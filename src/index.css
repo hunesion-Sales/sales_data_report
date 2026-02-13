@@ -1,0 +1,22 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Nanum+Gothic:wght@400;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@media print {
+  header, footer, button, .no-print {
+    display: none !important;
+  }
+  body {
+    font-size: 10pt;
+    color: #000;
+    background: #fff;
+  }
+  .print-break {
+    page-break-after: always;
+  }
+  table {
+    font-size: 9pt;
+  }
+}
