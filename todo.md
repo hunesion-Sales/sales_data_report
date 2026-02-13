@@ -52,12 +52,13 @@
 - [x] **자체 닫힘 태그 오류 수정 완료**
 - [x] **TypeScript 타입 추가 및 tsc 컴파일 통과**
 
-### P0 - 엑셀 파일 업로드 미지원
-- [ ] **현재 .txt 파일만 지원**: `accept=".txt"`, `readAsText()` 사용 중
-- [ ] **exceljs 라이브러리 도입** (sales-app과 동일)
-  - sales-app의 `src/utils/excelExport.ts` 패턴 참조: 동적 import로 번들 최적화
-  - `const ExcelJS = await import('exceljs')` 패턴 사용
-- [ ] 엑셀 파싱 시 헤더 행(row 14-15) 스킵, 데이터 행(row 16~) 읽기, 합계 행("전체") 제외 로직 구현 필요
+### P0 - 엑셀 파일 업로드 미지원 -- RESOLVED
+- [x] **엑셀 파일(.xlsx/.xls) 업로드 지원**: `accept=".xlsx,.xls,.txt"`, `readAsArrayBuffer()` 사용
+- [x] **exceljs 라이브러리 도입** (sales-app과 동일)
+  - `src/utils/excelParser.ts` 생성: 동적 import `await import('exceljs')`
+  - 월 헤더 자동 감지, "전체" 행 자동 제외, 수식 결과값 처리
+- [x] 엑셀 파싱 시 헤더 행 자동 감지, 데이터 행 파싱, 합계 행("전체") 제외 로직 구현 완료
+- [x] 업로드 중 로딩 스피너 표시, 기존 .txt 파싱 하위 호환 유지
 
 ---
 
@@ -117,20 +118,19 @@
    - `vite build` 성공 (경고 없음)
    - 번들 크기: JS 206KB + charts 380KB, CSS 17KB
 
-### Phase 2: 엑셀 업로드 기능 구현
-6. [ ] `exceljs@^4.4.0` 설치 (sales-app과 동일)
-7. [ ] `src/utils/excelParser.ts` 생성
+### Phase 2: 엑셀 업로드 기능 구현 -- COMPLETED (2026-02-13)
+6. [x] `exceljs@^4.4.0` 설치 (Phase 1에서 완료, sales-app과 동일)
+7. [x] `src/utils/excelParser.ts` 생성
    - 동적 import 패턴: `const ExcelJS = await import('exceljs')`
-   - 엑셀 구조 자동 감지 (헤더 행 위치, 월 컬럼, 데이터 범위)
-   - "전체" 행 자동 제외
-8. [ ] 파일 업로드 핸들러 수정: `.xlsx` 파일 지원
-   - accept 속성: `.xlsx,.xls`
-   - `FileReader.readAsArrayBuffer()` 사용 (readAsText 대신)
-9. [ ] Vite 빌드 최적화: sales-app 참조하여 exceljs를 별도 chunk로 분리
-   ```ts
-   // vite.config.ts manualChunks
-   if (id.includes('exceljs')) return 'vendor-excel';
-   ```
+   - 엑셀 구조 자동 감지 (row 10~20 범위에서 월 헤더 탐색, 제품군 컬럼 자동 감지)
+   - "전체" 행 자동 제외, 수식 결과값(`.result`) 처리 지원
+8. [x] 파일 업로드 핸들러 수정: `.xlsx` 파일 지원
+   - accept 속성: `.xlsx,.xls,.txt` (하위 호환)
+   - `file.arrayBuffer()` + `parseExcelFile()` 사용
+   - 업로드 중 로딩 스피너 표시 (`isUploading` 상태)
+   - 감지된 월 정보를 알림 메시지에 표시
+9. [x] Vite 빌드 최적화: exceljs 별도 chunk 분리 (Phase 1에서 설정 완료)
+   - 빌드 결과: `vendor-excel` 937KB (gzip 269KB) 별도 분리 확인
 
 ### Phase 3: 동적 월 지원 & 데이터 구조 개선
 10. [ ] `src/types/index.ts` 생성: 타입 정의

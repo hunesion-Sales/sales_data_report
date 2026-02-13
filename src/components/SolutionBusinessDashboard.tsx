@@ -1,4 +1,5 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useCallback } from 'react';
+import { parseExcelFile } from '../utils/excelParser';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   ComposedChart, Line
@@ -102,6 +103,7 @@ export default function SolutionBusinessDashboard() {
   const [data, setData] = useState<ProductData[]>(INITIAL_DATA);
   const [notification, setNotification] = useState<Notification | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   const [newEntry, setNewEntry] = useState<Omit<ProductData, 'id'>>({
     product: '',
@@ -204,58 +206,81 @@ export default function SolutionBusinessDashboard() {
   };
 
   // --- 파일 업로드 처리 ---
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const text = event.target?.result as string;
+    const isExcel = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
+
+    if (isExcel) {
+      setIsUploading(true);
       try {
-        const lines = text.split('\n');
-        const parsedData: ProductData[] = [];
-
-        lines.forEach((line, index) => {
-          const trimmedLine = line.trim();
-          if (!trimmedLine) return;
-          if (trimmedLine.startsWith('계산서') || trimmedLine.startsWith('제품군') || trimmedLine.startsWith('전체')) return;
-
-          let columns = trimmedLine.split('\t');
-          if (columns.length < 2) {
-            columns = trimmedLine.split(/\s{2,}/);
-          }
-
-          if (columns.length > 0) {
-            const product = columns[0].trim();
-            if (!product) return;
-
-            const janSales = cleanNumber(columns[1]);
-            const janCost = cleanNumber(columns[2]);
-            const febSales = cleanNumber(columns[4]);
-            const febCost = cleanNumber(columns[5]);
-
-            parsedData.push({
-              id: Date.now() + index,
-              product, janSales, janCost, febSales, febCost
-            });
-          }
-        });
-
-        if (parsedData.length > 0) {
-          setData(parsedData);
-          showNotification(`${parsedData.length}건의 데이터를 불러왔습니다.`);
-          setActiveTab('dashboard');
-        } else {
-          showNotification('유효한 데이터를 찾을 수 없습니다.', 'error');
-        }
+        const buffer = await file.arrayBuffer();
+        const result = await parseExcelFile(buffer);
+        setData(result.data);
+        const monthInfo = result.monthsDetected.length > 0
+          ? ` (${result.monthsDetected.join(', ')})`
+          : '';
+        showNotification(`${result.data.length}건의 데이터를 불러왔습니다.${monthInfo}`);
+        setActiveTab('dashboard');
       } catch (error) {
-        console.error('File parsing error:', error);
-        showNotification('파일 처리 중 오류가 발생했습니다.', 'error');
+        console.error('Excel parsing error:', error);
+        const message = error instanceof Error ? error.message : '파일 처리 중 오류가 발생했습니다.';
+        showNotification(message, 'error');
+      } finally {
+        setIsUploading(false);
       }
-    };
-    reader.readAsText(file);
+    } else {
+      // 기존 텍스트 파일 파싱 (하위 호환)
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const text = event.target?.result as string;
+        try {
+          const lines = text.split('\n');
+          const parsedData: ProductData[] = [];
+
+          lines.forEach((line, index) => {
+            const trimmedLine = line.trim();
+            if (!trimmedLine) return;
+            if (trimmedLine.startsWith('계산서') || trimmedLine.startsWith('제품군') || trimmedLine.startsWith('전체')) return;
+
+            let columns = trimmedLine.split('\t');
+            if (columns.length < 2) {
+              columns = trimmedLine.split(/\s{2,}/);
+            }
+
+            if (columns.length > 0) {
+              const product = columns[0].trim();
+              if (!product) return;
+
+              const janSales = cleanNumber(columns[1]);
+              const janCost = cleanNumber(columns[2]);
+              const febSales = cleanNumber(columns[4]);
+              const febCost = cleanNumber(columns[5]);
+
+              parsedData.push({
+                id: Date.now() + index,
+                product, janSales, janCost, febSales, febCost
+              });
+            }
+          });
+
+          if (parsedData.length > 0) {
+            setData(parsedData);
+            showNotification(`${parsedData.length}건의 데이터를 불러왔습니다.`);
+            setActiveTab('dashboard');
+          } else {
+            showNotification('유효한 데이터를 찾을 수 없습니다.', 'error');
+          }
+        } catch (error) {
+          console.error('File parsing error:', error);
+          showNotification('파일 처리 중 오류가 발생했습니다.', 'error');
+        }
+      };
+      reader.readAsText(file);
+    }
     e.target.value = '';
-  };
+  }, []);
 
   // --- 대시보드 뷰 ---
   const DashboardView = () => (
@@ -425,23 +450,32 @@ export default function SolutionBusinessDashboard() {
           데이터 파일 일괄 업로드
         </h3>
         <p className="text-sm text-slate-500 mb-6">
-          엑셀 데이터를 텍스트 파일(.txt)로 저장한 후 업로드하세요.<br />
-          (형식: 탭으로 구분된 텍스트, '제품군' 컬럼 필수)
+          매출 데이터 엑셀 파일(.xlsx)을 업로드하세요.<br />
+          (헤더 행에서 월 정보를 자동 감지합니다)
         </p>
         <div
-          className="border-2 border-dashed border-indigo-200 rounded-xl p-8 bg-indigo-50/50 text-center hover:bg-indigo-50 transition-colors cursor-pointer"
-          onClick={() => fileInputRef.current?.click()}
+          className={`border-2 border-dashed border-indigo-200 rounded-xl p-8 bg-indigo-50/50 text-center transition-colors ${isUploading ? 'opacity-60 cursor-wait' : 'hover:bg-indigo-50 cursor-pointer'}`}
+          onClick={() => !isUploading && fileInputRef.current?.click()}
         >
           <input
             type="file"
             ref={fileInputRef}
             onChange={handleFileUpload}
-            accept=".txt"
+            accept=".xlsx,.xls,.txt"
             className="hidden"
           />
-          <FileText className="w-12 h-12 text-indigo-400 mx-auto mb-3" />
-          <p className="text-indigo-900 font-medium">클릭하여 파일 업로드</p>
-          <p className="text-xs text-indigo-400 mt-1">.txt 파일만 지원합니다</p>
+          {isUploading ? (
+            <>
+              <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mx-auto mb-3" />
+              <p className="text-indigo-900 font-medium">파일 처리 중...</p>
+            </>
+          ) : (
+            <>
+              <FileText className="w-12 h-12 text-indigo-400 mx-auto mb-3" />
+              <p className="text-indigo-900 font-medium">클릭하여 파일 업로드</p>
+              <p className="text-xs text-indigo-400 mt-1">.xlsx, .xls, .txt 파일 지원</p>
+            </>
+          )}
         </div>
       </div>
 
