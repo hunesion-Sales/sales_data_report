@@ -353,7 +353,7 @@ reports/{reportId}/products/{productId}  (기존 확장)
     - `src/types/index.ts`: `ProductMaster`, `ProductMasterInput`, `ProductDataExtended` 타입 추가
     - 빌드 테스트 통과 (6.65s, JS 699KB + charts 380KB + excel 937KB)
 
-### Phase 7: 부문별 보고 & 기간별 집계
+### Phase 7: 부문별 보고 & 기간별 집계 -- COMPLETED (2026-02-14)
 
 > **목표**: 영업부문별, 월/분기/반기/연간 매출액·매출이익 보고, 권한별 데이터 접근 제어
 
@@ -384,16 +384,23 @@ interface ReportFilter { year: number; periodType: PeriodType; divisionId?: stri
 
 #### 7-2. 작업 항목
 
-27. [ ] 기간 유틸리티 구현
+27. [x] 기간 유틸리티 구현
     - `src/utils/periodUtils.ts`: 분기/반기/연간 변환 및 집계 함수
-28. [ ] 부문별 보고 훅 구현
-    - `src/hooks/useDivisionReport.ts`: divisions + products → DivisionSummary[] 집계
+    - `getQuarterForMonth`, `getHalfYearForMonth`, `getMonthsInQuarter`, `getMonthsInHalfYear`
+    - `getPeriodInfoList`, `aggregateByPeriod`, `getAvailableYears`
+28. [x] 부문별 보고 훅 구현
+    - `src/hooks/useDivisionReport.ts`: divisions + products + productMasters → DivisionSummary[] 집계
+    - 제품명 기준 divisionId 매핑, 미분류 제품 별도 표시
     - admin: 전체 부문 조회 / 일반 user: 본인 소속 부문만 조회
-29. [ ] 부문별 보고 페이지 및 컴포넌트
-    - `src/pages/DivisionReportPage.tsx`: 필터바 + 테이블 + 차트
+29. [x] 부문별 보고 페이지 및 컴포넌트
+    - `src/pages/DivisionReportPage.tsx`: 필터바 + KPI 카드 + 테이블 + 차트
     - `src/components/reports/ReportFilterBar.tsx`: 연도, 기간유형(월/분기/반기/연간) 탭, 부문 필터
-    - `src/components/reports/DivisionSummaryTable.tsx`: 부문별 확장 가능 테이블
-    - `src/components/reports/DivisionCharts.tsx`: Stacked bar + Pie 차트
+    - `src/components/reports/DivisionSummaryTable.tsx`: 부문별 확장 가능 테이블 (제품 상세 토글)
+    - `src/components/reports/DivisionCharts.tsx`: Stacked bar + Pie + Horizontal bar 차트
+30. [x] 라우팅 및 네비게이션 업데이트
+    - `src/router.tsx`: `/reports` 라우트 추가
+    - `SolutionBusinessDashboard.tsx`: "부문별 보고서" 버튼 추가
+    - 빌드 테스트 통과 (6.39s, JS 717KB + charts 395KB + excel 937KB)
 
 ### Phase 8: 분기별 목표 & 달성율
 

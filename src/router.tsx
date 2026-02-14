@@ -3,6 +3,7 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import SolutionBusinessDashboard from './components/SolutionBusinessDashboard';
+import DivisionReportPage from './pages/DivisionReportPage';
 import DivisionManagementPage from './pages/admin/DivisionManagementPage';
 import ProductManagementPage from './pages/admin/ProductManagementPage';
 import UserManagementPage from './pages/admin/UserManagementPage';
@@ -21,6 +22,14 @@ export const router = createBrowserRouter([
     element: (
       <ProtectedRoute>
         <SolutionBusinessDashboard />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/reports',
+    element: (
+      <ProtectedRoute>
+        <DivisionReportPage />
       </ProtectedRoute>
     ),
   },
