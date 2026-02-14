@@ -9,8 +9,10 @@ import {
 } from 'recharts';
 import {
   LayoutDashboard, Table as TableIcon, Plus, Save, TrendingUp,
-  DollarSign, Calendar, Printer, Upload, FileText, X, Cloud, CloudOff, Loader2
+  DollarSign, Calendar, Printer, Upload, FileText, X, Cloud, CloudOff, Loader2,
+  LogOut, User
 } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 // --- 초기 데이터 (동적 월 구조) ---
 const DEFAULT_MONTHS = ['2026-01', '2026-02'];
@@ -82,6 +84,7 @@ const formatCurrencyWithUnit = (value: number): string => {
 
 // --- 컴포넌트 ---
 export default function SolutionBusinessDashboard() {
+  const { user, logout, isAdmin } = useAuth();
   const [activeTab, setActiveTab] = useState<'dashboard' | 'input'>('dashboard');
   const {
     data, months, monthLabels,
@@ -91,6 +94,14 @@ export default function SolutionBusinessDashboard() {
   const [notification, setNotification] = useState<Notification | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch (err) {
+      console.error('Logout failed:', err);
+    }
+  };
 
   const showNotification = (message: string, type: 'success' | 'error' = 'success') => {
     setNotification({ message, type });
@@ -644,6 +655,24 @@ export default function SolutionBusinessDashboard() {
               <Plus className="w-4 h-4" />
               데이터 입력
             </button>
+
+            {/* 사용자 정보 및 로그아웃 */}
+            <div className="flex items-center gap-2 ml-4 pl-4 border-l border-slate-200">
+              <div className="flex items-center gap-2 px-2 py-1 bg-slate-100 rounded-lg">
+                <User className="w-4 h-4 text-slate-500" />
+                <span className="text-sm text-slate-700">{user?.displayName}</span>
+                {isAdmin && (
+                  <span className="text-xs bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded font-medium">관리자</span>
+                )}
+              </div>
+              <button
+                onClick={handleLogout}
+                className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+                title="로그아웃"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </div>
       </header>

@@ -1,5 +1,11 @@
-import SolutionBusinessDashboard from './components/SolutionBusinessDashboard'
+import { RouterProvider } from 'react-router-dom';
+import { AuthProvider } from './contexts/AuthContext';
+import { router } from './router';
 
 export default function App() {
-  return <SolutionBusinessDashboard />
+  return (
+    <AuthProvider>
+      <RouterProvider router={router} />
+    </AuthProvider>
+  );
 }

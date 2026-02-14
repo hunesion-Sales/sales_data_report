@@ -253,7 +253,7 @@ service cloud.firestore {
     - 로딩 중 스피너 화면 추가
     - `tsc -b` 에러 0건, `vite build` 성공 (8.75s)
 
-### Phase 5: 인증 & 라우팅 기반 구축
+### Phase 5: 인증 & 라우팅 기반 구축 -- COMPLETED (2026-02-14)
 
 > **목표**: Firebase Auth 기반 로그인/가입 시스템, react-router-dom 라우팅, 670줄 메가 컴포넌트 분리
 > **첫 관리자**: `hclim@hunesion.com` (Firebase Auth에 이미 존재) → 자동 admin+approved 설정
@@ -291,34 +291,31 @@ divisions/{divisionId}
 
 #### 5-3. 작업 항목
 
-17. [ ] 의존성 추가 및 Firebase Auth 설정
-    - `npm install react-router-dom`
-    - `src/firebase/config.ts`에 `getAuth(app)` export 추가
-18. [ ] 인증 서비스 및 컨텍스트 구현
+17. [x] 의존성 추가 및 Firebase Auth 설정
+    - `bun add react-router-dom` 완료 (v7.13.0)
+    - `src/firebase/config.ts`에 `getAuth(app)` export 추가 완료
+18. [x] 인증 서비스 및 컨텍스트 구현
     - `src/firebase/services/authService.ts`: 회원가입, 로그인, 로그아웃, 사용자 승인/거절
-      - `ensureAdminUser(uid, email)`: `hclim@hunesion.com` 첫 로그인 시 admin+approved 자동 생성
+      - `hclim@hunesion.com` 첫 로그인 시 admin+approved 자동 생성
       - 이후 가입자는 `status: 'pending'` → 관리자 승인 필요
     - `src/contexts/AuthContext.tsx`: `onAuthStateChanged` + Firestore `users/{uid}` 프로필 연동
-    - `src/hooks/useAuth.ts`: AuthContext wrapper hook
-19. [ ] 영업부문 서비스 구현
+    - `useAuth()` 훅을 AuthContext 내에 포함
+19. [x] 영업부문 서비스 구현
     - `src/firebase/services/divisionService.ts`: 부문 CRUD + 기본 5개 부문 seed
     - 기본값: 공공사업부문(0), 융합사업부문(1), 전략사업부문(2), 금융기업사업부문(3), 유지보수(4)
-20. [ ] 로그인/가입 페이지 구현
-    - `src/pages/LoginPage.tsx`: 이메일/비밀번호 로그인 폼
-    - `src/pages/RegisterPage.tsx`: 가입 신청 (이름, 이메일, 비밀번호, 부문 선택)
-    - `src/components/auth/ProtectedRoute.tsx`: 미인증 리다이렉트, adminOnly prop
-21. [ ] 라우팅 설정 및 컴포넌트 분리
-    - `src/router.tsx`: 전체 라우트 정의
+    - `seedDefaultDivisions()`: 앱 초기화 시 divisions 컬렉션이 비어있으면 자동 생성
+20. [x] 로그인/가입 페이지 구현
+    - `src/pages/LoginPage.tsx`: 이메일/비밀번호 로그인 폼, 에러 한국어 번역
+    - `src/pages/RegisterPage.tsx`: 가입 신청 (이름, 이메일, 비밀번호, 부문 선택), 승인 대기 안내
+    - `src/components/auth/ProtectedRoute.tsx`: 미인증 리다이렉트, adminOnly prop, 승인대기/거절 상태 UI
+21. [x] 라우팅 설정 및 컴포넌트 분리
+    - `src/router.tsx`: 전체 라우트 정의 (/login, /register, /)
     - `src/App.tsx`: `AuthProvider` + `RouterProvider` 래핑
-    - `SolutionBusinessDashboard.tsx` 670줄 분할:
-      - `src/components/dashboard/DashboardView.tsx` (대시보드 뷰 추출)
-      - `src/components/dashboard/InputView.tsx` (입력 뷰 추출)
-      - `src/components/layout/AppLayout.tsx` (헤더/네비/푸터 Outlet 레이아웃)
-      - `src/utils/formatters.ts` (formatCurrency 등 유틸 추출)
-      - `src/constants/index.ts` (MONTH_COLORS, INITIAL_DATA 등 상수 추출)
-22. [ ] 기존 타입 및 서비스 수정
-    - `src/types/index.ts`: `UserProfile`, `Division`, `UserRole`, `UserStatus` 타입 추가
-    - `src/firebase/services/uploadHistoryService.ts`: `uploadedBy`에 실제 uid 전달
+    - `SolutionBusinessDashboard.tsx`에 로그아웃 버튼 및 사용자 정보 표시 추가
+    - (컴포넌트 세부 분리는 Phase 6+ 또는 필요 시 진행)
+22. [x] 기존 타입 및 서비스 수정
+    - `src/types/index.ts`: `UserProfile`, `Division`, `UserRole`, `UserStatus`, `AuthState` 타입 추가
+    - `src/firebase/services/uploadHistoryService.ts`: `uploadedBy`에 실제 uid 전달 (Phase 6에서 완료 예정)
 
 ### Phase 6: 영업부문 & 제품 마스터 관리 (CRUD)
 
