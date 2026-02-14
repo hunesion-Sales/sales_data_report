@@ -113,13 +113,14 @@ export function useReport(
       return;
     }
 
-    // 이미 로드했으면 스킵
-    if (loadedRef.current) {
+    // 로그인하지 않은 상태면 초기 데이터 사용
+    if (!firebaseUser) {
+      setIsLoading(false);
       return;
     }
 
-    // 로그인하지 않은 상태면 초기 데이터 사용
-    if (!firebaseUser) {
+    // 이미 로드했으면 스킵 (React 18 StrictMode 대응)
+    if (loadedRef.current) {
       setIsLoading(false);
       return;
     }
