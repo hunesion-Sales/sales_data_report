@@ -184,3 +184,43 @@ export interface PeriodInfo {
   label: string;     // "1월", "1분기", "상반기", "2026년"
   months: string[];  // 해당 기간에 포함된 월 키 목록
 }
+
+// ============================================
+// Phase 8: 분기별 목표 & 달성율 타입
+// ============================================
+
+/** 달성 상태 */
+export type AchievementStatus = 'exceeded' | 'on-track' | 'behind' | 'critical';
+
+/** 분기별 목표 (Firestore targets/{year}-{quarter}-{divisionId}) */
+export interface QuarterlyTarget {
+  id: string;
+  year: number;
+  quarter: Quarter;
+  divisionId: string;
+  salesTarget: number;
+  profitTarget?: number;
+  createdBy: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+/** 분기별 목표 입력 타입 */
+export interface QuarterlyTargetInput {
+  year: number;
+  quarter: Quarter;
+  divisionId: string;
+  salesTarget: number;
+  profitTarget?: number;
+}
+
+/** 목표 달성 현황 */
+export interface TargetAchievement {
+  target: QuarterlyTarget;
+  divisionName: string;
+  actualSales: number;
+  actualProfit: number;
+  salesAchievementRate: number;
+  profitAchievementRate?: number;
+  status: AchievementStatus;
+}

@@ -4,9 +4,11 @@ import RegisterPage from './pages/RegisterPage';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import SolutionBusinessDashboard from './components/SolutionBusinessDashboard';
 import DivisionReportPage from './pages/DivisionReportPage';
+import AchievementPage from './pages/AchievementPage';
 import DivisionManagementPage from './pages/admin/DivisionManagementPage';
 import ProductManagementPage from './pages/admin/ProductManagementPage';
 import UserManagementPage from './pages/admin/UserManagementPage';
+import TargetInputPage from './pages/admin/TargetInputPage';
 
 export const router = createBrowserRouter([
   {
@@ -54,6 +56,22 @@ export const router = createBrowserRouter([
     element: (
       <ProtectedRoute adminOnly>
         <UserManagementPage />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/admin/targets',
+    element: (
+      <ProtectedRoute adminOnly>
+        <TargetInputPage />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/achievement',
+    element: (
+      <ProtectedRoute>
+        <AchievementPage />
       </ProtectedRoute>
     ),
   },

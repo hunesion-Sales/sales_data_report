@@ -23,7 +23,7 @@ const DEFAULT_DIVISIONS = [
   { id: 'convergence', name: '융합사업부문', sortOrder: 1 },
   { id: 'strategy', name: '전략사업부문', sortOrder: 2 },
   { id: 'finance', name: '금융기업사업부문', sortOrder: 3 },
-  { id: 'maintenance', name: '유지보수', sortOrder: 4 },
+  { id: 'maintenance', name: '서비스사업팀', sortOrder: 4 },
 ];
 
 /**

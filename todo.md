@@ -402,7 +402,7 @@ interface ReportFilter { year: number; periodType: PeriodType; divisionId?: stri
     - `SolutionBusinessDashboard.tsx`: "부문별 보고서" 버튼 추가
     - 빌드 테스트 통과 (6.39s, JS 717KB + charts 395KB + excel 937KB)
 
-### Phase 8: 분기별 목표 & 달성율
+### Phase 8: 분기별 목표 & 달성율 -- COMPLETED (2026-02-14)
 
 > **목표**: 영업부문별 분기 목표 입력 및 달성율 시각화
 > **목표 단위**: 영업부문별만 (제품별 세부 목표 없음)
@@ -435,34 +435,96 @@ interface TargetAchievement {
 
 #### 8-3. 작업 항목
 
-30. [ ] 목표 서비스 및 훅 구현
-    - `src/firebase/services/targetService.ts`: 목표 CRUD
-    - `src/hooks/useTargets.ts`: 목표 데이터 훅
+30. [x] 타입 정의
+    - `src/types/index.ts`: `AchievementStatus`, `QuarterlyTarget`, `QuarterlyTargetInput`, `TargetAchievement` 4개 타입 추가
+31. [x] 목표 서비스 및 훅 구현
+    - `src/firebase/services/targetService.ts`: 목표 CRUD (deterministic doc ID: `{year}-{quarter}-{divisionId}`)
+      - `getTargetsByYear()`, `getTargetsByYearQuarter()`, `upsertTarget()`, `batchUpsertTargets()`, `deleteTarget()`
+    - `src/hooks/useTargets.ts`: divisions + targets 병렬 fetch, year 변경 시 자동 재로드, `saveTargets()` batch upsert
     - `src/hooks/useAchievement.ts`: 목표 + 실적 결합 → 달성율 계산
-31. [ ] 목표 입력 페이지
-    - `src/pages/admin/TargetInputPage.tsx`: 부문 × 분기 매트릭스 테이블
-    - `src/components/targets/TargetInputTable.tsx`: 편집 가능한 입력 테이블
-32. [ ] 달성율 대시보드
-    - `src/pages/AchievementPage.tsx`: 달성율 KPI + 테이블 + 차트
-    - `src/components/achievement/AchievementTable.tsx`: 진행률 바 + 색상 코딩
-    - `src/components/achievement/AchievementCharts.tsx`: 게이지/Grouped bar 차트
-33. [ ] 기존 대시보드 연동
-    - DashboardView KPI 카드에 "분기 목표 달성율" 카드 추가 (현재 분기 기준, 목표 설정 시에만 표시)
+      - `productDivisionMap` (useMemo): 제품명 → divisionId 매핑 (useDivisionReport 패턴 재사용)
+      - `divisionActuals` (useMemo): `getMonthsInQuarter()` 기반 부문별 분기 실적 합산
+      - `achievements` (useMemo): targets + actuals 결합, status 판정 (exceeded/on-track/behind/critical)
+      - `overallAchievementRate`: 전체 달성율 (대시보드 KPI용, 목표 없으면 null)
+      - role-based: admin 전체 부문, 일반 사용자 자기 부문만
+32. [x] 목표 입력 페이지 (admin 전용)
+    - `src/pages/admin/TargetInputPage.tsx`: 뒤로가기 + Target 아이콘 + "분기별 목표 관리" + 연도 선택, 저장 성공 시 토스트
+    - `src/components/targets/TargetInputTable.tsx`: 부문(행) × Q1~Q4(열) 매트릭스, 매출/이익 목표 number input
+      - matrix state, 기존 targets 초기화, 변경 감지, salesTarget > 0인 셀만 저장
+33. [x] 달성율 대시보드
+    - `src/pages/AchievementPage.tsx`: 연도/분기 필터 + KPI 4개(분기 목표/실적/달성율/이익) + 차트 + 테이블
+    - `src/components/achievement/AchievementTable.tsx`: progress bar + 상태 badge (emerald/blue/amber/red)
+    - `src/components/achievement/AchievementCharts.tsx`: Grouped bar(목표 vs 실적) + RadialBar(부문별 달성율 게이지)
+34. [x] 라우팅 & 기존 대시보드 연동
+    - `src/router.tsx`: `/admin/targets` (adminOnly), `/achievement` (전체 승인 사용자) 라우트 추가
+    - `SolutionBusinessDashboard.tsx`: 4개 변경
+      - `Target` 아이콘 + `useAchievement` 훅 + `getCurrentQuarter`/`getQuarterLabel` import
+      - 달성율 KPI 카드 (overallAchievementRate !== null일 때 조건부 표시, 클릭 시 /achievement 이동)
+      - "달성 현황" 네비게이션 버튼 추가
+      - 관리자 드롭다운에 "목표 관리" 메뉴 항목 추가
+    - `tsc -b` 에러 0건, `vite build` 성공 (6.06s)
+
+### Phase 8.5: 부문별 데이터 업로드 기능 -- COMPLETED (2026-02-14)
+
+> **목표**: 부문별 엑셀 파일(월당 4컬럼: 매출/매입/이익/달성율) 업로드 지원
+> **배경**: 매주 목요일 제품별 엑셀과 부문별 엑셀 두 가지를 업로드하여 데이터 갱신
+> 달성율 컬럼은 무시하고 매출/매입만 파싱. 엑셀 부문명과 Firestore division name은 자동 부분 매칭.
+
+#### 8.5-1. 부문별 엑셀 구조
+
+```
+Row 14: "계산서일자 →" | "1월 2026"(4칸 병합) | "2월 2026"(4칸 병합) | "전체"(4칸 병합)
+Row 15: "매출코드 소유자: 부서 ↑" | 매출액 합계 | 매입액 합계 | 매출이익 | 달성율 | (반복)
+Row 16~20: 부문 데이터 (경영지원본부, 공공사업부, 금융기업사업부, 서비스사업팀, 융합사업부)
+Row 21: "전체" (합계, 제외)
+```
+
+#### 8.5-2. Firestore 신규 서브컬렉션
+
+```
+reports/{reportId}/division_data/{docId}
+├── divisionName: string       # 엑셀 원본 부문명
+├── divisionId: string         # 매칭된 division ID (없으면 'unmatched')
+├── months: Record<string, { sales: number, cost: number }>
+└── updatedAt: timestamp
+```
+
+#### 8.5-3. 작업 항목
+
+35. [x] `excelParser.ts`에서 `parseMonthLabel()` 함수 export 처리 (기존 private → public)
+36. [x] 부문별 엑셀 파서 구현
+    - `src/utils/divisionExcelParser.ts`: 월당 4컬럼 구조 파싱, 달성율 무시
+    - 같은 월 라벨 4번 반복 → 중복 제거 (seenMonthKeys Set 사용)
+    - 매출 = 첫 번째 컬럼, 매입 = 두 번째 컬럼 (기존과 동일 패턴)
+    - "전체" 섹션/행 자동 제외
+    - 반환: `DivisionParseResult { data: DivisionDataRow[], months, monthLabels }`
+37. [x] 부문별 데이터 Firestore 서비스 구현
+    - `src/firebase/services/divisionDataService.ts`: `reports/{id}/division_data` 서브컬렉션 CRUD
+    - `saveDivisionData(reportId, items[])`: 기존 전체 삭제 후 batch write (productService 패턴)
+    - `getDivisionData(reportId)`: 전체 조회 orderBy divisionName
+38. [x] 대시보드 InputView에 부문별 업로드 UI 통합
+    - `SolutionBusinessDashboard.tsx` 수정:
+      - `uploadType: 'product' | 'division'` 상태 추가
+      - 업로드 영역 위에 "제품별 데이터" / "부문별 데이터" 토글 버튼 그룹
+      - 부문별 선택 시 `parseDivisionExcelFile()` → `getDivisions()` → 자동 매칭 → `saveDivisionData()` 흐름
+      - 부문 매칭: 정확 일치 → 부분 문자열 포함 매칭 (e.g., "공공사업부" → "공공사업부문")
+      - 알림: "N개 부문 데이터가 업로드되었습니다 (M개 매칭, K개 미매칭)"
+    - `tsc -b` 에러 0건, `npm run build` 성공
 
 ### Phase 9: UI/UX 안정화 & 배포
 
-34. [ ] 인쇄용 CSS 강화
+39. [ ] 인쇄용 CSS 강화
     - `@media print` 스타일: 네비게이션 숨기기, 테이블 페이지 나눔, 폰트 크기 조정
-35. [ ] 에러 핸들링 강화
+40. [ ] 에러 핸들링 강화
     - `ErrorBoundary` 컴포넌트, Firestore 연결 실패 시 fallback UI
-36. [ ] 엑셀 업로드 병합 모드
+41. [ ] 엑셀 업로드 병합 모드
     - 새 파일 업로드 시 "덮어쓰기 / 병합" 선택 옵션
-37. [ ] Firestore 보안 규칙 적용
+42. [ ] Firestore 보안 규칙 적용
     - `isApproved()`, `isAdmin()` 헬퍼 함수 기반 규칙 적용
-38. [ ] Firebase Hosting 배포
+43. [ ] Firebase Hosting 배포
     - `firebase.json`: SPA rewrite, 캐시 헤더
     - `.firebaserc`: `hunesalesreport` 프로젝트 연결
-39. [ ] GitHub Actions CI/CD (선택)
+44. [ ] GitHub Actions CI/CD (선택)
     - PR 시 빌드 검증, main 머지 시 자동 배포
 
 ---
@@ -534,6 +596,7 @@ src/
 │   └── services/
 │       ├── authService.ts                     # 인증 관련
 │       ├── divisionService.ts                 # 부문 CRUD
+│       ├── divisionDataService.ts             # 부문별 매출 데이터 CRUD (Phase 8.5)
 │       ├── productMasterService.ts            # 제품 마스터 CRUD
 │       ├── productService.ts                  # 매출 데이터 CRUD (divisionId 확장)
 │       ├── reportService.ts                   # 보고서 CRUD
@@ -548,7 +611,8 @@ src/
 ├── types/
 │   └── index.ts                               # 모든 TypeScript 인터페이스
 ├── utils/
-│   ├── excelParser.ts                         # 엑셀 파싱
+│   ├── excelParser.ts                         # 제품별 엑셀 파싱
+│   ├── divisionExcelParser.ts                 # 부문별 엑셀 파싱 (Phase 8.5)
 │   ├── formatters.ts                          # 통화 포맷 유틸
 │   └── periodUtils.ts                         # 분기/반기/연간 유틸
 ├── components/
@@ -606,10 +670,14 @@ Firestore Root
 ├── reports/{reportId}                         # Phase 4 (기존)
 │   ├── year, title, months[], monthLabels{}
 │   ├── createdAt, updatedAt
-│   └── products/{productId}                   # Phase 4 + 6 확장
-│       ├── product, months{}, sortOrder
-│       ├── divisionId (NEW Phase 6)
-│       └── productMasterId (NEW Phase 6)
+│   ├── products/{productId}                   # Phase 4 + 6 확장
+│   │   ├── product, months{}, sortOrder
+│   │   ├── divisionId (NEW Phase 6)
+│   │   └── productMasterId (NEW Phase 6)
+│   └── division_data/{docId}                  # Phase 8.5
+│       ├── divisionName, divisionId
+│       ├── months: { "2026-01": { sales, cost }, ... }
+│       └── updatedAt
 │
 ├── targets/{year-quarter-divisionId}          # Phase 8
 │   ├── year, quarter, divisionId

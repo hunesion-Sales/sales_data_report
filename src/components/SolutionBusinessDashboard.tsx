@@ -1,7 +1,8 @@
 import React, { useState, useMemo, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { parseExcelFile } from '@/utils/excelParser';
-import type { ProductData, ProcessedProduct, Totals, Notification } from '@/types';
+import { parseDivisionExcelFile } from '@/utils/divisionExcelParser';
+import type { ProductData, ProcessedProduct, Totals, Notification, Division } from '@/types';
 import { getMonthShortLabel, getMonthFullLabel } from '@/types';
 import { useReport } from '@/hooks/useReport';
 import {
@@ -11,9 +12,13 @@ import {
 import {
   LayoutDashboard, Table as TableIcon, Plus, Save, TrendingUp,
   DollarSign, Calendar, Printer, Upload, FileText, X, Cloud, CloudOff, Loader2,
-  LogOut, User, Settings, Building2, Package, Users, ChevronDown, BarChart3
+  LogOut, User, Settings, Building2, Package, Users, ChevronDown, BarChart3, Target
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAchievement } from '@/hooks/useAchievement';
+import { getDivisions } from '@/firebase/services/divisionService';
+import { saveDivisionData } from '@/firebase/services/divisionDataService';
+import { getCurrentQuarter, getQuarterLabel } from '@/utils/periodUtils';
 
 // --- 초기 데이터 (동적 월 구조) ---
 const DEFAULT_MONTHS = ['2026-01', '2026-02'];
@@ -87,6 +92,7 @@ const formatCurrencyWithUnit = (value: number): string => {
 export default function SolutionBusinessDashboard() {
   const navigate = useNavigate();
   const { user, logout, isAdmin } = useAuth();
+  const { overallAchievementRate } = useAchievement(user?.divisionId, isAdmin);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'input'>('dashboard');
   const [showAdminMenu, setShowAdminMenu] = useState(false);
   const {
@@ -97,6 +103,7 @@ export default function SolutionBusinessDashboard() {
   const [notification, setNotification] = useState<Notification | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadType, setUploadType] = useState<'product' | 'division'>('product');
 
   const handleLogout = async () => {
     try {
@@ -256,6 +263,18 @@ export default function SolutionBusinessDashboard() {
     }
   };
 
+  // --- 부문 매칭 로직 ---
+  const matchDivision = (excelName: string, divisions: Division[]): Division | null => {
+    // 1. 정확 일치
+    const exact = divisions.find(d => d.name === excelName);
+    if (exact) return exact;
+    // 2. 포함 매칭 (둘 중 하나가 다른 하나를 포함)
+    const partial = divisions.find(d =>
+      d.name.includes(excelName) || excelName.includes(d.name)
+    );
+    return partial || null;
+  };
+
   // --- 파일 업로드 처리 ---
   const handleFileUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -263,13 +282,49 @@ export default function SolutionBusinessDashboard() {
 
     const isExcel = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
 
-    if (isExcel) {
-      setIsUploading(true);
-      try {
-        const buffer = await file.arrayBuffer();
-        const result = await parseExcelFile(buffer);
+    if (!isExcel) {
+      showNotification('지원하지 않는 파일 형식입니다. .xlsx 파일을 업로드해주세요.', 'error');
+      e.target.value = '';
+      return;
+    }
 
-        // Firestore에 저장 (UI도 즉시 반영)
+    setIsUploading(true);
+    try {
+      const buffer = await file.arrayBuffer();
+
+      if (uploadType === 'division') {
+        // 부문별 엑셀 파싱
+        const result = await parseDivisionExcelFile(buffer);
+        const divisions = await getDivisions();
+
+        // 부문명 자동 매칭 및 Firestore 저장용 데이터 생성
+        let matchedCount = 0;
+        let unmatchedCount = 0;
+        const items = result.data.map(row => {
+          const matched = matchDivision(row.divisionName, divisions);
+          if (matched) {
+            matchedCount++;
+          } else {
+            unmatchedCount++;
+          }
+          return {
+            divisionName: row.divisionName,
+            divisionId: matched?.id ?? 'unmatched',
+            months: row.months,
+          };
+        });
+
+        // 현재 보고서 ID (useReport에서 사용하는 reportId)
+        const currentYear = new Date().getFullYear();
+        const reportId = `report-${currentYear}`;
+        await saveDivisionData(reportId, items);
+
+        showNotification(
+          `${items.length}개 부문 데이터가 업로드되었습니다 (${matchedCount}개 매칭, ${unmatchedCount}개 미매칭)`
+        );
+      } else {
+        // 제품별 엑셀 파싱 (기존 로직)
+        const result = await parseExcelFile(buffer);
         await saveUploadedData(result.data, result.months, result.monthLabels, file.name);
 
         const monthInfo = result.months.length > 0
@@ -277,18 +332,16 @@ export default function SolutionBusinessDashboard() {
           : '';
         showNotification(`${result.data.length}건의 데이터를 불러왔습니다.${monthInfo}`);
         setActiveTab('dashboard');
-      } catch (error) {
-        console.error('Excel parsing error:', error);
-        const message = error instanceof Error ? error.message : '파일 처리 중 오류가 발생했습니다.';
-        showNotification(message, 'error');
-      } finally {
-        setIsUploading(false);
       }
-    } else {
-      showNotification('지원하지 않는 파일 형식입니다. .xlsx 파일을 업로드해주세요.', 'error');
+    } catch (error) {
+      console.error('Excel parsing error:', error);
+      const message = error instanceof Error ? error.message : '파일 처리 중 오류가 발생했습니다.';
+      showNotification(message, 'error');
+    } finally {
+      setIsUploading(false);
     }
     e.target.value = '';
-  }, [saveUploadedData]);
+  }, [saveUploadedData, uploadType]);
 
   // --- 대시보드 뷰 ---
   const DashboardView = () => (
@@ -330,6 +383,27 @@ export default function SolutionBusinessDashboard() {
           );
         })}
       </div>
+
+      {/* 분기 달성율 KPI */}
+      {overallAchievementRate !== null && (
+        <div
+          className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 cursor-pointer hover:border-indigo-300 transition-colors"
+          onClick={() => navigate('/achievement')}
+        >
+          <div className="flex justify-between items-center mb-2">
+            <h3 className="text-sm font-medium text-slate-500">{getQuarterLabel(getCurrentQuarter())} 달성율</h3>
+            <Target className="w-5 h-5 text-indigo-500" />
+          </div>
+          <div className={`text-2xl font-bold ${
+            overallAchievementRate >= 100 ? 'text-emerald-600' :
+            overallAchievementRate >= 75 ? 'text-blue-600' :
+            overallAchievementRate >= 50 ? 'text-amber-600' : 'text-red-600'
+          }`}>
+            {overallAchievementRate.toFixed(1)}%
+          </div>
+          <p className="text-xs text-slate-400 mt-1">클릭하여 상세 보기</p>
+        </div>
+      )}
 
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -474,10 +548,36 @@ export default function SolutionBusinessDashboard() {
           <Upload className="w-6 h-6 text-indigo-600" />
           데이터 파일 일괄 업로드
         </h3>
-        <p className="text-sm text-slate-500 mb-6">
+        <p className="text-sm text-slate-500 mb-4">
           매출 데이터 엑셀 파일(.xlsx)을 업로드하세요.<br />
           (헤더 행에서 월 정보를 자동 감지합니다)
         </p>
+
+        {/* 업로드 타입 토글 */}
+        <div className="flex gap-2 mb-6">
+          <button
+            onClick={() => setUploadType('product')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              uploadType === 'product'
+                ? 'bg-indigo-600 text-white shadow-sm'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            }`}
+          >
+            <Package className="w-4 h-4" />
+            제품별 데이터
+          </button>
+          <button
+            onClick={() => setUploadType('division')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              uploadType === 'division'
+                ? 'bg-indigo-600 text-white shadow-sm'
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            }`}
+          >
+            <Building2 className="w-4 h-4" />
+            부문별 데이터
+          </button>
+        </div>
         <div
           className={`border-2 border-dashed border-indigo-200 rounded-xl p-8 bg-indigo-50/50 text-center transition-colors ${isUploading ? 'opacity-60 cursor-wait' : 'hover:bg-indigo-50 cursor-pointer'}`}
           onClick={() => !isUploading && fileInputRef.current?.click()}
@@ -497,7 +597,9 @@ export default function SolutionBusinessDashboard() {
           ) : (
             <>
               <FileText className="w-12 h-12 text-indigo-400 mx-auto mb-3" />
-              <p className="text-indigo-900 font-medium">클릭하여 파일 업로드</p>
+              <p className="text-indigo-900 font-medium">
+                클릭하여 {uploadType === 'division' ? '부문별' : '제품별'} 파일 업로드
+              </p>
               <p className="text-xs text-indigo-400 mt-1">.xlsx, .xls 파일 지원</p>
             </>
           )}
@@ -665,6 +767,13 @@ export default function SolutionBusinessDashboard() {
               <BarChart3 className="w-4 h-4" />
               부문별 보고서
             </button>
+            <button
+              onClick={() => navigate('/achievement')}
+              className="px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 text-slate-600 hover:bg-slate-100"
+            >
+              <Target className="w-4 h-4" />
+              달성 현황
+            </button>
 
             {/* 관리자 메뉴 */}
             {isAdmin && (
@@ -713,6 +822,16 @@ export default function SolutionBusinessDashboard() {
                       >
                         <Users className="w-4 h-4 text-blue-500" />
                         사용자 관리
+                      </button>
+                      <button
+                        onClick={() => {
+                          navigate('/admin/targets');
+                          setShowAdminMenu(false);
+                        }}
+                        className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                      >
+                        <Target className="w-4 h-4 text-amber-500" />
+                        목표 관리
                       </button>
                     </div>
                   </>
