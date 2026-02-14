@@ -95,7 +95,7 @@ export default function DivisionCharts({
       {/* Stacked Bar Chart: 기간별 부문 매출 */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
         <h3 className="text-lg font-bold text-slate-800 mb-4">기간별 부문 매출</h3>
-        <div className="h-80">
+        <div className="h-80 min-h-[320px]">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={stackedBarData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -122,7 +122,7 @@ export default function DivisionCharts({
       {/* Pie Chart: 부문별 매출 비율 */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
         <h3 className="text-lg font-bold text-slate-800 mb-4">부문별 매출 비율</h3>
-        <div className="h-80">
+        <div className="h-80 min-h-[320px]">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
@@ -149,7 +149,7 @@ export default function DivisionCharts({
       {/* 부문별 매출 & 이익 비교 */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 lg:col-span-2">
         <h3 className="text-lg font-bold text-slate-800 mb-4">부문별 매출 및 이익 비교</h3>
-        <div className="h-72">
+        <div className="h-72 min-h-[290px]">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={profitRateData}

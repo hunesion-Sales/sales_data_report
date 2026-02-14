@@ -66,7 +66,7 @@ export default function AchievementCharts({ achievements }: AchievementChartsPro
       {/* Grouped Bar Chart: 목표 vs 실적 */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
         <h3 className="text-lg font-bold text-slate-800 mb-4">부문별 목표 vs 실적</h3>
-        <div className="h-80">
+        <div className="h-80 min-h-[320px]">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={barData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -84,7 +84,7 @@ export default function AchievementCharts({ achievements }: AchievementChartsPro
       {/* Radial Bar Chart: 부문별 달성율 */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
         <h3 className="text-lg font-bold text-slate-800 mb-4">부문별 달성율</h3>
-        <div className="h-80">
+        <div className="h-80 min-h-[320px]">
           <ResponsiveContainer width="100%" height="100%">
             <RadialBarChart
               cx="50%"

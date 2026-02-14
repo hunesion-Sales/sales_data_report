@@ -11,9 +11,10 @@ import type {
 import { getDivisions } from '@/firebase/services/divisionService';
 import { getProductMasters } from '@/firebase/services/productMasterService';
 import { getTargetsByYearQuarter } from '@/firebase/services/targetService';
-import { getOrCreateReport } from '@/firebase/services/reportService';
+import { getReport } from '@/firebase/services/reportService';
 import { getProducts } from '@/firebase/services/productService';
 import { getMonthsInQuarter, getCurrentQuarter } from '@/utils/periodUtils';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface UseAchievementReturn {
   divisions: Division[];
@@ -44,6 +45,7 @@ export function useAchievement(
   userDivisionId?: string | null,
   isAdmin = false,
 ): UseAchievementReturn {
+  const { firebaseUser, authReady } = useAuth();
   const [divisions, setDivisions] = useState<Division[]>([]);
   const [targets, setTargets] = useState<QuarterlyTarget[]>([]);
   const [products, setProducts] = useState<ProductData[]>([]);
@@ -69,9 +71,15 @@ export function useAchievement(
       setTargets(targetsData);
 
       // Report products 로드
-      const { reportId } = await getOrCreateReport(year);
-      const productsData = await getProducts(reportId);
-      setProducts(productsData);
+      const reportResult = await getReport(year);
+
+      if (reportResult) {
+        const productsData = await getProducts(reportResult.reportId);
+        setProducts(productsData);
+      } else {
+        setProducts([]);
+        // 보고서가 없으면 빈 상태 유지
+      }
     } catch (err) {
       console.error('useAchievement load error:', err);
       setError('달성 현황 데이터를 불러오는데 실패했습니다.');
@@ -80,9 +88,22 @@ export function useAchievement(
     }
   }, [year, quarter]);
 
+  // 인증 완료 후에만 데이터 로드
   useEffect(() => {
+    // Auth 상태가 아직 결정되지 않았으면 대기
+    if (!authReady) {
+      return;
+    }
+
+    // 로그인하지 않은 상태면 로딩 종료
+    if (!firebaseUser) {
+      setIsLoading(false);
+      return;
+    }
+
+    // 인증 완료 후 데이터 로드
     loadData();
-  }, [loadData]);
+  }, [authReady, firebaseUser, loadData]);
 
   // 제품명 → divisionId 매핑
   const productDivisionMap = useMemo(() => {

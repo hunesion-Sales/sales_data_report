@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { auth } from '../firebase/config';
 import {
@@ -14,6 +14,8 @@ interface AuthContextType {
   user: UserProfile | null;
   firebaseUser: User | null;
   loading: boolean;
+  /** Auth 상태가 결정되었는지 (로그인/비로그인 확인 완료) */
+  authReady: boolean;
   error: string | null;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, displayName: string, divisionId?: string) => Promise<void>;
@@ -29,34 +31,58 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [firebaseUser, setFirebaseUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [authReady, setAuthReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const initDone = useRef(false);
 
-  // 앱 초기화 시 기본 부문 seed
+  // 앱 초기화 시 기본 부문 seed (한 번만 실행)
   useEffect(() => {
-    seedDefaultDivisions().catch(console.error);
+    if (initDone.current) return;
+    initDone.current = true;
+    // 인증 없이도 실행될 수 있으므로 에러 무시
+    seedDefaultDivisions().catch(() => {
+      // divisions seed 실패해도 앱은 계속 동작
+    });
   }, []);
 
-  // Firebase Auth 상태 감시
+  // Firebase Auth 상태 감시 - 안전한 패턴
   useEffect(() => {
+    let cancelled = false;
+
     const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
+      if (cancelled) return;
+
       setFirebaseUser(fbUser);
 
       if (fbUser) {
         try {
+          // 인증된 상태에서만 프로필 조회 시도
           const profile = await getUserProfile(fbUser.uid);
-          setUser(profile);
+          if (!cancelled) {
+            setUser(profile);
+          }
         } catch (err) {
-          console.error('Failed to get user profile:', err);
-          setUser(null);
+          // 프로필이 없을 수 있음 (아직 생성 전) - 이건 에러가 아님
+          console.warn('Profile not found or error:', err);
+          if (!cancelled) {
+            setUser(null);
+          }
         }
       } else {
+        // 로그아웃 상태
         setUser(null);
       }
 
-      setLoading(false);
+      if (!cancelled) {
+        setLoading(false);
+        setAuthReady(true);
+      }
     });
 
-    return () => unsubscribe();
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
   }, []);
 
   const login = useCallback(async (email: string, password: string) => {
@@ -119,6 +145,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user,
         firebaseUser,
         loading,
+        authReady,
         error,
         login,
         register,

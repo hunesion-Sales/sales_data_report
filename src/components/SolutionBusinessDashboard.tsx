@@ -92,7 +92,7 @@ const formatCurrencyWithUnit = (value: number): string => {
 // --- 컴포넌트 ---
 export default function SolutionBusinessDashboard() {
   const navigate = useNavigate();
-  const { user, logout, isAdmin } = useAuth();
+  const { user, firebaseUser, authReady, logout, isAdmin } = useAuth();
   const { overallAchievementRate } = useAchievement(user?.divisionId, isAdmin);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'input'>('dashboard');
   const [showAdminMenu, setShowAdminMenu] = useState(false);
@@ -100,7 +100,10 @@ export default function SolutionBusinessDashboard() {
     data, months, monthLabels,
     isLoading, isSaving, error: firestoreError,
     saveUploadedData, addEntry, removeEntry,
-  } = useReport(INITIAL_DATA, DEFAULT_MONTHS, DEFAULT_MONTH_LABELS);
+  } = useReport(INITIAL_DATA, DEFAULT_MONTHS, DEFAULT_MONTH_LABELS, {
+    firebaseUser,
+    authReady,
+  });
   const [notification, setNotification] = useState<Notification | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -409,11 +412,10 @@ export default function SolutionBusinessDashboard() {
             <h3 className="text-sm font-medium text-slate-500">{getQuarterLabel(getCurrentQuarter())} 달성율</h3>
             <Target className="w-5 h-5 text-indigo-500" />
           </div>
-          <div className={`text-2xl font-bold ${
-            overallAchievementRate >= 100 ? 'text-emerald-600' :
+          <div className={`text-2xl font-bold ${overallAchievementRate >= 100 ? 'text-emerald-600' :
             overallAchievementRate >= 75 ? 'text-blue-600' :
-            overallAchievementRate >= 50 ? 'text-amber-600' : 'text-red-600'
-          }`}>
+              overallAchievementRate >= 50 ? 'text-amber-600' : 'text-red-600'
+            }`}>
             {overallAchievementRate.toFixed(1)}%
           </div>
           <p className="text-xs text-slate-400 mt-1">클릭하여 상세 보기</p>
@@ -424,7 +426,7 @@ export default function SolutionBusinessDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 no-print">
         <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-slate-200">
           <h3 className="text-lg font-bold text-slate-800 mb-6">주요 제품별 매출 및 이익 현황(Top 7)</h3>
-          <div className="h-80">
+          <div className="h-80 min-h-[320px]">
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={topProducts} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -442,7 +444,7 @@ export default function SolutionBusinessDashboard() {
 
         <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
           <h3 className="text-lg font-bold text-slate-800 mb-6">월별 매출 추이</h3>
-          <div className="h-80">
+          <div className="h-80 min-h-[320px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={monthlyTrend}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -580,22 +582,20 @@ export default function SolutionBusinessDashboard() {
         <div className="flex flex-wrap gap-2 mb-4">
           <button
             onClick={() => setUploadType('product')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              uploadType === 'product'
-                ? 'bg-indigo-600 text-white shadow-sm'
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-            }`}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${uploadType === 'product'
+              ? 'bg-indigo-600 text-white shadow-sm'
+              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
           >
             <Package className="w-4 h-4" />
             제품별 데이터
           </button>
           <button
             onClick={() => setUploadType('division')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              uploadType === 'division'
-                ? 'bg-indigo-600 text-white shadow-sm'
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-            }`}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${uploadType === 'division'
+              ? 'bg-indigo-600 text-white shadow-sm'
+              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
           >
             <Building2 className="w-4 h-4" />
             부문별 데이터

@@ -12,34 +12,49 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // 사용자 문서 가져오기
+    // 사용자 문서가 존재하는지 확인
+    function userExists() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    // 사용자 문서 가져오기 (존재할 때만 호출해야 함)
     function getUserData() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
-    // 관리자 권한 확인
+    // 관리자 권한 확인 (문서 존재 여부 먼저 체크)
     function isAdmin() {
-      return isAuthenticated() && getUserData().role == 'admin';
+      return isAuthenticated() && userExists() && getUserData().role == 'admin';
+    }
+
+    // 승인된 사용자인지 확인
+    function isApproved() {
+      return isAuthenticated() && userExists() && getUserData().status == 'approved';
     }
 
     // 특정 부문에 속한 사용자인지 확인
     function belongsToDivision(divisionId) {
-      return isAuthenticated() && getUserData().divisionId == divisionId;
+      return isAuthenticated() && userExists() && getUserData().divisionId == divisionId;
     }
 
     // ========================================
     // Users Collection
     // ========================================
     match /users/{userId} {
-      // 읽기: 인증된 사용자는 모두 읽기 가능 (부문 목록 조회 등)
+      // 읽기: 본인 문서는 isAdmin() 체크 없이 허용 (순환 참조 방지)
+      // 다른 사용자 문서도 인증되면 읽기 허용 (사용자 목록 조회용)
       allow read: if isAuthenticated();
 
-      // 생성: 인증된 사용자 (회원가입 시)
+      // 생성: 인증된 사용자가 본인 uid로만 생성 가능 (회원가입/로그인 시)
+      // isAdmin() 호출하지 않음 - 신규 유저는 아직 문서가 없으므로
       allow create: if isAuthenticated() && request.auth.uid == userId;
 
-      // 수정/삭제: 본인 또는 관리자만
-      allow update, delete: if isAuthenticated() &&
+      // 수정: 본인은 무조건 허용, 관리자는 누구든 수정 가능
+      allow update: if isAuthenticated() &&
         (request.auth.uid == userId || isAdmin());
+
+      // 삭제: 관리자만 (본인 삭제 방지)
+      allow delete: if isAdmin();
     }
 
     // ========================================
@@ -56,11 +71,17 @@ service cloud.firestore {
     // ========================================
     // Products Master Collection (제품 마스터)
     // ========================================
-    match /products/{productId} {
+    match /products_master/{productId} {
       // 읽기: 인증된 모든 사용자
       allow read: if isAuthenticated();
 
       // 생성/수정/삭제: 관리자만
+      allow create, update, delete: if isAdmin();
+    }
+
+    // 기존 products 컬렉션 (하위 호환)
+    match /products/{productId} {
+      allow read: if isAuthenticated();
       allow create, update, delete: if isAdmin();
     }
 

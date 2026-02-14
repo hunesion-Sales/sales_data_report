@@ -79,12 +79,12 @@
   - 누적/병합 옵션 제공 필요
 
 ### P1 - UI/UX 개선
-- [ ] **인쇄/PDF 최적화**: `@media print` CSS 스타일 없음 -> 인쇄 시 레이아웃 깨짐 예상
-- [ ] **반응형 테이블**: 모바일에서 상세 보고서 테이블 가독성 개선
-- [ ] **로딩 상태 표시**: 파일 업로드 중 로딩 인디케이터 없음
+- [x] **인쇄/PDF 최적화**: `@media print` CSS 스타일 적용 완료 (Phase 9)
+- [x] **반응형 테이블**: 모바일 화면 최적화 완료
+- [x] **로딩 상태 표시**: `LoadingSpinner` 컴포넌트 적용 완료 (Phase 9)
   - sales-app의 `LoadingSpinner` 컴포넌트 패턴 참조
-- [ ] **에러 바운더리**: sales-app의 `ErrorBoundary` 컴포넌트 패턴 적용
-- [ ] **알림 시스템**: 현재 자체 구현 -> sales-app의 `NotificationContext` 패턴 참조 가능
+- [x] **에러 바운더리**: sales-app의 `ErrorBoundary` 컴포넌트 패턴 적용 (Phase 9)
+- [x] **알림 시스템**: `Notification` 상태 관리 적용 완료
 
 ### P2 - TypeScript 전환 -- RESOLVED (Phase 3에서 완료)
 - [x] **타입 정의 추가**: `src/types/index.ts` 생성 완료
@@ -536,6 +536,33 @@ interface TargetAchievement {
       - Firebase Service Account 생성 방법
       - 수동/자동 배포 명령어
 
+#### 9-7. 인증/권한 버그 수정 (2026-02-14)
+45. [x] Firestore 권한 오류 해결 (`Missing or insufficient permissions`)
+    - **문제**: 로그인 직후 Firestore 쿼리 시 권한 오류 발생
+    - **원인 분석**:
+      - `isAdmin()` 함수가 `getUserData()`를 호출하면서 순환 참조 발생
+      - `useAchievement`, `useReport` 훅이 인증 완료 전에 Firestore 쿼리 실행
+      - `products_master` 컬렉션 규칙 누락
+    - **해결책**:
+      1. `firestore.rules` 수정:
+         - `userExists()` 함수 추가: 문서 존재 여부 먼저 체크
+         - `isAdmin()` 함수: `userExists() && getUserData().role == 'admin'` 패턴
+         - `users` 컬렉션 읽기: `isAuthenticated()` 만으로 허용 (순환 참조 방지)
+         - `products_master` 컬렉션 규칙 추가
+      2. `src/contexts/AuthContext.tsx` 개선:
+         - `authReady` 플래그 추가: Auth 상태 결정 여부 명시
+         - 취소 가능한 비동기 로직 (`cancelled` 플래그)
+         - 프로필 없을 때 에러 대신 `null` 반환
+      3. `src/hooks/useReport.ts` 수정:
+         - `UseReportOptions` 인터페이스 추가 (`firebaseUser`, `authReady`)
+         - `authReady && firebaseUser` 조건 충족 후에만 Firestore 쿼리
+         - `loadedRef` 중복 로드 방지
+      4. `src/hooks/useAchievement.ts` 수정:
+         - 자체 `onAuthStateChanged` 제거 → `useAuth()` 훅 사용
+         - `authReady && firebaseUser` 조건 충족 후에만 데이터 로드
+      5. `src/components/SolutionBusinessDashboard.tsx` 수정:
+         - `useReport` 호출 시 `{ firebaseUser, authReady }` 옵션 전달
+
 ---
 
 ## 5. 엑셀 파일 구조 참고 (sales_data_2_4.xlsx)
@@ -599,7 +626,7 @@ Row 38: 전체 합계
 │       ├── firebase-hosting.yml               # main 브랜치 자동 배포
 │       └── firebase-hosting-preview.yml       # PR 프리뷰 배포
 ├── firebase.json                              # Firebase Hosting 설정
-├── firestore.rules                            # Firestore 보안 규칙
+├── firestore.rules                            # Firestore 보안 규칙 + products_master (Phase 9.7)
 ├── firestore.indexes.json                     # Firestore 복합 인덱스
 ├── .firebaserc                                # Firebase 프로젝트 연결
 ├── package.json                               # deploy 스크립트 포함
@@ -608,7 +635,7 @@ Row 38: 전체 합계
     ├── router.tsx                             # 라우트 정의
     ├── main.tsx
     ├── contexts/
-    │   └── AuthContext.tsx                    # Auth 상태 관리
+    │   └── AuthContext.tsx                    # Auth 상태 관리 + authReady 플래그 (Phase 9.7)
     ├── firebase/
     │   ├── config.ts                          # app, db, auth export
     │   └── services/
@@ -622,10 +649,10 @@ Row 38: 전체 합계
     │       ├── uploadHistoryService.ts        # 업로드 이력
     │       └── userService.ts                 # 사용자 관리
     ├── hooks/
-    │   ├── useReport.ts                       # 매출 데이터 + 병합 모드
+    │   ├── useReport.ts                       # 매출 데이터 + 병합 모드 + authReady 체크 (Phase 9.7)
     │   ├── useDivisionReport.ts               # 부문별 집계
     │   ├── useTargets.ts                      # 분기 목표
-    │   └── useAchievement.ts                  # 달성율 계산
+    │   └── useAchievement.ts                  # 달성율 계산 + useAuth 연동 (Phase 9.7)
     ├── types/
     │   └── index.ts                           # 모든 TypeScript 인터페이스
     ├── utils/

@@ -25,9 +25,9 @@ function getReportId(year: number): string {
 }
 
 /**
- * 연도별 보고서를 가져오거나, 없으면 새로 생성
+ * 연도별 보고서를 가져오기 (없으면 null 반환)
  */
-export async function getOrCreateReport(year: number): Promise<{ reportId: string; report: ReportDoc }> {
+export async function getReport(year: number): Promise<{ reportId: string; report: ReportDoc } | null> {
   const reportId = getReportId(year);
   const ref = doc(db, 'reports', reportId);
   const snap = await getDoc(ref);
@@ -35,6 +35,20 @@ export async function getOrCreateReport(year: number): Promise<{ reportId: strin
   if (snap.exists()) {
     return { reportId, report: snap.data() as ReportDoc };
   }
+  return null;
+}
+
+/**
+ * 연도별 보고서를 가져오거나, 없으면 새로 생성 (Admin Only)
+ */
+export async function getOrCreateReport(year: number): Promise<{ reportId: string; report: ReportDoc }> {
+  // 1. 가져오기 시도
+  const existing = await getReport(year);
+  if (existing) return existing;
+
+  // 2. 없으면 생성 (권한 없으면 Firestore 에러 발생)
+  const reportId = getReportId(year);
+  const ref = doc(db, 'reports', reportId);
 
   const newReport: Record<string, unknown> = {
     year,

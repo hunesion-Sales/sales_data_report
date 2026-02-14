@@ -1,10 +1,18 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { ProductData } from '@/types';
-import { getOrCreateReport, updateReportMonths } from '@/firebase/services/reportService';
+import { getOrCreateReport, getReport, updateReportMonths } from '@/firebase/services/reportService';
 import { getProducts, saveProducts, addProduct, deleteProduct } from '@/firebase/services/productService';
 import { recordUploadHistory } from '@/firebase/services/uploadHistoryService';
+import type { User } from 'firebase/auth';
 
 export type UploadMergeMode = 'overwrite' | 'merge';
+
+interface UseReportOptions {
+  /** Firebase Auth 사용자 (null이면 Firestore 쿼리 스킵) */
+  firebaseUser: User | null;
+  /** Auth 상태가 결정되었는지 (초기 로딩 중이면 false) */
+  authReady: boolean;
+}
 
 interface UseReportReturn {
   data: ProductData[];
@@ -86,7 +94,9 @@ export function useReport(
   initialData: ProductData[],
   initialMonths: string[],
   initialMonthLabels: Record<string, string>,
+  options: UseReportOptions,
 ): UseReportReturn {
+  const { firebaseUser, authReady } = options;
   const [data, setData] = useState<ProductData[]>(initialData);
   const [months, setMonths] = useState<string[]>(initialMonths);
   const [monthLabels, setMonthLabels] = useState<Record<string, string>>(initialMonthLabels);
@@ -94,17 +104,44 @@ export function useReport(
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const reportIdRef = useRef<string | null>(null);
+  const loadedRef = useRef(false);
 
-  // 초기 로드: Firestore에서 데이터 fetch
+  // 초기 로드: 인증 완료 후 Firestore에서 데이터 fetch
   useEffect(() => {
+    // Auth 상태가 아직 결정되지 않았으면 대기
+    if (!authReady) {
+      return;
+    }
+
+    // 이미 로드했으면 스킵
+    if (loadedRef.current) {
+      return;
+    }
+
+    // 로그인하지 않은 상태면 초기 데이터 사용
+    if (!firebaseUser) {
+      setIsLoading(false);
+      return;
+    }
+
     let cancelled = false;
+    loadedRef.current = true;
 
     async function load() {
       try {
         setIsLoading(true);
         setError(null);
 
-        const { reportId, report } = await getOrCreateReport(CURRENT_YEAR);
+        const reportResult = await getReport(CURRENT_YEAR);
+
+        if (!reportResult) {
+          // 보고서가 없으면 로컬/초기 데이터 사용
+          // (에러 아님, 첫 실행이거나 아직 데이터가 없는 상태)
+          if (!cancelled) setIsLoading(false);
+          return;
+        }
+
+        const { reportId, report } = reportResult;
         reportIdRef.current = reportId;
 
         const products = await getProducts(reportId);
@@ -130,7 +167,7 @@ export function useReport(
 
     load();
     return () => { cancelled = true; };
-  }, []);
+  }, [authReady, firebaseUser]);
 
   // 엑셀 업로드 데이터 저장 (병합 모드 지원)
   const saveUploadedData = useCallback(async (
