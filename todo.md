@@ -465,21 +465,76 @@ interface TargetAchievement {
       - 관리자 드롭다운에 "목표 관리" 메뉴 항목 추가
     - `tsc -b` 에러 0건, `vite build` 성공 (6.06s)
 
-### Phase 9: UI/UX 안정화 & 배포
+### Phase 9: UI/UX 안정화 & 배포 -- COMPLETED (2026-02-14)
 
-34. [ ] 인쇄용 CSS 강화
-    - `@media print` 스타일: 네비게이션 숨기기, 테이블 페이지 나눔, 폰트 크기 조정
-35. [ ] 에러 핸들링 강화
-    - `ErrorBoundary` 컴포넌트, Firestore 연결 실패 시 fallback UI
-36. [ ] 엑셀 업로드 병합 모드
-    - 새 파일 업로드 시 "덮어쓰기 / 병합" 선택 옵션
-37. [ ] Firestore 보안 규칙 적용
-    - `isApproved()`, `isAdmin()` 헬퍼 함수 기반 규칙 적용
-38. [ ] Firebase Hosting 배포
-    - `firebase.json`: SPA rewrite, 캐시 헤더
-    - `.firebaserc`: `hunesalesreport` 프로젝트 연결
-39. [ ] GitHub Actions CI/CD (선택)
-    - PR 시 빌드 검증, main 머지 시 자동 배포
+#### 9-1. 인쇄용 CSS 강화 (기존 Phase 9.1에서 완료)
+- [x] `@media print` 스타일: 네비게이션 숨기기, 테이블 페이지 나눔, 폰트 크기 조정
+
+#### 9-2. 에러 핸들링 강화
+40. [x] ErrorBoundary 및 Fallback UI 구현
+    - `src/components/error/ErrorBoundary.tsx`: React Error Boundary 컴포넌트
+      - 하위 컴포넌트 에러 캐치, "다시 시도" / "홈으로" 버튼, DEV 모드 상세 정보 표시
+    - `src/components/error/FirestoreErrorFallback.tsx`: Firestore 연결 실패 UI
+      - 네트워크/인증/할당량 초과 에러 유형별 안내, "다시 시도" 버튼
+    - `src/components/error/LoadingSpinner.tsx`: 공통 로딩 스피너 (sm/md/lg 사이즈)
+    - `src/components/error/index.ts`: 컴포넌트 re-export
+    - `src/App.tsx`: 최상위 `<ErrorBoundary>` 적용
+    - `src/pages/DivisionReportPage.tsx`: `FirestoreErrorFallback`, `LoadingSpinner` 적용
+    - `src/pages/AchievementPage.tsx`: `FirestoreErrorFallback`, `LoadingSpinner` 적용
+    - `src/hooks/useAchievement.ts`: `refresh()` 함수 추가
+
+#### 9-3. 엑셀 업로드 병합 모드
+41. [x] 덮어쓰기/병합 선택 옵션 구현
+    - `src/hooks/useReport.ts`:
+      - `UploadMergeMode` 타입 추가 (`'overwrite' | 'merge'`)
+      - `mergeProducts()` 함수: 기존 데이터와 새 데이터 병합 로직
+        - 같은 제품명은 월별 데이터 업데이트, 새 제품은 추가
+        - 월 정보도 자동 병합 (중복 제거 및 정렬)
+      - `saveUploadedData()`: `mergeMode` 파라미터 추가, `{ newCount, updatedCount }` 반환
+    - `src/components/SolutionBusinessDashboard.tsx`:
+      - `mergeMode` state 추가
+      - "업로드 방식" 라디오 버튼 UI (덮어쓰기/병합)
+      - 병합 시 "신규 N건, 업데이트 N건" 알림 표시
+
+#### 9-4. Firestore 보안 규칙
+42. [x] 인증 기반 접근 제어 규칙 적용
+    - `firestore.rules`: 보안 규칙 파일 생성
+      - `isAuthenticated()`: 인증 여부 확인
+      - `isAdmin()`: 관리자 권한 확인 (users/{uid}.role == 'admin')
+      - `belongsToDivision()`: 부문 소속 확인 (향후 확장용)
+      - 컬렉션별 규칙:
+        - `users`: 인증 읽기, 본인/admin만 수정 가능
+        - `divisions`, `products`: 인증 읽기, admin만 CRUD
+        - `reports`, `reports/products`, `reports/division_data`: 인증 읽기, admin만 CRUD
+        - `reports/upload_history`: 생성만 가능, 수정/삭제 불가 (감사 로그)
+        - `targets`: 인증 읽기, admin만 CRUD
+    - `firestore.indexes.json`: 복합 인덱스 설정
+      - `targets`: year+quarter, divisionId+year 인덱스
+      - `products`: order 인덱스
+
+#### 9-5. Firebase Hosting 배포 설정
+43. [x] Hosting 구성 파일 생성
+    - `firebase.json`: Hosting + Firestore 설정
+      - `public: "dist"`: Vite 빌드 출력 디렉토리
+      - SPA rewrite: 모든 경로 → `/index.html`
+      - 보안 헤더: `X-Content-Type-Options`, `X-Frame-Options`, `X-XSS-Protection`
+      - `/assets/**` 캐시: 1년 immutable
+    - `package.json` 스크립트 추가:
+      - `npm run deploy`: 빌드 후 Hosting만 배포
+      - `npm run deploy:rules`: Firestore 규칙만 배포
+      - `npm run deploy:all`: 전체 배포 (빌드 + Hosting + Rules)
+
+#### 9-6. GitHub Actions CI/CD
+44. [x] 자동 배포 워크플로우 구성
+    - `.github/workflows/firebase-hosting.yml`: main 브랜치 자동 배포
+      - Node.js 20, npm ci, npm run build, Firebase Hosting 배포
+      - GitHub Secrets: `FIREBASE_SERVICE_ACCOUNT`, `VITE_FIREBASE_*` 환경 변수
+    - `.github/workflows/firebase-hosting-preview.yml`: PR 프리뷰 배포
+      - PR 생성 시 프리뷰 URL 자동 생성 (PR 코멘트로 URL 표시)
+    - `.github/DEPLOYMENT.md`: 배포 설정 가이드
+      - GitHub Secrets 설정 방법
+      - Firebase Service Account 생성 방법
+      - 수동/자동 배포 명령어
 
 ---
 
@@ -534,66 +589,77 @@ Row 38: 전체 합계
 
 ---
 
-## 7. 전체 파일 구조 (Phase 5~8 완료 후 예상)
+## 7. 전체 파일 구조 (Phase 9 완료)
 
 ```
-src/
-├── App.tsx                                    # AuthProvider + RouterProvider
-├── router.tsx                                 # 라우트 정의
-├── main.tsx
-├── constants/
-│   └── index.ts                               # MONTH_COLORS, INITIAL_DATA 등
-├── contexts/
-│   └── AuthContext.tsx                         # Auth 상태 관리
-├── firebase/
-│   ├── config.ts                              # app, db, auth export
-│   └── services/
-│       ├── authService.ts                     # 인증 관련
-│       ├── divisionService.ts                 # 부문 CRUD
-│       ├── productMasterService.ts            # 제품 마스터 CRUD
-│       ├── productService.ts                  # 매출 데이터 CRUD (divisionId 확장)
-│       ├── reportService.ts                   # 보고서 CRUD
-│       ├── targetService.ts                   # 분기별 목표 CRUD
-│       └── uploadHistoryService.ts            # 업로드 이력
-├── hooks/
-│   ├── useAuth.ts                             # AuthContext wrapper
-│   ├── useReport.ts                           # 매출 데이터 (divisionId 필터)
-│   ├── useDivisionReport.ts                   # 부문별 집계
-│   ├── useTargets.ts                          # 분기 목표
-│   └── useAchievement.ts                      # 달성율 계산
-├── types/
-│   └── index.ts                               # 모든 TypeScript 인터페이스
-├── utils/
-│   ├── excelParser.ts                         # 엑셀 파싱
-│   ├── formatters.ts                          # 통화 포맷 유틸
-│   └── periodUtils.ts                         # 분기/반기/연간 유틸
-├── components/
-│   ├── auth/
-│   │   └── ProtectedRoute.tsx
-│   ├── layout/
-│   │   └── AppLayout.tsx                      # 공통 레이아웃 (Outlet)
-│   ├── dashboard/
-│   │   ├── DashboardView.tsx
-│   │   └── InputView.tsx
-│   ├── reports/
-│   │   ├── ReportFilterBar.tsx
-│   │   ├── DivisionSummaryTable.tsx
-│   │   └── DivisionCharts.tsx
-│   ├── targets/
-│   │   └── TargetInputTable.tsx
-│   └── achievement/
-│       ├── AchievementTable.tsx
-│       └── AchievementCharts.tsx
-└── pages/
-    ├── LoginPage.tsx
-    ├── RegisterPage.tsx
-    ├── DivisionReportPage.tsx
-    ├── AchievementPage.tsx
-    └── admin/
-        ├── DivisionManagementPage.tsx
-        ├── ProductManagementPage.tsx
-        ├── UserManagementPage.tsx
-        └── TargetInputPage.tsx
+.
+├── .github/
+│   ├── DEPLOYMENT.md                          # 배포 설정 가이드
+│   └── workflows/
+│       ├── firebase-hosting.yml               # main 브랜치 자동 배포
+│       └── firebase-hosting-preview.yml       # PR 프리뷰 배포
+├── firebase.json                              # Firebase Hosting 설정
+├── firestore.rules                            # Firestore 보안 규칙
+├── firestore.indexes.json                     # Firestore 복합 인덱스
+├── .firebaserc                                # Firebase 프로젝트 연결
+├── package.json                               # deploy 스크립트 포함
+└── src/
+    ├── App.tsx                                # ErrorBoundary + AuthProvider + RouterProvider
+    ├── router.tsx                             # 라우트 정의
+    ├── main.tsx
+    ├── contexts/
+    │   └── AuthContext.tsx                    # Auth 상태 관리
+    ├── firebase/
+    │   ├── config.ts                          # app, db, auth export
+    │   └── services/
+    │       ├── authService.ts                 # 인증 관련
+    │       ├── divisionService.ts             # 부문 CRUD
+    │       ├── divisionDataService.ts         # 부문별 데이터 CRUD
+    │       ├── productMasterService.ts        # 제품 마스터 CRUD
+    │       ├── productService.ts              # 매출 데이터 CRUD
+    │       ├── reportService.ts               # 보고서 CRUD
+    │       ├── targetService.ts               # 분기별 목표 CRUD
+    │       ├── uploadHistoryService.ts        # 업로드 이력
+    │       └── userService.ts                 # 사용자 관리
+    ├── hooks/
+    │   ├── useReport.ts                       # 매출 데이터 + 병합 모드
+    │   ├── useDivisionReport.ts               # 부문별 집계
+    │   ├── useTargets.ts                      # 분기 목표
+    │   └── useAchievement.ts                  # 달성율 계산
+    ├── types/
+    │   └── index.ts                           # 모든 TypeScript 인터페이스
+    ├── utils/
+    │   ├── excelParser.ts                     # 제품별 엑셀 파싱
+    │   ├── divisionExcelParser.ts             # 부문별 엑셀 파싱
+    │   └── periodUtils.ts                     # 분기/반기/연간 유틸
+    ├── components/
+    │   ├── auth/
+    │   │   └── ProtectedRoute.tsx
+    │   ├── error/                             # NEW (Phase 9)
+    │   │   ├── ErrorBoundary.tsx              # React Error Boundary
+    │   │   ├── FirestoreErrorFallback.tsx     # Firestore 에러 UI
+    │   │   ├── LoadingSpinner.tsx             # 로딩 스피너
+    │   │   └── index.ts
+    │   ├── reports/
+    │   │   ├── ReportFilterBar.tsx
+    │   │   ├── DivisionSummaryTable.tsx
+    │   │   └── DivisionCharts.tsx
+    │   ├── targets/
+    │   │   └── TargetInputTable.tsx
+    │   ├── achievement/
+    │   │   ├── AchievementTable.tsx
+    │   │   └── AchievementCharts.tsx
+    │   └── SolutionBusinessDashboard.tsx      # 메인 대시보드 (병합 모드 UI 포함)
+    └── pages/
+        ├── LoginPage.tsx
+        ├── RegisterPage.tsx
+        ├── DivisionReportPage.tsx
+        ├── AchievementPage.tsx
+        └── admin/
+            ├── DivisionManagementPage.tsx
+            ├── ProductManagementPage.tsx
+            ├── UserManagementPage.tsx
+            └── TargetInputPage.tsx
 ```
 
 ---

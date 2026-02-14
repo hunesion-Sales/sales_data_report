@@ -1,0 +1,28 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "targets",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "year", "order": "ASCENDING" },
+        { "fieldPath": "quarter", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "targets",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "divisionId", "order": "ASCENDING" },
+        { "fieldPath": "year", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "products",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "order", "order": "ASCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

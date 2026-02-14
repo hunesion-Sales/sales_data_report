@@ -1,7 +1,8 @@
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Target, Loader2, AlertCircle, TrendingUp, DollarSign, BarChart3 } from 'lucide-react';
+import { ArrowLeft, Target, TrendingUp, DollarSign, BarChart3 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAchievement } from '@/hooks/useAchievement';
+import { FirestoreErrorFallback, LoadingSpinner } from '@/components/error';
 import AchievementTable from '@/components/achievement/AchievementTable';
 import AchievementCharts from '@/components/achievement/AchievementCharts';
 import type { Quarter } from '@/types';
@@ -36,6 +37,7 @@ export default function AchievementPage() {
     totalTarget,
     totalActualSales,
     totalActualProfit,
+    refresh,
   } = useAchievement(user?.divisionId, isAdmin);
 
   const getOverallStatusColor = () => {
@@ -102,18 +104,16 @@ export default function AchievementPage() {
 
         {/* Loading State */}
         {isLoading && (
-          <div className="flex flex-col items-center justify-center py-20">
-            <Loader2 className="w-8 h-8 text-indigo-600 animate-spin mb-4" />
-            <p className="text-slate-500">데이터를 불러오는 중...</p>
-          </div>
+          <LoadingSpinner size="lg" message="데이터를 불러오는 중..." />
         )}
 
         {/* Error State */}
         {error && !isLoading && (
-          <div className="p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-700">
-            <AlertCircle className="w-5 h-5 flex-shrink-0" />
-            <span>{error}</span>
-          </div>
+          <FirestoreErrorFallback
+            error={error}
+            onRetry={refresh}
+            title="달성 현황을 불러올 수 없습니다"
+          />
         )}
 
         {/* Content */}

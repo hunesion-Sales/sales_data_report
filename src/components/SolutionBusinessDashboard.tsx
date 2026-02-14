@@ -4,7 +4,7 @@ import { parseExcelFile } from '@/utils/excelParser';
 import { parseDivisionExcelFile } from '@/utils/divisionExcelParser';
 import type { ProductData, ProcessedProduct, Totals, Notification, Division } from '@/types';
 import { getMonthShortLabel, getMonthFullLabel } from '@/types';
-import { useReport } from '@/hooks/useReport';
+import { useReport, type UploadMergeMode } from '@/hooks/useReport';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   ComposedChart, Line
@@ -12,7 +12,8 @@ import {
 import {
   LayoutDashboard, Table as TableIcon, Plus, Save, TrendingUp,
   DollarSign, Calendar, Printer, Upload, FileText, X, Cloud, CloudOff, Loader2,
-  LogOut, User, Settings, Building2, Package, Users, ChevronDown, BarChart3, Target
+  LogOut, User, Settings, Building2, Package, Users, ChevronDown, BarChart3, Target,
+  RefreshCcw, GitMerge
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAchievement } from '@/hooks/useAchievement';
@@ -104,6 +105,7 @@ export default function SolutionBusinessDashboard() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadType, setUploadType] = useState<'product' | 'division'>('product');
+  const [mergeMode, setMergeMode] = useState<UploadMergeMode>('overwrite');
 
   const handleLogout = async () => {
     try {
@@ -323,14 +325,27 @@ export default function SolutionBusinessDashboard() {
           `${items.length}개 부문 데이터가 업로드되었습니다 (${matchedCount}개 매칭, ${unmatchedCount}개 미매칭)`
         );
       } else {
-        // 제품별 엑셀 파싱 (기존 로직)
+        // 제품별 엑셀 파싱 (병합 모드 지원)
         const result = await parseExcelFile(buffer);
-        await saveUploadedData(result.data, result.months, result.monthLabels, file.name);
+        const { newCount, updatedCount } = await saveUploadedData(
+          result.data,
+          result.months,
+          result.monthLabels,
+          file.name,
+          mergeMode,
+        );
 
         const monthInfo = result.months.length > 0
           ? ` (${result.months.map(m => getMonthShortLabel(m)).join(', ')})`
           : '';
-        showNotification(`${result.data.length}건의 데이터를 불러왔습니다.${monthInfo}`);
+
+        if (mergeMode === 'merge') {
+          showNotification(
+            `데이터가 병합되었습니다: 신규 ${newCount}건, 업데이트 ${updatedCount}건${monthInfo}`
+          );
+        } else {
+          showNotification(`${result.data.length}건의 데이터를 불러왔습니다.${monthInfo}`);
+        }
         setActiveTab('dashboard');
       }
     } catch (error) {
@@ -341,7 +356,7 @@ export default function SolutionBusinessDashboard() {
       setIsUploading(false);
     }
     e.target.value = '';
-  }, [saveUploadedData, uploadType]);
+  }, [saveUploadedData, uploadType, mergeMode]);
 
   // --- 대시보드 뷰 ---
   const DashboardView = () => (
@@ -562,7 +577,7 @@ export default function SolutionBusinessDashboard() {
         </p>
 
         {/* 업로드 타입 토글 */}
-        <div className="flex gap-2 mb-6">
+        <div className="flex flex-wrap gap-2 mb-4">
           <button
             onClick={() => setUploadType('product')}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
@@ -586,6 +601,43 @@ export default function SolutionBusinessDashboard() {
             부문별 데이터
           </button>
         </div>
+
+        {/* 병합 모드 (제품별 데이터에서만 표시) */}
+        {uploadType === 'product' && (
+          <div className="mb-6 p-4 bg-slate-50 rounded-lg border border-slate-200">
+            <p className="text-sm font-medium text-slate-700 mb-3">업로드 방식</p>
+            <div className="flex gap-3">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="mergeMode"
+                  checked={mergeMode === 'overwrite'}
+                  onChange={() => setMergeMode('overwrite')}
+                  className="w-4 h-4 text-indigo-600 focus:ring-indigo-500"
+                />
+                <RefreshCcw className="w-4 h-4 text-slate-500" />
+                <div>
+                  <span className="text-sm font-medium text-slate-700">덮어쓰기</span>
+                  <p className="text-xs text-slate-500">기존 데이터를 새 데이터로 대체</p>
+                </div>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="mergeMode"
+                  checked={mergeMode === 'merge'}
+                  onChange={() => setMergeMode('merge')}
+                  className="w-4 h-4 text-indigo-600 focus:ring-indigo-500"
+                />
+                <GitMerge className="w-4 h-4 text-slate-500" />
+                <div>
+                  <span className="text-sm font-medium text-slate-700">병합</span>
+                  <p className="text-xs text-slate-500">기존 데이터와 합치기 (같은 제품은 업데이트)</p>
+                </div>
+              </label>
+            </div>
+          </div>
+        )}
         <div
           className={`border-2 border-dashed border-indigo-200 rounded-xl p-8 bg-indigo-50/50 text-center transition-colors ${isUploading ? 'opacity-60 cursor-wait' : 'hover:bg-indigo-50 cursor-pointer'}`}
           onClick={() => !isUploading && fileInputRef.current?.click()}

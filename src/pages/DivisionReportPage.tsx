@@ -1,7 +1,8 @@
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, BarChart3, Loader2, AlertCircle } from 'lucide-react';
+import { ArrowLeft, BarChart3 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDivisionReport } from '@/hooks/useDivisionReport';
+import { FirestoreErrorFallback, LoadingSpinner } from '@/components/error';
 import ReportFilterBar from '@/components/reports/ReportFilterBar';
 import DivisionSummaryTable from '@/components/reports/DivisionSummaryTable';
 import DivisionCharts from '@/components/reports/DivisionCharts';
@@ -57,18 +58,16 @@ export default function DivisionReportPage() {
 
         {/* Loading State */}
         {isLoading && (
-          <div className="flex flex-col items-center justify-center py-20">
-            <Loader2 className="w-8 h-8 text-indigo-600 animate-spin mb-4" />
-            <p className="text-slate-500">데이터를 불러오는 중...</p>
-          </div>
+          <LoadingSpinner size="lg" message="데이터를 불러오는 중..." />
         )}
 
         {/* Error State */}
         {error && !isLoading && (
-          <div className="p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-700">
-            <AlertCircle className="w-5 h-5 flex-shrink-0" />
-            <span>{error}</span>
-          </div>
+          <FirestoreErrorFallback
+            error={error}
+            onRetry={refresh}
+            title="데이터를 불러올 수 없습니다"
+          />
         )}
 
         {/* Content */}

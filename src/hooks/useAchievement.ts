@@ -28,6 +28,7 @@ interface UseAchievementReturn {
   totalTarget: number;
   totalActualSales: number;
   totalActualProfit: number;
+  refresh: () => Promise<void>;
 }
 
 const CURRENT_YEAR = new Date().getFullYear();
@@ -183,5 +184,6 @@ export function useAchievement(
     totalTarget,
     totalActualSales,
     totalActualProfit,
+    refresh: loadData,
   };
 }
