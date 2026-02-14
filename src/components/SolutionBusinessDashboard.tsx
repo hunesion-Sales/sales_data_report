@@ -405,8 +405,8 @@ export default function SolutionBusinessDashboard() {
         </div>
       )}
 
-      {/* Charts Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Charts Section - 인쇄 시 숨김 */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 no-print">
         <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-slate-200">
           <h3 className="text-lg font-bold text-slate-800 mb-6">주요 제품별 매출 및 이익 현황(Top 7)</h3>
           <div className="h-80">
@@ -441,11 +441,19 @@ export default function SolutionBusinessDashboard() {
         </div>
       </div>
 
+      {/* 인쇄용 헤더 - 화면에서는 숨김 */}
+      <div className="hidden print:block mb-4">
+        <h1 className="text-xl font-bold text-center">Hunesion Solution 사업본부 매출 현황</h1>
+        <p className="text-sm text-center text-slate-600 mt-1">
+          {monthRangeText} 실적 보고서 | 출력일: {new Date().toLocaleDateString('ko-KR')}
+        </p>
+      </div>
+
       {/* Detailed Report Table */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden print-avoid-break">
         <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
           <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-            <TableIcon className="w-5 h-5 text-slate-500" />
+            <TableIcon className="w-5 h-5 text-slate-500 no-print" />
             상세 실적 보고서
           </h3>
           <div className="flex items-center gap-4">

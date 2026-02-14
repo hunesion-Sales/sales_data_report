@@ -5,18 +5,119 @@
 @tailwind utilities;
 
 @media print {
-  header, footer, button, .no-print {
+  /* 네비게이션, 버튼, 인터랙티브 요소 숨기기 */
+  header, footer, button, .no-print, nav {
     display: none !important;
   }
+
+  /* 기본 인쇄 스타일 */
   body {
     font-size: 10pt;
     color: #000;
     background: #fff;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
+
+  /* 페이지 여백 설정 */
+  @page {
+    size: A4 landscape;
+    margin: 10mm 8mm;
+  }
+
+  /* 컨테이너 최대 너비 제거 */
+  .max-w-7xl, .max-w-4xl {
+    max-width: 100% !important;
+    padding: 0 !important;
+  }
+
+  /* 테이블 인쇄 최적화 */
+  table {
+    font-size: 8pt;
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  table th, table td {
+    padding: 4px 6px !important;
+    border: 1px solid #ddd !important;
+  }
+
+  /* 테이블 헤더 페이지마다 반복 */
+  thead {
+    display: table-header-group;
+  }
+
+  /* 테이블 본문 행 페이지 나눔 방지 */
+  tbody tr {
+    page-break-inside: avoid;
+  }
+
+  /* 페이지 나눔 제어 */
   .print-break {
     page-break-after: always;
   }
-  table {
-    font-size: 9pt;
+
+  .print-break-before {
+    page-break-before: always;
+  }
+
+  .print-avoid-break {
+    page-break-inside: avoid;
+  }
+
+  /* 차트/그래프 영역 - 인쇄 시 숨기기 (선택적) */
+  .recharts-wrapper {
+    page-break-inside: avoid;
+  }
+
+  /* KPI 카드 그리드 인쇄 최적화 */
+  .grid {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+  }
+
+  .grid > div {
+    flex: 1 1 22% !important;
+    min-width: 150px !important;
+    padding: 8px !important;
+    border: 1px solid #e2e8f0 !important;
+  }
+
+  /* 그림자 제거 */
+  .shadow, .shadow-sm, .shadow-md, .shadow-lg {
+    box-shadow: none !important;
+  }
+
+  /* 둥근 모서리 줄이기 */
+  .rounded-xl, .rounded-lg {
+    border-radius: 4px !important;
+  }
+
+  /* 링크 색상 */
+  a {
+    color: #000 !important;
+    text-decoration: none !important;
+  }
+
+  /* 배경색 보존 (테이블 헤더 등) */
+  .bg-slate-800, .bg-slate-900 {
+    background-color: #1e293b !important;
+    color: #fff !important;
+  }
+
+  .bg-slate-100, .bg-slate-50 {
+    background-color: #f8fafc !important;
+  }
+
+  /* 인쇄 전용 표시 요소 */
+  .print-only {
+    display: block !important;
+  }
+
+  /* 화면에서만 표시되는 요소 */
+  .screen-only {
+    display: none !important;
   }
 }
