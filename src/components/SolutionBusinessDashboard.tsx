@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useRef, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { parseExcelFile } from '@/utils/excelParser';
 import type { ProductData, ProcessedProduct, Totals, Notification } from '@/types';
 import { getMonthShortLabel, getMonthFullLabel } from '@/types';
@@ -10,7 +11,7 @@ import {
 import {
   LayoutDashboard, Table as TableIcon, Plus, Save, TrendingUp,
   DollarSign, Calendar, Printer, Upload, FileText, X, Cloud, CloudOff, Loader2,
-  LogOut, User
+  LogOut, User, Settings, Building2, Package, Users, ChevronDown
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -84,8 +85,10 @@ const formatCurrencyWithUnit = (value: number): string => {
 
 // --- 컴포넌트 ---
 export default function SolutionBusinessDashboard() {
+  const navigate = useNavigate();
   const { user, logout, isAdmin } = useAuth();
   const [activeTab, setActiveTab] = useState<'dashboard' | 'input'>('dashboard');
+  const [showAdminMenu, setShowAdminMenu] = useState(false);
   const {
     data, months, monthLabels,
     isLoading, isSaving, error: firestoreError,
@@ -655,6 +658,60 @@ export default function SolutionBusinessDashboard() {
               <Plus className="w-4 h-4" />
               데이터 입력
             </button>
+
+            {/* 관리자 메뉴 */}
+            {isAdmin && (
+              <div className="relative">
+                <button
+                  onClick={() => setShowAdminMenu(!showAdminMenu)}
+                  className="px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 text-slate-600 hover:bg-slate-100"
+                >
+                  <Settings className="w-4 h-4" />
+                  관리
+                  <ChevronDown className={`w-3 h-3 transition-transform ${showAdminMenu ? 'rotate-180' : ''}`} />
+                </button>
+                {showAdminMenu && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-10"
+                      onClick={() => setShowAdminMenu(false)}
+                    />
+                    <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-lg shadow-lg border border-slate-200 py-1 z-20">
+                      <button
+                        onClick={() => {
+                          navigate('/admin/divisions');
+                          setShowAdminMenu(false);
+                        }}
+                        className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                      >
+                        <Building2 className="w-4 h-4 text-indigo-500" />
+                        영업부문 관리
+                      </button>
+                      <button
+                        onClick={() => {
+                          navigate('/admin/products');
+                          setShowAdminMenu(false);
+                        }}
+                        className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                      >
+                        <Package className="w-4 h-4 text-emerald-500" />
+                        제품 마스터 관리
+                      </button>
+                      <button
+                        onClick={() => {
+                          navigate('/admin/users');
+                          setShowAdminMenu(false);
+                        }}
+                        className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                      >
+                        <Users className="w-4 h-4 text-blue-500" />
+                        사용자 관리
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
 
             {/* 사용자 정보 및 로그아웃 */}
             <div className="flex items-center gap-2 ml-4 pl-4 border-l border-slate-200">

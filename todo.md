@@ -317,7 +317,7 @@ divisions/{divisionId}
     - `src/types/index.ts`: `UserProfile`, `Division`, `UserRole`, `UserStatus`, `AuthState` 타입 추가
     - `src/firebase/services/uploadHistoryService.ts`: `uploadedBy`에 실제 uid 전달 (Phase 6에서 완료 예정)
 
-### Phase 6: 영업부문 & 제품 마스터 관리 (CRUD)
+### Phase 6: 영업부문 & 제품 마스터 관리 (CRUD) -- COMPLETED (2026-02-14)
 
 > **목표**: 영업부문/제품 마스터 데이터 관리, 사용자 관리 페이지, 기존 데이터 부문 배정
 
@@ -339,21 +339,19 @@ reports/{reportId}/products/{productId}  (기존 확장)
 
 #### 6-2. 작업 항목
 
-23. [ ] 제품 마스터 서비스 구현
+23. [x] 제품 마스터 서비스 구현
     - `src/firebase/services/productMasterService.ts`: 제품 마스터 CRUD, 부문별 필터
-24. [ ] 관리자 페이지 구현
-    - `src/pages/admin/DivisionManagementPage.tsx`: 부문 목록/추가/수정/삭제 (삭제 시 소속 제품 체크)
-    - `src/pages/admin/ProductManagementPage.tsx`: 제품 목록, 부문 배정, 유지보수 타입 토글
-    - `src/pages/admin/UserManagementPage.tsx`: 사용자 승인/거절, 역할 변경
-25. [ ] 기존 데이터 모델 확장
-    - `ProductData` 타입에 `divisionId?`, `productMasterId?` 추가
-    - `productService.ts`: `saveProducts()`, `addProduct()`에 divisionId 포함
-    - `getProducts()`에 divisionId 필터 옵션 추가
-26. [ ] 마이그레이션 지원
-    - divisionId 없는 기존 제품 → "미분류" 표시
-    - 관리자가 제품 관리 페이지에서 부문 배정
-    - 기존 `_MA` suffix → `isMaintenanceType: true` 매핑
-    - 엑셀 업로드 시 제품 마스터 매칭하여 divisionId 자동 배정
+    - `src/firebase/services/userService.ts`: 사용자 목록 조회 (상태별, 부문별 필터)
+24. [x] 관리자 페이지 구현
+    - `src/pages/admin/DivisionManagementPage.tsx`: 부문 목록/추가/수정/삭제 (삭제 시 소속 제품/사용자 체크)
+    - `src/pages/admin/ProductManagementPage.tsx`: 제품 목록, 부문 배정, 유지보수 타입 토글, 필터링
+    - `src/pages/admin/UserManagementPage.tsx`: 사용자 승인/거절, 역할 변경, 부문 배정
+25. [x] 라우팅 및 네비게이션 업데이트
+    - `src/router.tsx`: `/admin/divisions`, `/admin/products`, `/admin/users` 라우트 추가
+    - `SolutionBusinessDashboard.tsx`: 관리자용 드롭다운 메뉴 추가 (Settings 아이콘)
+26. [x] 타입 확장
+    - `src/types/index.ts`: `ProductMaster`, `ProductMasterInput`, `ProductDataExtended` 타입 추가
+    - 빌드 테스트 통과 (6.65s, JS 699KB + charts 380KB + excel 937KB)
 
 ### Phase 7: 부문별 보고 & 기간별 집계
 

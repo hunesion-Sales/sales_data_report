@@ -3,6 +3,9 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import SolutionBusinessDashboard from './components/SolutionBusinessDashboard';
+import DivisionManagementPage from './pages/admin/DivisionManagementPage';
+import ProductManagementPage from './pages/admin/ProductManagementPage';
+import UserManagementPage from './pages/admin/UserManagementPage';
 
 export const router = createBrowserRouter([
   {
@@ -21,21 +24,28 @@ export const router = createBrowserRouter([
       </ProtectedRoute>
     ),
   },
-  // TODO: Phase 6+ 추가 라우트
-  // {
-  //   path: '/admin/divisions',
-  //   element: (
-  //     <ProtectedRoute adminOnly>
-  //       <DivisionManagementPage />
-  //     </ProtectedRoute>
-  //   ),
-  // },
-  // {
-  //   path: '/admin/users',
-  //   element: (
-  //     <ProtectedRoute adminOnly>
-  //       <UserManagementPage />
-  //     </ProtectedRoute>
-  //   ),
-  // },
+  {
+    path: '/admin/divisions',
+    element: (
+      <ProtectedRoute adminOnly>
+        <DivisionManagementPage />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/admin/products',
+    element: (
+      <ProtectedRoute adminOnly>
+        <ProductManagementPage />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/admin/users',
+    element: (
+      <ProtectedRoute adminOnly>
+        <UserManagementPage />
+      </ProtectedRoute>
+    ),
+  },
 ]);
