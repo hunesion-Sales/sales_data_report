@@ -65,15 +65,15 @@
 ## 3. 발견된 문제점 (Major)
 
 ### P1 - 기능 개선 필요
-- [ ] **월 데이터 하드코딩**: 현재 1월/2월만 지원 -> 주간/월간 데이터 동적 추가 구조로 변경 필요
-  - 매주 엑셀 업로드 시 새 월(3월, 4월...) 컬럼이 자동으로 추가되어야 함
-  - 엑셀 헤더 행(row 14)에서 "1월 2026", "2월 2026" 등 월 정보 자동 감지
-  - 테이블 헤더, KPI 카드, 차트 모두 동적 월 지원 필요
+- [x] **월 데이터 하드코딩**: ~~현재 1월/2월만 지원~~ -> **동적 월 구조로 전환 완료 (Phase 3)**
+  - `months: Record<string, MonthData>` 구조로 전환, 월 키: `"2026-01"`, `"2026-02"`, ...
+  - 엑셀 업로드 시 새 월(3월, 4월...) 컬럼이 자동으로 추가됨
+  - 테이블 헤더, KPI 카드, 차트, 입력폼 모두 동적 월 지원 완료
 - [ ] **데이터 영속성 없음**: 페이지 새로고침 시 데이터 초기화됨
   - 1단계: `localStorage` 기반 저장/로드 (간단, 즉시 적용 가능)
   - 2단계(선택): Firebase Firestore 연동 시 sales-app의 baseService 패턴 참조
-- [ ] **엑셀 업로드 시 컬럼 매핑 취약**: `columns[1]`, `columns[4]` 등 인덱스 하드코딩
-  - 엑셀 헤더(제품군, 매출액 합계, 매입액 합계 등) 기반 동적 매핑 필요
+- [x] **엑셀 업로드 시 컬럼 매핑 취약**: ~~`columns[1]`, `columns[4]` 등 인덱스 하드코딩~~
+  - **월 헤더 기반 동적 매핑으로 전환 완료** (`parseMonthLabel()` 함수로 "1월 2026" -> "2026-01" 변환)
 - [ ] **엑셀 업로드 시 기존 데이터 덮어쓰기**: 새 파일 업로드 시 기존 데이터를 완전 교체함
   - 누적/병합 옵션 제공 필요
 
@@ -85,11 +85,15 @@
 - [ ] **에러 바운더리**: sales-app의 `ErrorBoundary` 컴포넌트 패턴 적용
 - [ ] **알림 시스템**: 현재 자체 구현 -> sales-app의 `NotificationContext` 패턴 참조 가능
 
-### P2 - TypeScript 전환
-- [ ] **타입 정의 추가**: sales-app의 `src/types/index.ts` 패턴 참조
-  - `SalesProduct` 인터페이스 정의 (product, monthlySales, monthlyCost 등)
-  - `ProcessedProduct` 인터페이스 (이익 계산 후)
-  - `MonthlyData` 타입 (동적 월 지원용)
+### P2 - TypeScript 전환 -- RESOLVED (Phase 3에서 완료)
+- [x] **타입 정의 추가**: `src/types/index.ts` 생성 완료
+  - `MonthData` 인터페이스 (sales, cost)
+  - `ProductData` 인터페이스 (id, product, months: Record<string, MonthData>)
+  - `MonthProcessed` 인터페이스 (profit 포함)
+  - `ProcessedProduct` 인터페이스 (월별 가공 + totalSales/totalCost/totalProfit)
+  - `Totals` 인터페이스 (byMonth + 전체 합계)
+  - `ParseResult` 인터페이스 (data, months, monthLabels)
+  - `getMonthShortLabel()`, `getMonthFullLabel()` 유틸 함수
 - [ ] **Zod 스키마 추가** (선택): 엑셀 파싱 데이터 검증용
 
 ---
@@ -132,18 +136,22 @@
 9. [x] Vite 빌드 최적화: exceljs 별도 chunk 분리 (Phase 1에서 설정 완료)
    - 빌드 결과: `vendor-excel` 937KB (gzip 269KB) 별도 분리 확인
 
-### Phase 3: 동적 월 지원 & 데이터 구조 개선
-10. [ ] `src/types/index.ts` 생성: 타입 정의
-    ```ts
-    interface MonthData { sales: number; cost: number; }
-    interface ProductRecord {
-      id: number;
-      product: string;
-      months: Record<string, MonthData>; // key: "2026-01", "2026-02", ...
-    }
-    ```
-11. [ ] 엑셀 헤더에서 월 자동 감지 (예: "1월 2026" -> "2026-01")
-12. [ ] 테이블/차트/KPI 컴포넌트를 동적 월 기반으로 수정
+### Phase 3: 동적 월 지원 & 데이터 구조 개선 -- COMPLETED (2026-02-14)
+10. [x] `src/types/index.ts` 생성: 동적 월 타입 정의
+    - `MonthData`, `ProductData`, `ProcessedProduct`, `Totals`, `ParseResult` 등 타입 정의
+    - `getMonthShortLabel("2026-01")` -> `"1월"`, `getMonthFullLabel("2026-01")` -> `"2026년 1월"` 유틸
+11. [x] 엑셀 헤더에서 월 자동 감지 및 동적 매핑
+    - `parseMonthLabel()`: "1월 2026" -> `{ key: "2026-01", display: "1월 2026" }`
+    - `excelParser.ts` 반환 타입: `{ data: ProductData[], months: string[], monthLabels: Record<string, string> }`
+    - 하드코딩된 `janSales/febSales` 구조 제거 -> `months: Record<string, MonthData>` 전환
+12. [x] 테이블/차트/KPI/입력폼 동적 월 기반으로 전면 수정
+    - KPI 카드: 누적 합계 + 최근 2개월 매출 동적 표시
+    - 상세 보고서 테이블: `months.map()` 기반 동적 컬럼 생성, 12색 팔레트 자동 배분
+    - 월별 매출 추이 차트: `monthlyTrend` 동적 생성
+    - 개별 입력 폼: 월 수에 따라 입력 필드 자동 생성
+    - 데이터 목록: 월별 매출 컬럼 동적 표시
+    - INITIAL_DATA 22건 동적 월 구조로 마이그레이션 완료
+    - `tsc -b` 컴파일 에러 0건, `vite build` 성공 (7.26s)
 
 ### Phase 4: 데이터 영속성 & 안정화
 13. [ ] `localStorage` 기반 데이터 저장/로드 구현
