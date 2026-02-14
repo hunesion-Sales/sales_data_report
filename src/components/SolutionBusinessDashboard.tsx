@@ -2,13 +2,14 @@ import React, { useState, useMemo, useRef, useCallback } from 'react';
 import { parseExcelFile } from '@/utils/excelParser';
 import type { ProductData, ProcessedProduct, Totals, Notification } from '@/types';
 import { getMonthShortLabel, getMonthFullLabel } from '@/types';
+import { useReport } from '@/hooks/useReport';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   ComposedChart, Line
 } from 'recharts';
 import {
   LayoutDashboard, Table as TableIcon, Plus, Save, TrendingUp,
-  DollarSign, Calendar, Printer, Upload, FileText, X
+  DollarSign, Calendar, Printer, Upload, FileText, X, Cloud, CloudOff, Loader2
 } from 'lucide-react';
 
 // --- 초기 데이터 (동적 월 구조) ---
@@ -82,9 +83,11 @@ const formatCurrencyWithUnit = (value: number): string => {
 // --- 컴포넌트 ---
 export default function SolutionBusinessDashboard() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'input'>('dashboard');
-  const [data, setData] = useState<ProductData[]>(INITIAL_DATA);
-  const [months, setMonths] = useState<string[]>(DEFAULT_MONTHS);
-  const [monthLabels, setMonthLabels] = useState<Record<string, string>>(DEFAULT_MONTH_LABELS);
+  const {
+    data, months, monthLabels,
+    isLoading, isSaving, error: firestoreError,
+    saveUploadedData, addEntry, removeEntry,
+  } = useReport(INITIAL_DATA, DEFAULT_MONTHS, DEFAULT_MONTH_LABELS);
   const [notification, setNotification] = useState<Notification | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -201,9 +204,9 @@ export default function SolutionBusinessDashboard() {
   }, [months]);
 
   // --- 핸들러 ---
-  const handleAddEntry = () => {
-    const emptyMonths: Record<string, { sales: number; cost: number }> = {};
-    months.forEach(mk => { emptyMonths[mk] = { sales: 0, cost: 0 }; });
+  const handleAddEntry = async () => {
+    const entryMonths: Record<string, { sales: number; cost: number }> = {};
+    months.forEach(mk => { entryMonths[mk] = { sales: 0, cost: 0 }; });
 
     const product = (document.getElementById('new-product') as HTMLInputElement)?.value?.trim();
     if (!product) return showNotification('제품명을 입력해주세요.', 'error');
@@ -212,13 +215,13 @@ export default function SolutionBusinessDashboard() {
     months.forEach(mk => {
       const salesInput = document.getElementById(`new-sales-${mk}`) as HTMLInputElement;
       const costInput = document.getElementById(`new-cost-${mk}`) as HTMLInputElement;
-      emptyMonths[mk] = {
+      entryMonths[mk] = {
         sales: Number(salesInput?.value) || 0,
         cost: Number(costInput?.value) || 0,
       };
     });
 
-    setData(prev => [...prev, { id: Date.now(), product, months: emptyMonths }]);
+    await addEntry({ id: Date.now(), product, months: entryMonths });
     showNotification('데이터가 성공적으로 추가되었습니다.');
 
     // 폼 리셋
@@ -232,9 +235,9 @@ export default function SolutionBusinessDashboard() {
     });
   };
 
-  const handleDelete = (id: number | string) => {
+  const handleDelete = async (id: number | string) => {
     if (window.confirm('삭제하시겠습니까?')) {
-      setData(data.filter(item => item.id !== id));
+      await removeEntry(id);
       showNotification('데이터가 삭제되었습니다.', 'error');
     }
   };
@@ -251,9 +254,10 @@ export default function SolutionBusinessDashboard() {
       try {
         const buffer = await file.arrayBuffer();
         const result = await parseExcelFile(buffer);
-        setData(result.data);
-        setMonths(result.months);
-        setMonthLabels(result.monthLabels);
+
+        // Firestore에 저장 (UI도 즉시 반영)
+        await saveUploadedData(result.data, result.months, result.monthLabels, file.name);
+
         const monthInfo = result.months.length > 0
           ? ` (${result.months.map(m => getMonthShortLabel(m)).join(', ')})`
           : '';
@@ -270,7 +274,7 @@ export default function SolutionBusinessDashboard() {
       showNotification('지원하지 않는 파일 형식입니다. .xlsx 파일을 업로드해주세요.', 'error');
     }
     e.target.value = '';
-  }, []);
+  }, [saveUploadedData]);
 
   // --- 대시보드 뷰 ---
   const DashboardView = () => (
@@ -607,7 +611,25 @@ export default function SolutionBusinessDashboard() {
             </div>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex items-center gap-3">
+            {/* Firestore 동기화 상태 */}
+            {isSaving ? (
+              <span className="flex items-center gap-1 text-xs text-amber-600">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                저장 중...
+              </span>
+            ) : firestoreError ? (
+              <span className="flex items-center gap-1 text-xs text-red-500" title={firestoreError}>
+                <CloudOff className="w-3.5 h-3.5" />
+                오프라인
+              </span>
+            ) : !isLoading ? (
+              <span className="flex items-center gap-1 text-xs text-green-600">
+                <Cloud className="w-3.5 h-3.5" />
+                동기화됨
+              </span>
+            ) : null}
+
             <button
               onClick={() => setActiveTab('dashboard')}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${activeTab === 'dashboard' ? 'bg-slate-800 text-white' : 'text-slate-600 hover:bg-slate-100'}`}
@@ -628,7 +650,14 @@ export default function SolutionBusinessDashboard() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {activeTab === 'dashboard' ? <DashboardView /> : <InputView />}
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center py-20 animate-fade-in">
+            <div className="w-12 h-12 border-4 border-slate-200 border-t-blue-600 rounded-full animate-spin mb-4" />
+            <p className="text-slate-500 font-medium">데이터를 불러오는 중...</p>
+          </div>
+        ) : (
+          activeTab === 'dashboard' ? <DashboardView /> : <InputView />
+        )}
       </main>
 
       {/* Footer */}
