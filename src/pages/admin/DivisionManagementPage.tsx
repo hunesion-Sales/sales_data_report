@@ -16,6 +16,7 @@ import {
   createDivision,
   updateDivision,
   deleteDivision,
+  resetToDefaultDivisions,
 } from '@/firebase/services/divisionService';
 import { getProductMastersByDivision } from '@/firebase/services/productMasterService';
 import { getUsersByDivision } from '@/firebase/services/userService';
@@ -138,6 +139,24 @@ export default function DivisionManagementPage() {
     setDeleteCheck(null);
   };
 
+  const handleInitialize = async () => {
+    if (!window.confirm('모든 영업부문 데이터가 초기화됩니다. 계속하시겠습니까?\n(주의: 기존 설정된 부문 정보가 삭제되고 기본값으로 복원됩니다.)')) {
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      await resetToDefaultDivisions();
+      await loadDivisions();
+      alert('영업부문이 초기화되었습니다.');
+    } catch (err) {
+      setError('초기화에 실패했습니다.');
+      console.error(err);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
@@ -185,15 +204,24 @@ export default function DivisionManagementPage() {
           {/* 추가 버튼 */}
           <div className="p-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
             <span className="text-sm text-slate-500">총 {divisions.length}개 부문</span>
-            {!isAdding && (
+            <div className="flex gap-2">
               <button
-                onClick={() => setIsAdding(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors"
+                onClick={handleInitialize}
+                disabled={isSaving}
+                className="px-4 py-2 text-slate-600 bg-white border border-slate-300 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors"
               >
-                <Plus className="w-4 h-4" />
-                부문 추가
+                초기화
               </button>
-            )}
+              {!isAdding && (
+                <button
+                  onClick={() => setIsAdding(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                  부문 추가
+                </button>
+              )}
+            </div>
           </div>
 
           {/* 추가 폼 */}

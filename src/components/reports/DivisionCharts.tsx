@@ -7,12 +7,12 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
-  ResponsiveContainer,
   PieChart,
   Pie,
   Cell,
 } from 'recharts';
 import type { DivisionSummary, PeriodInfo } from '@/types';
+import { ChartWrapper } from '@/components/charts';
 
 interface DivisionChartsProps {
   summaries: DivisionSummary[];
@@ -93,88 +93,73 @@ export default function DivisionCharts({
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {/* Stacked Bar Chart: 기간별 부문 매출 */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-        <h3 className="text-lg font-bold text-slate-800 mb-4">기간별 부문 매출</h3>
-        <div className="h-80 min-h-[320px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={stackedBarData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-              <YAxis tickFormatter={formatCurrencyShort} tick={{ fontSize: 11 }} />
-              <Tooltip
-                formatter={(value) => formatCurrency(Number(value))}
-                labelStyle={{ fontWeight: 'bold' }}
-              />
-              <Legend wrapperStyle={{ fontSize: 12 }} />
-              {summaries.map((summary, idx) => (
-                <Bar
-                  key={summary.divisionId}
-                  dataKey={summary.divisionName}
-                  stackId="a"
-                  fill={COLORS[idx % COLORS.length]}
-                />
-              ))}
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
+      <ChartWrapper title="기간별 부문 매출" height={320}>
+        <BarChart data={stackedBarData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+          <CartesianGrid strokeDasharray="3 3" vertical={false} />
+          <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+          <YAxis tickFormatter={formatCurrencyShort} tick={{ fontSize: 11 }} />
+          <Tooltip
+            formatter={(value) => formatCurrency(Number(value))}
+            labelStyle={{ fontWeight: 'bold' }}
+          />
+          <Legend wrapperStyle={{ fontSize: 12 }} />
+          {summaries.map((summary, idx) => (
+            <Bar
+              key={summary.divisionId}
+              dataKey={summary.divisionName}
+              stackId="a"
+              fill={COLORS[idx % COLORS.length]}
+            />
+          ))}
+        </BarChart>
+      </ChartWrapper>
 
-      {/* Pie Chart: 부문별 매출 비율 */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-        <h3 className="text-lg font-bold text-slate-800 mb-4">부문별 매출 비율</h3>
-        <div className="h-80 min-h-[320px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={pieData}
-                cx="50%"
-                cy="50%"
-                innerRadius={60}
-                outerRadius={100}
-                paddingAngle={2}
-                dataKey="value"
-                label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
-                labelLine={{ strokeWidth: 1 }}
-              >
-                {pieData.map((_, idx) => (
-                  <Cell key={`cell-${idx}`} fill={COLORS[idx % COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip formatter={(value) => formatCurrency(Number(value))} />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
+      {/* Pie Chart: 부문별 총 매출 비율 */}
+      <ChartWrapper title="부문별 총 매출 비율" height={320}>
+        <PieChart>
+          <Pie
+            data={pieData}
+            cx="50%"
+            cy="50%"
+            innerRadius={60}
+            outerRadius={100}
+            paddingAngle={2}
+            dataKey="value"
+            label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
+            labelLine={{ strokeWidth: 1 }}
+          >
+            {pieData.map((_, idx) => (
+              <Cell key={`cell-${idx}`} fill={COLORS[idx % COLORS.length]} />
+            ))}
+          </Pie>
+          <Tooltip formatter={(value) => formatCurrency(Number(value))} />
+        </PieChart>
+      </ChartWrapper>
 
       {/* 부문별 매출 & 이익 비교 */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 lg:col-span-2">
-        <h3 className="text-lg font-bold text-slate-800 mb-4">부문별 매출 및 이익 비교</h3>
-        <div className="h-72 min-h-[290px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={profitRateData}
-              layout="vertical"
-              margin={{ top: 5, right: 30, left: 100, bottom: 5 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-              <XAxis type="number" tickFormatter={formatCurrencyShort} tick={{ fontSize: 11 }} />
-              <YAxis type="category" dataKey="name" tick={{ fontSize: 12 }} width={90} />
-              <Tooltip
-                formatter={(value, name) => [
-                  formatCurrency(Number(value)),
-                  name === 'sales' ? '매출액' : '매출이익',
-                ]}
-              />
-              <Legend
-                formatter={(value) => (value === 'sales' ? '매출액' : '매출이익')}
-                wrapperStyle={{ fontSize: 12 }}
-              />
-              <Bar dataKey="sales" name="sales" fill="#6366f1" radius={[0, 4, 4, 0]} barSize={16} />
-              <Bar dataKey="profit" name="profit" fill="#10b981" radius={[0, 4, 4, 0]} barSize={16} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
+      <ChartWrapper title="부문별 매출 및 이익 비교" height={290} className="lg:col-span-2">
+        <BarChart
+          data={profitRateData}
+          layout="vertical"
+          margin={{ top: 5, right: 30, left: 100, bottom: 5 }}
+        >
+          <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+          <XAxis type="number" tickFormatter={formatCurrencyShort} tick={{ fontSize: 11 }} />
+          <YAxis type="category" dataKey="name" tick={{ fontSize: 12 }} width={90} />
+          <Tooltip
+            formatter={(value, name) => [
+              formatCurrency(Number(value)),
+              name === 'sales' ? '매출액' : '매출이익',
+            ]}
+          />
+          <Legend
+            formatter={(value) => (value === 'sales' ? '매출액' : '매출이익')}
+            wrapperStyle={{ fontSize: 12 }}
+          />
+          <Bar dataKey="sales" name="sales" fill="#6366f1" radius={[0, 4, 4, 0]} barSize={16} />
+          <Bar dataKey="profit" name="profit" fill="#10b981" radius={[0, 4, 4, 0]} barSize={16} />
+        </BarChart>
+      </ChartWrapper>
     </div>
   );
 }

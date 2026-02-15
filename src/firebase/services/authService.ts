@@ -113,6 +113,24 @@ export async function loginWithEmail(
   // 프로필이 없으면 생성 (기존 Firebase Auth 사용자 마이그레이션)
   if (!profile) {
     profile = await createUserProfile(user, user.displayName || email.split('@')[0]);
+  } else {
+    // 관리자 이메일인 경우 강제로 권한/상태 업데이트 (기존 계정 권한 상승)
+    const isAdminEmail = email === ADMIN_EMAIL;
+    if (isAdminEmail && (profile.role !== 'admin' || profile.status !== 'approved')) {
+      const docRef = doc(db, 'users', user.uid);
+      await updateDoc(docRef, {
+        role: 'admin',
+        status: 'approved',
+        updatedAt: serverTimestamp(),
+      });
+      // 업데이트된 프로필 반환
+      profile = {
+        ...profile,
+        role: 'admin',
+        status: 'approved',
+        updatedAt: new Date(),
+      };
+    }
   }
 
   return profile;

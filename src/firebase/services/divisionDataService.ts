@@ -68,3 +68,21 @@ export async function getDivisionData(reportId: string): Promise<DivisionDataIte
     };
   });
 }
+
+/**
+ * 부문별 데이터 전체 삭제 (초기화)
+ */
+export async function clearDivisionData(reportId: string): Promise<number> {
+  const colRef = collection(db, 'reports', reportId, 'division_data');
+  const existing = await getDocs(colRef);
+
+  if (existing.empty) {
+    return 0;
+  }
+
+  const batch = writeBatch(db);
+  existing.docs.forEach((d) => batch.delete(d.ref));
+  await batch.commit();
+
+  return existing.docs.length;
+}

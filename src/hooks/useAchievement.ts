@@ -90,19 +90,43 @@ export function useAchievement(
 
   // 인증 완료 후에만 데이터 로드
   useEffect(() => {
-    // Auth 상태가 아직 결정되지 않았으면 대기
-    if (!authReady) {
-      return;
-    }
+    let cancelled = false;
 
-    // 로그인하지 않은 상태면 로딩 종료
-    if (!firebaseUser) {
-      setIsLoading(false);
-      return;
-    }
+    const init = async () => {
+      // Auth 상태가 아직 결정되지 않았으면 대기
+      if (!authReady) {
+        return;
+      }
 
-    // 인증 완료 후 데이터 로드
-    loadData();
+      // 로그인하지 않은 상태면 로딩 종료
+      if (!firebaseUser) {
+        setIsLoading(false);
+        return;
+      }
+
+      // Firestore 연결 안정화를 위한 짧은 딜레이
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      if (cancelled) return;
+
+      // 인증 완료 후 데이터 로드
+      try {
+        await loadData();
+      } catch (err) {
+        console.error('useAchievement init error:', err);
+        if (!cancelled) {
+          setError('데이터를 불러오는데 실패했습니다.');
+          setIsLoading(false);
+        }
+      }
+    };
+
+    init();
+
+
+    return () => {
+      cancelled = true;
+    };
   }, [authReady, firebaseUser, loadData]);
 
   // 제품명 → divisionId 매핑

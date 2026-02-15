@@ -125,3 +125,30 @@ export async function seedDefaultDivisions(): Promise<boolean> {
   await batch.commit();
   return true;
 }
+/**
+ * 영업부문 전체 초기화 (기존 데이터 삭제 후 기본값 생성)
+ * - 주의: 기존 부문 ID가 변경되므로 연관 데이터(User, Product 등)의 정합성이 깨질 수 있음
+ */
+export async function resetToDefaultDivisions(): Promise<void> {
+  const existing = await getDivisions();
+  const batch = writeBatch(db);
+
+  // 1. 기존 데이터 전체 삭제
+  for (const div of existing) {
+    const docRef = doc(db, COLLECTION_NAME, div.id);
+    batch.delete(docRef);
+  }
+
+  // 2. 기본 데이터 생성
+  for (const div of DEFAULT_DIVISIONS) {
+    const docRef = doc(db, COLLECTION_NAME, div.id);
+    batch.set(docRef, {
+      name: div.name,
+      sortOrder: div.sortOrder,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+  }
+
+  await batch.commit();
+}

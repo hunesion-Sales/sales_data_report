@@ -6,7 +6,7 @@ import type { ProductData, ProcessedProduct, Totals, Notification, Division } fr
 import { getMonthShortLabel, getMonthFullLabel } from '@/types';
 import { useReport, type UploadMergeMode } from '@/hooks/useReport';
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   ComposedChart, Line
 } from 'recharts';
 import {
@@ -20,6 +20,7 @@ import { useAchievement } from '@/hooks/useAchievement';
 import { getDivisions } from '@/firebase/services/divisionService';
 import { saveDivisionData } from '@/firebase/services/divisionDataService';
 import { getCurrentQuarter, getQuarterLabel } from '@/utils/periodUtils';
+import { ChartWrapper } from '@/components/charts';
 
 // --- 초기 데이터 (동적 월 구조) ---
 const DEFAULT_MONTHS = ['2026-01', '2026-02'];
@@ -424,38 +425,32 @@ export default function SolutionBusinessDashboard() {
 
       {/* Charts Section - 인쇄 시 숨김 */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 no-print">
-        <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-          <h3 className="text-lg font-bold text-slate-800 mb-6">주요 제품별 매출 및 이익 현황(Top 7)</h3>
-          <div className="h-80 min-h-[320px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={topProducts} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="product" scale="point" padding={{ left: 30, right: 30 }} tick={{ fontSize: 12 }} />
-                <YAxis yAxisId="left" tickFormatter={formatCurrencyWithUnit} tick={{ fontSize: 11 }} />
-                <YAxis yAxisId="right" orientation="right" tickFormatter={formatCurrencyWithUnit} tick={{ fontSize: 11 }} />
-                <Tooltip formatter={(value) => formatCurrency(Number(value))} />
-                <Legend />
-                <Bar yAxisId="left" dataKey="totalSales" name="매출액" fill="#3b82f6" barSize={30} radius={[4, 4, 0, 0]} />
-                <Line yAxisId="right" type="monotone" dataKey="totalProfit" name="매출이익" stroke="#10b981" strokeWidth={3} dot={{ r: 4 }} />
-              </ComposedChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
+        <ChartWrapper
+          title="주요 제품별 매출 및 이익 현황(Top 7)"
+          height={320}
+          className="lg:col-span-2"
+        >
+          <ComposedChart data={topProducts} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} />
+            <XAxis dataKey="product" scale="point" padding={{ left: 30, right: 30 }} tick={{ fontSize: 12 }} />
+            <YAxis yAxisId="left" tickFormatter={formatCurrencyWithUnit} tick={{ fontSize: 11 }} />
+            <YAxis yAxisId="right" orientation="right" tickFormatter={formatCurrencyWithUnit} tick={{ fontSize: 11 }} />
+            <Tooltip formatter={(value) => formatCurrency(Number(value))} />
+            <Legend />
+            <Bar yAxisId="left" dataKey="totalSales" name="매출액" fill="#3b82f6" barSize={30} radius={[4, 4, 0, 0]} />
+            <Line yAxisId="right" type="monotone" dataKey="totalProfit" name="매출이익" stroke="#10b981" strokeWidth={3} dot={{ r: 4 }} />
+          </ComposedChart>
+        </ChartWrapper>
 
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-          <h3 className="text-lg font-bold text-slate-800 mb-6">월별 매출 추이</h3>
-          <div className="h-80 min-h-[320px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={monthlyTrend}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="name" />
-                <YAxis tickFormatter={formatCurrencyWithUnit} tick={{ fontSize: 11 }} width={45} />
-                <Tooltip formatter={(value) => formatCurrency(Number(value))} />
-                <Bar dataKey="sales" name="매출" fill="#6366f1" radius={[6, 6, 0, 0]} barSize={40} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
+        <ChartWrapper title="월별 매출 추이" height={320}>
+          <BarChart data={monthlyTrend}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} />
+            <XAxis dataKey="name" />
+            <YAxis tickFormatter={formatCurrencyWithUnit} tick={{ fontSize: 11 }} width={45} />
+            <Tooltip formatter={(value) => formatCurrency(Number(value))} />
+            <Bar dataKey="sales" name="매출" fill="#6366f1" radius={[6, 6, 0, 0]} barSize={40} />
+          </BarChart>
+        </ChartWrapper>
       </div>
 
       {/* 인쇄용 헤더 - 화면에서는 숨김 */}
