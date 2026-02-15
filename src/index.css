@@ -4,6 +4,17 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  body {
+    background: linear-gradient(to bottom right, 
+      theme('colors.slate.50'), 
+      theme('colors.purple.50/30%'), 
+      theme('colors.slate.100')
+    );
+    min-height: 100vh;
+  }
+}
+
 @media print {
   /* 네비게이션, 버튼, 인터랙티브 요소 숨기기 */
   header, footer, button, .no-print, nav {

@@ -35,8 +35,9 @@ export function ChartWrapper({
     const [isMounted, setIsMounted] = useState(false);
 
     useEffect(() => {
-        // DOM 마운트 후 차트 렌더링 (100ms 딜레이로 부모 컨테이너 크기 확정 대기)
-        const timer = setTimeout(() => setIsMounted(true), 100);
+        // DOM 마운트 및 애니메이션 종료 후 차트 렌더링 (400ms 딜레이)
+        // animate-fade-in(0.3s)이 완전히 끝난 후 렌더링하여 정확한 크기 계산 보장
+        const timer = setTimeout(() => setIsMounted(true), 400);
         return () => clearTimeout(timer);
     }, []);
 
@@ -45,7 +46,7 @@ export function ChartWrapper({
         height: height,
         minHeight: height,
         width: '100%',
-        minWidth: 0,
+        minWidth: '1px', // 0 대신 1px로 설정하여 보장
     };
 
     const shouldRenderChart = isMounted && !loading && hasData;
@@ -59,7 +60,7 @@ export function ChartWrapper({
                 {loading ? (
                     // 로딩 스켈레톤 UI
                     <div className="flex flex-col items-center justify-center h-full">
-                        <div className="w-12 h-12 border-4 border-slate-200 border-t-indigo-600 rounded-full animate-spin mb-3" />
+                        <div className="w-12 h-12 border-4 border-slate-200 border-t-primary-600 rounded-full animate-spin mb-3" />
                         <span className="text-sm text-slate-500 font-medium">차트 로딩 중...</span>
                     </div>
                 ) : !hasData ? (
@@ -77,8 +78,8 @@ export function ChartWrapper({
                         <div className="w-8 h-8 border-3 border-slate-200 border-t-slate-400 rounded-full animate-spin" />
                     </div>
                 ) : (
-                    // 차트 렌더링
-                    <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+                    // 차트 렌더링 - 높이를 명시적으로 지정
+                    <ResponsiveContainer width="99%" height={height} minWidth={100} debounce={50}>
                         {children}
                     </ResponsiveContainer>
                 )}

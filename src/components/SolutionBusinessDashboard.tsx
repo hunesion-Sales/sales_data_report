@@ -7,7 +7,7 @@ import { getMonthShortLabel, getMonthFullLabel } from '@/types';
 import { useReport, type UploadMergeMode } from '@/hooks/useReport';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
-  ComposedChart, Line
+  ComposedChart, Line, ResponsiveContainer
 } from 'recharts';
 import {
   LayoutDashboard, Table as TableIcon, Plus, Save, TrendingUp,
@@ -371,7 +371,7 @@ export default function SolutionBusinessDashboard() {
         <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
           <div className="flex justify-between items-center mb-2">
             <h3 className="text-sm font-medium text-slate-500">누적 총 매출액</h3>
-            <DollarSign className="w-5 h-5 text-blue-600" />
+            <DollarSign className="w-5 h-5 text-primary-600" />
           </div>
           <div className="text-2xl font-bold text-slate-900">{formatCurrencyWithUnit(totals.totalSales)}</div>
           <p className="text-xs text-slate-400 mt-1">{monthRangeText} 합계</p>
@@ -380,10 +380,10 @@ export default function SolutionBusinessDashboard() {
         <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
           <div className="flex justify-between items-center mb-2">
             <h3 className="text-sm font-medium text-slate-500">누적 매출이익</h3>
-            <TrendingUp className="w-5 h-5 text-emerald-600" />
+            <TrendingUp className="w-5 h-5 text-accent-600" />
           </div>
           <div className="text-2xl font-bold text-slate-900">{formatCurrencyWithUnit(totals.totalProfit)}</div>
-          <p className="text-xs text-emerald-600 mt-1">
+          <p className="text-xs text-accent-600 mt-1">
             이익률 {totals.totalSales > 0 ? ((totals.totalProfit / totals.totalSales) * 100).toFixed(1) : 0}%
           </p>
         </div>
@@ -411,10 +411,10 @@ export default function SolutionBusinessDashboard() {
         >
           <div className="flex justify-between items-center mb-2">
             <h3 className="text-sm font-medium text-slate-500">{getQuarterLabel(getCurrentQuarter())} 달성율</h3>
-            <Target className="w-5 h-5 text-indigo-500" />
+            <Target className="w-5 h-5 text-primary-500" />
           </div>
-          <div className={`text-2xl font-bold ${overallAchievementRate >= 100 ? 'text-emerald-600' :
-            overallAchievementRate >= 75 ? 'text-blue-600' :
+          <div className={`text-2xl font-bold ${overallAchievementRate >= 100 ? 'text-accent-600' :
+            overallAchievementRate >= 75 ? 'text-primary-600' :
               overallAchievementRate >= 50 ? 'text-amber-600' : 'text-red-600'
             }`}>
             {overallAchievementRate.toFixed(1)}%
@@ -425,32 +425,35 @@ export default function SolutionBusinessDashboard() {
 
       {/* Charts Section - 인쇄 시 숨김 */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 no-print">
-        <ChartWrapper
-          title="주요 제품별 매출 및 이익 현황(Top 7)"
-          height={320}
-          className="lg:col-span-2"
-        >
-          <ComposedChart data={topProducts} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} />
-            <XAxis dataKey="product" scale="point" padding={{ left: 30, right: 30 }} tick={{ fontSize: 12 }} />
-            <YAxis yAxisId="left" tickFormatter={formatCurrencyWithUnit} tick={{ fontSize: 11 }} />
-            <YAxis yAxisId="right" orientation="right" tickFormatter={formatCurrencyWithUnit} tick={{ fontSize: 11 }} />
-            <Tooltip formatter={(value) => formatCurrency(Number(value))} />
-            <Legend />
-            <Bar yAxisId="left" dataKey="totalSales" name="매출액" fill="#3b82f6" barSize={30} radius={[4, 4, 0, 0]} />
-            <Line yAxisId="right" type="monotone" dataKey="totalProfit" name="매출이익" stroke="#10b981" strokeWidth={3} dot={{ r: 4 }} />
-          </ComposedChart>
-        </ChartWrapper>
+        <div className="lg:col-span-2" style={{ minHeight: '400px' }}>
+          <ChartWrapper
+            title="주요 제품별 매출 및 이익 현황(Top 7)"
+            height={320}
+          >
+            <ComposedChart data={topProducts} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} />
+              <XAxis dataKey="product" scale="point" padding={{ left: 30, right: 30 }} tick={{ fontSize: 12 }} />
+              <YAxis yAxisId="left" tickFormatter={formatCurrencyWithUnit} tick={{ fontSize: 11 }} />
+              <YAxis yAxisId="right" orientation="right" tickFormatter={formatCurrencyWithUnit} tick={{ fontSize: 11 }} />
+              <Tooltip formatter={(value) => formatCurrency(Number(value))} />
+              <Legend />
+              <Bar yAxisId="left" dataKey="totalSales" name="매출액" fill="#a855f7" barSize={30} radius={[4, 4, 0, 0]} />
+              <Line yAxisId="right" type="monotone" dataKey="totalProfit" name="매출이익" stroke="#10b981" strokeWidth={3} dot={{ r: 4 }} />
+            </ComposedChart>
+          </ChartWrapper>
+        </div>
 
-        <ChartWrapper title="월별 매출 추이" height={320}>
-          <BarChart data={monthlyTrend}>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} />
-            <XAxis dataKey="name" />
-            <YAxis tickFormatter={formatCurrencyWithUnit} tick={{ fontSize: 11 }} width={45} />
-            <Tooltip formatter={(value) => formatCurrency(Number(value))} />
-            <Bar dataKey="sales" name="매출" fill="#6366f1" radius={[6, 6, 0, 0]} barSize={40} />
-          </BarChart>
-        </ChartWrapper>
+        <div style={{ minHeight: '400px' }}>
+          <ChartWrapper title="월별 매출 추이" height={320}>
+            <BarChart data={monthlyTrend}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} />
+              <XAxis dataKey="name" />
+              <YAxis tickFormatter={formatCurrencyWithUnit} tick={{ fontSize: 11 }} width={45} />
+              <Tooltip formatter={(value) => formatCurrency(Number(value))} />
+              <Bar dataKey="sales" name="매출" fill="#a855f7" radius={[6, 6, 0, 0]} barSize={40} />
+            </BarChart>
+          </ChartWrapper>
+        </div>
       </div>
 
       {/* 인쇄용 헤더 - 화면에서는 숨김 */}
@@ -578,7 +581,7 @@ export default function SolutionBusinessDashboard() {
           <button
             onClick={() => setUploadType('product')}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${uploadType === 'product'
-              ? 'bg-indigo-600 text-white shadow-sm'
+              ? 'bg-primary-600 text-white shadow-sm'
               : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
           >
@@ -588,7 +591,7 @@ export default function SolutionBusinessDashboard() {
           <button
             onClick={() => setUploadType('division')}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${uploadType === 'division'
-              ? 'bg-indigo-600 text-white shadow-sm'
+              ? 'bg-primary-600 text-white shadow-sm'
               : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
           >
@@ -608,7 +611,7 @@ export default function SolutionBusinessDashboard() {
                   name="mergeMode"
                   checked={mergeMode === 'overwrite'}
                   onChange={() => setMergeMode('overwrite')}
-                  className="w-4 h-4 text-indigo-600 focus:ring-indigo-500"
+                  className="w-4 h-4 text-primary-600 focus:ring-primary-500"
                 />
                 <RefreshCcw className="w-4 h-4 text-slate-500" />
                 <div>
@@ -622,7 +625,7 @@ export default function SolutionBusinessDashboard() {
                   name="mergeMode"
                   checked={mergeMode === 'merge'}
                   onChange={() => setMergeMode('merge')}
-                  className="w-4 h-4 text-indigo-600 focus:ring-indigo-500"
+                  className="w-4 h-4 text-primary-600 focus:ring-primary-500"
                 />
                 <GitMerge className="w-4 h-4 text-slate-500" />
                 <div>
@@ -634,7 +637,7 @@ export default function SolutionBusinessDashboard() {
           </div>
         )}
         <div
-          className={`border-2 border-dashed border-indigo-200 rounded-xl p-8 bg-indigo-50/50 text-center transition-colors ${isUploading ? 'opacity-60 cursor-wait' : 'hover:bg-indigo-50 cursor-pointer'}`}
+          className={`border-2 border-dashed border-primary-200 rounded-xl p-8 bg-primary-50/50 text-center transition-colors ${isUploading ? 'opacity-60 cursor-wait' : 'hover:bg-primary-50 cursor-pointer'}`}
           onClick={() => !isUploading && fileInputRef.current?.click()}
         >
           <input
@@ -646,16 +649,16 @@ export default function SolutionBusinessDashboard() {
           />
           {isUploading ? (
             <>
-              <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mx-auto mb-3" />
-              <p className="text-indigo-900 font-medium">파일 처리 중...</p>
+              <div className="w-12 h-12 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin mx-auto mb-3" />
+              <p className="text-primary-900 font-medium">파일 처리 중...</p>
             </>
           ) : (
             <>
-              <FileText className="w-12 h-12 text-indigo-400 mx-auto mb-3" />
-              <p className="text-indigo-900 font-medium">
+              <FileText className="w-12 h-12 text-primary-400 mx-auto mb-3" />
+              <p className="text-primary-900 font-medium">
                 클릭하여 {uploadType === 'division' ? '부문별' : '제품별'} 파일 업로드
               </p>
-              <p className="text-xs text-indigo-400 mt-1">.xlsx, .xls 파일 지원</p>
+              <p className="text-xs text-primary-400 mt-1">.xlsx, .xls 파일 지원</p>
             </>
           )}
         </div>
@@ -673,7 +676,7 @@ export default function SolutionBusinessDashboard() {
             <input
               id="new-product"
               type="text"
-              className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+              className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition-all"
               placeholder="예: NGS, i-oneNet"
             />
           </div>
@@ -690,7 +693,7 @@ export default function SolutionBusinessDashboard() {
                       id={`new-sales-${mk}`}
                       type="number"
                       defaultValue={0}
-                      className="w-full p-2 border border-slate-300 rounded focus:ring-1 focus:ring-blue-500"
+                      className="w-full p-2 border border-slate-300 rounded focus:ring-1 focus:ring-primary-500"
                     />
                   </div>
                   <div>
@@ -699,7 +702,7 @@ export default function SolutionBusinessDashboard() {
                       id={`new-cost-${mk}`}
                       type="number"
                       defaultValue={0}
-                      className="w-full p-2 border border-slate-300 rounded focus:ring-1 focus:ring-blue-500"
+                      className="w-full p-2 border border-slate-300 rounded focus:ring-1 focus:ring-primary-500"
                     />
                   </div>
                 </div>
@@ -711,7 +714,7 @@ export default function SolutionBusinessDashboard() {
         <div className="mt-8 flex justify-end">
           <button
             onClick={handleAddEntry}
-            className="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 shadow-md transition-all active:scale-95"
+            className="flex items-center gap-2 bg-gradient-to-r from-primary-600 to-primary-500 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg hover:shadow-primary-500/50 transition-all active:scale-95"
           >
             <Save className="w-5 h-5" />
             데이터 저장
@@ -763,7 +766,7 @@ export default function SolutionBusinessDashboard() {
     <div className="min-h-screen bg-slate-50 font-sans text-slate-800 relative">
       {/* Toast Notification */}
       {notification && (
-        <div className={`fixed top-4 left-1/2 transform -translate-x-1/2 z-50 px-6 py-3 rounded-full shadow-lg flex items-center gap-2 animate-bounce-in ${notification.type === 'error' ? 'bg-red-500 text-white' : 'bg-green-600 text-white'}`}>
+        <div className={`fixed top-4 left-1/2 transform -translate-x-1/2 z-50 px-6 py-3 rounded-full shadow-lg flex items-center gap-2 animate-bounce-in ${notification.type === 'error' ? 'bg-red-500 text-white' : 'bg-accent-600 text-white'}`}>
           {notification.type === 'error' ? <X className="w-4 h-4" /> : <Save className="w-4 h-4" />}
           <span className="font-medium text-sm">{notification.message}</span>
         </div>
@@ -773,7 +776,7 @@ export default function SolutionBusinessDashboard() {
       <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <div className="bg-blue-600 p-2 rounded-lg">
+            <div className="bg-primary-600 p-2 rounded-lg">
               <LayoutDashboard className="w-6 h-6 text-white" />
             </div>
             <div>
@@ -795,7 +798,7 @@ export default function SolutionBusinessDashboard() {
                 오프라인
               </span>
             ) : !isLoading ? (
-              <span className="flex items-center gap-1 text-xs text-green-600">
+              <span className="flex items-center gap-1 text-xs text-accent-600">
                 <Cloud className="w-3.5 h-3.5" />
                 동기화됨
               </span>

@@ -19,7 +19,7 @@ interface AchievementChartsProps {
 }
 
 const COLORS = [
-  '#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
+  '#a855f7', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6',
   '#06b6d4', '#f97316', '#ec4899', '#84cc16', '#14b8a6',
 ];
 
@@ -89,7 +89,7 @@ export default function AchievementCharts({ achievements }: AchievementChartsPro
       {/* Grouped Bar Chart: 목표 vs 실적 */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
         <h3 className="text-lg font-bold text-slate-800 mb-4">부문별 목표 vs 실적</h3>
-        <div className="h-80 min-h-[320px]" style={{ height: 320 }}>
+        <div className="h-80 min-h-[320px] min-w-0" style={{ height: 320 }}>
           {!shouldRenderCharts ? (
             <div className="flex items-center justify-center h-full text-slate-500">차트 로딩 중...</div>
           ) : (
@@ -101,7 +101,7 @@ export default function AchievementCharts({ achievements }: AchievementChartsPro
                 <Tooltip formatter={(value) => formatCurrency(Number(value))} />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
                 <Bar dataKey="targetSales" name="목표" fill="#94a3b8" radius={[4, 4, 0, 0]} barSize={24} />
-                <Bar dataKey="actualSales" name="실적" fill="#6366f1" radius={[4, 4, 0, 0]} barSize={24} />
+                <Bar dataKey="actualSales" name="실적" fill="#a855f7" radius={[4, 4, 0, 0]} barSize={24} />
               </BarChart>
             </ResponsiveContainer>
           )}
@@ -111,7 +111,7 @@ export default function AchievementCharts({ achievements }: AchievementChartsPro
       {/* Radial Bar Chart: 부문별 달성율 */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
         <h3 className="text-lg font-bold text-slate-800 mb-4">부문별 달성율</h3>
-        <div className="h-80 min-h-[320px]" style={{ height: 320 }}>
+        <div className="h-80 min-h-[320px] min-w-0" style={{ height: 320 }}>
           {!shouldRenderCharts ? (
             <div className="flex items-center justify-center h-full text-slate-500">차트 로딩 중...</div>
           ) : (
