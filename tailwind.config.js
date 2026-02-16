@@ -4,6 +4,7 @@ export default {
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
+  darkMode: 'class', // Dark mode support
   theme: {
     extend: {
       colors: {
@@ -40,6 +41,10 @@ export default {
       boxShadow: {
         'soft': '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)',
         'soft-lg': '0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025)',
+      },
+      transitionDuration: {
+        '250': '250ms',
+        '350': '350ms',
       },
       animation: {
         'fade-in': 'fadeIn 0.3s ease-out',

@@ -5,13 +5,23 @@
 @tailwind utilities;
 
 @layer base {
+  /* Light Mode */
   body {
-    background: linear-gradient(to bottom right, 
-      theme('colors.slate.50'), 
-      theme('colors.purple.50/30%'), 
+    background: linear-gradient(to bottom right,
+      theme('colors.slate.50'),
+      theme('colors.purple.50/30%'),
       theme('colors.slate.100')
     );
     min-height: 100vh;
+  }
+
+  /* Dark Mode */
+  body.dark {
+    background: linear-gradient(to bottom right,
+      theme('colors.gray.900'),
+      theme('colors.purple.950/20%'),
+      theme('colors.gray.900')
+    );
   }
 }
 
