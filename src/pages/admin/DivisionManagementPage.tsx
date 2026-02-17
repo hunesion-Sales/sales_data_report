@@ -18,10 +18,8 @@ import {
   deleteDivision,
   resetToDefaultDivisions,
 } from '@/firebase/services/divisionService';
-import { getProductMastersByDivision } from '@/firebase/services/productMasterService';
 import { getUsersByDivision } from '@/firebase/services/userService';
 import type { Division } from '@/types';
-
 export default function DivisionManagementPage() {
   const navigate = useNavigate();
   const [divisions, setDivisions] = useState<Division[]>([]);
@@ -107,11 +105,8 @@ export default function DivisionManagementPage() {
   const handleDeleteClick = async (division: Division) => {
     setDeleteTarget(division);
     try {
-      const [products, users] = await Promise.all([
-        getProductMastersByDivision(division.id),
-        getUsersByDivision(division.id),
-      ]);
-      setDeleteCheck({ products: products.length, users: users.length });
+      const users = await getUsersByDivision(division.id);
+      setDeleteCheck({ products: 0, users: users.length });
     } catch (err) {
       console.error(err);
       setDeleteCheck({ products: 0, users: 0 });

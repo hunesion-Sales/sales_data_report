@@ -40,51 +40,70 @@ export async function parseDivisionExcelFile(buffer: ArrayBuffer): Promise<Divis
     throw new Error('워크시트를 찾을 수 없습니다.');
   }
 
-  // 1) 월 헤더 행 탐색 (row 10~20 범위에서 "월" 포함 셀 검색)
+  // 1) 월 헤더 행 탐색 (row 1~20 범위)
+  // "1월 2026" 같은 패턴이 있는 행을 찾음
   let monthHeaderRow = 0;
+  // 각 월의 시작 컬럼 인덱스 저장
   const monthColumns: { key: string; display: string; salesCol: number; costCol: number }[] = [];
   const seenMonthKeys = new Set<string>();
 
-  for (let rowNum = 10; rowNum <= 20; rowNum++) {
+  for (let rowNum = 1; rowNum <= 20; rowNum++) {
     const row = worksheet.getRow(rowNum);
     let found = false;
+
     row.eachCell({ includeEmpty: false }, (cell, colNumber) => {
+      // 병합된 셀의 경우, ExcelJS는 보통 top-left 셀에만 값을 줍니다.
       const val = String(cell.value ?? '').trim();
+
+      // "1월 2026" 또는 "1월" 패턴 확인, "전체" 제외
       if (/^\d{1,2}월/.test(val) && val !== '전체') {
         const parsed = parseMonthLabel(val);
-        // 같은 월 라벨이 4번 반복되므로 중복 제거
+
         if (!seenMonthKeys.has(parsed.key)) {
           seenMonthKeys.add(parsed.key);
           if (!found) {
             monthHeaderRow = rowNum;
             found = true;
           }
+
+          // 4컬럼 구조: [매출, 매입, 이익, 달성율]
+          // cell.col 이 시작점(매출)
           monthColumns.push({
             key: parsed.key,
             display: parsed.display,
-            salesCol: colNumber,       // 첫 번째 컬럼 = 매출액
-            costCol: colNumber + 1,    // 두 번째 컬럼 = 매입액
+            salesCol: colNumber,       // 1번째: 매출액
+            costCol: colNumber + 1,    // 2번째: 매입액
           });
         }
       }
     });
-    if (found) break;
+    if (found) break; // 월 헤더 행을 찾았으면 중단
   }
 
-  // 2) 부문명 컬럼 탐색 (월 헤더 행 다음 행에서 "부서" 키워드 검색, fallback B열)
-  let divisionCol = 2; // 기본값: B열
-  if (monthHeaderRow > 0) {
-    const headerRow = worksheet.getRow(monthHeaderRow + 1);
-    headerRow.eachCell({ includeEmpty: false }, (cell, colNumber) => {
+  if (monthHeaderRow === 0) {
+    throw new Error('월 헤더("1월 2026" 등)를 찾을 수 없습니다.');
+  }
+
+  // 2) 부문명 컬럼 탐색 
+  // 월 헤더 행의 *다음 행*(또는 그 근처)에서 "매출코드 소유자" 또는 "부서"/"부문" 찾기
+  let divisionCol = 1; // 기본값 A열
+  const headerSearchStart = monthHeaderRow;
+  const headerSearchEnd = monthHeaderRow + 2;
+
+  let dataStartRow = monthHeaderRow + 2; // 기본 데이터 시작 행
+
+  for (let r = headerSearchStart; r <= headerSearchEnd; r++) {
+    const row = worksheet.getRow(r);
+    row.eachCell({ includeEmpty: false }, (cell, colNumber) => {
       const val = String(cell.value ?? '').trim();
-      if (val.includes('부서') || val.includes('부문')) {
+      if (val.includes('매출코드 소유자') || val.includes('부서') || val.includes('부문')) {
         divisionCol = colNumber;
+        dataStartRow = r + 1; // 헤더 바로 다음부터 데이터
       }
     });
   }
 
-  // 3) 데이터 행 파싱 (월 헤더 + 2행부터 빈 행 또는 "전체"까지)
-  const dataStartRow = monthHeaderRow + 2;
+  // 3) 데이터 행 파싱
   const data: DivisionDataRow[] = [];
   const months = monthColumns.map(m => m.key);
   const monthLabels: Record<string, string> = {};
@@ -107,7 +126,7 @@ export async function parseDivisionExcelFile(buffer: ArrayBuffer): Promise<Divis
     const divisionName = String(row.getCell(divisionCol).value ?? '').trim();
 
     // 빈 행이거나 "전체" 합계 행이면 종료
-    if (!divisionName || divisionName === '전체') break;
+    if (!divisionName || divisionName === '전체' || divisionName === '합계') continue;
 
     const monthData: Record<string, { sales: number; cost: number }> = {};
     for (const mc of monthColumns) {

@@ -140,11 +140,14 @@ export default function TargetInputTable({
                 <th
                   key={q}
                   colSpan={2}
-                  className="p-3 text-center border-b border-r border-slate-200 min-w-[240px]"
+                  className="p-3 text-center border-b border-r border-slate-200 min-w-[200px]"
                 >
                   {getQuarterLabel(q)}
                 </th>
               ))}
+              <th colSpan={2} className="p-3 text-center border-b border-slate-200 min-w-[200px] bg-slate-50 text-slate-800">
+                연간 합계
+              </th>
             </tr>
             <tr className="text-xs text-slate-500">
               <th className="p-2 text-left border-b border-r border-slate-200 bg-slate-200 sticky left-0 z-10" />
@@ -154,42 +157,65 @@ export default function TargetInputTable({
                   <th className="p-2 border-b border-r border-slate-200 text-center">이익 목표</th>
                 </React.Fragment>
               ))}
+              <th className="p-2 border-b border-r border-slate-200 text-center bg-slate-50 font-bold text-slate-700">매출 합계</th>
+              <th className="p-2 border-b border-slate-200 text-center bg-slate-50 font-bold text-slate-700">이익 합계</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {divisions.map(div => (
-              <tr key={div.id} className="hover:bg-slate-50/50 transition-colors">
-                <td className="p-3 font-medium text-slate-700 border-r border-slate-100 sticky left-0 bg-white">
-                  {div.name}
-                </td>
-                {QUARTERS.map(q => {
-                  const key = cellKey(div.id, q);
-                  const cell = matrix[key] || { salesTarget: '', profitTarget: '' };
-                  return (
-                    <React.Fragment key={q}>
-                      <td className="p-2 border-r border-slate-100">
-                        <input
-                          type="text"
-                          value={cell.salesTarget ? Number(cell.salesTarget).toLocaleString() : ''}
-                          onChange={(e) => handleChange(key, 'salesTarget', e.target.value)}
-                          placeholder="0"
-                          className="w-full px-2 py-1.5 text-right border border-slate-200 rounded focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-sm"
-                        />
-                      </td>
-                      <td className="p-2 border-r border-slate-100">
-                        <input
-                          type="text"
-                          value={cell.profitTarget ? Number(cell.profitTarget).toLocaleString() : ''}
-                          onChange={(e) => handleChange(key, 'profitTarget', e.target.value)}
-                          placeholder="0"
-                          className="w-full px-2 py-1.5 text-right border border-slate-200 rounded focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-sm"
-                        />
-                      </td>
-                    </React.Fragment>
-                  );
-                })}
-              </tr>
-            ))}
+            {divisions.map(div => {
+              // Calculate totals for this division
+              let totalSales = 0;
+              let totalProfit = 0;
+              QUARTERS.forEach(q => {
+                const key = cellKey(div.id, q);
+                const cell = matrix[key];
+                if (cell) {
+                  totalSales += Number(cell.salesTarget) || 0;
+                  totalProfit += Number(cell.profitTarget) || 0;
+                }
+              });
+
+              return (
+                <tr key={div.id} className="hover:bg-slate-50/50 transition-colors">
+                  <td className="p-3 font-medium text-slate-700 border-r border-slate-100 sticky left-0 bg-white">
+                    {div.name}
+                  </td>
+                  {QUARTERS.map(q => {
+                    const key = cellKey(div.id, q);
+                    const cell = matrix[key] || { salesTarget: '', profitTarget: '' };
+                    return (
+                      <React.Fragment key={q}>
+                        <td className="p-2 border-r border-slate-100">
+                          <input
+                            type="text"
+                            value={cell.salesTarget ? Number(cell.salesTarget).toLocaleString() : ''}
+                            onChange={(e) => handleChange(key, 'salesTarget', e.target.value)}
+                            placeholder="0"
+                            className="w-full px-2 py-1.5 text-right border border-slate-200 rounded focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-sm"
+                          />
+                        </td>
+                        <td className="p-2 border-r border-slate-100">
+                          <input
+                            type="text"
+                            value={cell.profitTarget ? Number(cell.profitTarget).toLocaleString() : ''}
+                            onChange={(e) => handleChange(key, 'profitTarget', e.target.value)}
+                            placeholder="0"
+                            className="w-full px-2 py-1.5 text-right border border-slate-200 rounded focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-sm"
+                          />
+                        </td>
+                      </React.Fragment>
+                    );
+                  })}
+                  {/* Total Columns */}
+                  <td className="p-2 text-right font-bold text-slate-800 border-r border-slate-100 bg-slate-50">
+                    {totalSales > 0 ? totalSales.toLocaleString() : '-'}
+                  </td>
+                  <td className="p-2 text-right font-bold text-slate-800 bg-slate-50">
+                    {totalProfit > 0 ? totalProfit.toLocaleString() : '-'}
+                  </td>
+                </tr>
+              )
+            })}
           </tbody>
         </table>
       </div>

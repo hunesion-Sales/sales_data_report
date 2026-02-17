@@ -1,21 +1,16 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import type {
-  ProductData,
-  ProcessedProduct,
   Division,
   DivisionSummary,
   ReportFilter,
-  PeriodType,
   PeriodInfo,
-  ProductMaster,
+  PeriodData,
 } from '@/types';
 import { getDivisions } from '@/firebase/services/divisionService';
-import { getProductMasters } from '@/firebase/services/productMasterService';
 import { getOrCreateReport } from '@/firebase/services/reportService';
-import { getProducts } from '@/firebase/services/productService';
+import { getDivisionData, type DivisionDataItem } from '@/firebase/services/divisionDataService';
 import {
   getPeriodInfoList,
-  aggregateByPeriod,
   getAvailableYears,
 } from '@/utils/periodUtils';
 
@@ -36,8 +31,7 @@ const CURRENT_YEAR = new Date().getFullYear();
 
 export function useDivisionReport(userDivisionId?: string | null, isAdmin = false): UseDivisionReportReturn {
   const [divisions, setDivisions] = useState<Division[]>([]);
-  const [products, setProducts] = useState<ProductData[]>([]);
-  const [productMasters, setProductMasters] = useState<ProductMaster[]>([]);
+  const [divisionItems, setDivisionItems] = useState<DivisionDataItem[]>([]);
   const [availableMonths, setAvailableMonths] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -54,19 +48,19 @@ export function useDivisionReport(userDivisionId?: string | null, isAdmin = fals
       setIsLoading(true);
       setError(null);
 
-      const [divisionsData, productMastersData] = await Promise.all([
+      const [divisionsData] = await Promise.all([
         getDivisions(),
-        getProductMasters(),
       ]);
 
       setDivisions(divisionsData);
-      setProductMasters(productMastersData);
 
       // 보고서 데이터 로드
       const { reportId, report } = await getOrCreateReport(filter.year);
-      const productsData = await getProducts(reportId);
 
-      setProducts(productsData);
+      // 부문별 데이터 로드 (Option B: division_data 컬렉션 사용)
+      const cachedDivisionData = await getDivisionData(reportId);
+
+      setDivisionItems(cachedDivisionData);
       setAvailableMonths(report.months || []);
     } catch (err) {
       console.error('useDivisionReport load error:', err);
@@ -80,42 +74,6 @@ export function useDivisionReport(userDivisionId?: string | null, isAdmin = fals
     loadData();
   }, [loadData]);
 
-  // 제품명 -> divisionId 매핑 (productMaster 기준)
-  const productDivisionMap = useMemo(() => {
-    const map: Record<string, string | null> = {};
-    for (const pm of productMasters) {
-      map[pm.name] = pm.divisionId;
-    }
-    return map;
-  }, [productMasters]);
-
-  // 제품 데이터를 ProcessedProduct로 변환
-  const processedProducts = useMemo<ProcessedProduct[]>(() => {
-    return products.map((p) => {
-      let totalSales = 0;
-      let totalCost = 0;
-      const processedMonths: Record<string, { sales: number; cost: number; profit: number }> = {};
-
-      for (const [monthKey, monthData] of Object.entries(p.months)) {
-        const sales = monthData.sales || 0;
-        const cost = monthData.cost || 0;
-        const profit = sales - cost;
-        processedMonths[monthKey] = { sales, cost, profit };
-        totalSales += sales;
-        totalCost += cost;
-      }
-
-      return {
-        id: p.id,
-        product: p.product,
-        months: processedMonths,
-        totalSales,
-        totalCost,
-        totalProfit: totalSales - totalCost,
-      };
-    });
-  }, [products]);
-
   // 사용 가능한 연도 목록
   const availableYears = useMemo(() => {
     return getAvailableYears(availableMonths);
@@ -128,82 +86,79 @@ export function useDivisionReport(userDivisionId?: string | null, isAdmin = fals
 
   // 부문별 요약 데이터 생성
   const summaries = useMemo<DivisionSummary[]>(() => {
-    // 필터링할 부문 목록
-    let targetDivisions = divisions;
+    // 1. 필터링 대상 부문 식별 (단, unmatched 부문은 별도 처리)
+    // 사용자 권한 필터
+    const allowedDivisionId = !isAdmin ? userDivisionId : null;
 
-    // 일반 사용자는 자신의 부문만, 관리자는 전체 또는 선택한 부문
-    if (!isAdmin && userDivisionId) {
-      targetDivisions = divisions.filter(d => d.id === userDivisionId);
-    } else if (filter.divisionId) {
-      targetDivisions = divisions.filter(d => d.id === filter.divisionId);
-    }
-
-    // 미분류 부문 추가 (divisionId가 없는 제품용)
-    const hasUnassigned = processedProducts.some(
-      p => !productDivisionMap[p.product]
-    );
+    // UI 필터
+    const selectedDivisionId = filter.divisionId;
 
     const result: DivisionSummary[] = [];
 
-    // 부문별로 제품 그룹핑 및 집계
-    for (const division of targetDivisions) {
-      const divisionProducts = processedProducts.filter(
-        p => productDivisionMap[p.product] === division.id
-      );
+    // 2. DivisionDataItem을 DivisionSummary로 변환
+    for (const item of divisionItems) {
+      // 권한 필터 체크
+      // userDivisionId가 있는데 item.divisionId와 다르다면 스킵 (unmatched도 제외됨)
+      if (allowedDivisionId && item.divisionId !== allowedDivisionId) {
+        continue;
+      }
 
-      if (divisionProducts.length === 0) continue;
+      // UI 필터 체크
+      if (selectedDivisionId && item.divisionId !== selectedDivisionId) {
+        continue;
+      }
 
-      const periodBreakdown = aggregateByPeriod(divisionProducts, periodInfoList);
-
+      // 기간별 집계 계산
+      const periodBreakdown: Record<string, PeriodData> = {};
       let totalSales = 0;
       let totalCost = 0;
-      for (const p of divisionProducts) {
-        totalSales += p.totalSales;
-        totalCost += p.totalCost;
+
+      // 각 기간(월, 분기, 반기, 연간)에 대해 데이터 집계
+      for (const period of periodInfoList) {
+        let periodSales = 0;
+        let periodCost = 0;
+
+        for (const monthKey of period.months) {
+          const monthData = item.months[monthKey];
+          if (monthData) {
+            periodSales += monthData.sales;
+            periodCost += monthData.cost;
+          }
+        }
+
+        periodBreakdown[period.key] = {
+          sales: periodSales,
+          cost: periodCost,
+          profit: periodSales - periodCost,
+        };
+      }
+
+      // 전체 합계 계산 (현재 선택된 기간 전체 기준이 아니라, 데이터 있는 모든 월 기준일 수도 있지만
+      // 보통 보고서는 표시된 기간의 합을 보여주는 것이 직관적임.
+      // 여기서는 periodInfoList에 포함된 모든 월의 합계를 계산)
+      const allMonthsInView = new Set(periodInfoList.flatMap(p => p.months));
+      for (const monthKey of allMonthsInView) {
+        const monthData = item.months[monthKey];
+        if (monthData) {
+          totalSales += monthData.sales;
+          totalCost += monthData.cost;
+        }
       }
 
       result.push({
-        divisionId: division.id,
-        divisionName: division.name,
+        divisionId: item.divisionId,
+        divisionName: item.divisionName, // 엑셀에서 파싱된 이름 그대로 사용 ("경영지원본부" 등)
         totalSales,
         totalCost,
         totalProfit: totalSales - totalCost,
-        products: divisionProducts,
+        products: [], // 상세 제품 데이터 없음
         periodBreakdown,
       });
     }
 
-    // 미분류 제품이 있고, 필터가 전체이거나 관리자인 경우 추가
-    if (hasUnassigned && (isAdmin || !filter.divisionId)) {
-      const unassignedProducts = processedProducts.filter(
-        p => !productDivisionMap[p.product]
-      );
-
-      if (unassignedProducts.length > 0) {
-        const periodBreakdown = aggregateByPeriod(unassignedProducts, periodInfoList);
-
-        let totalSales = 0;
-        let totalCost = 0;
-        for (const p of unassignedProducts) {
-          totalSales += p.totalSales;
-          totalCost += p.totalCost;
-        }
-
-        result.push({
-          divisionId: 'unassigned',
-          divisionName: '미분류',
-          totalSales,
-          totalCost,
-          totalProfit: totalSales - totalCost,
-          products: unassignedProducts,
-          periodBreakdown,
-        });
-      }
-    }
-
     // 매출액 기준 내림차순 정렬
     return result.sort((a, b) => b.totalSales - a.totalSales);
-  }, [divisions, processedProducts, productDivisionMap, periodInfoList, filter.divisionId, isAdmin, userDivisionId]);
+  }, [divisionItems, periodInfoList, filter.divisionId, isAdmin, userDivisionId]);
 
   return {
     divisions,

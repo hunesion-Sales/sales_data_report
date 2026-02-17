@@ -1,4 +1,5 @@
 import type { TargetAchievement, AchievementStatus } from '@/types';
+import { formatMillionWon, formatCurrency } from '@/utils/formatUtils';
 
 interface AchievementTableProps {
   achievements: TargetAchievement[];
@@ -9,15 +10,6 @@ const STATUS_CONFIG: Record<AchievementStatus, { label: string; bgColor: string;
   'on-track': { label: '순항', bgColor: 'bg-blue-100', textColor: 'text-blue-700', barColor: 'bg-blue-500' },
   behind: { label: '미달', bgColor: 'bg-amber-100', textColor: 'text-amber-700', barColor: 'bg-amber-500' },
   critical: { label: '위험', bgColor: 'bg-red-100', textColor: 'text-red-700', barColor: 'bg-red-500' },
-};
-
-const formatCurrencyShort = (value: number): string => {
-  if (Math.abs(value) >= 100000000) {
-    return `${(value / 100000000).toFixed(1)}억`;
-  } else if (Math.abs(value) >= 1000000) {
-    return `${(value / 1000000).toFixed(0)}백만`;
-  }
-  return value.toLocaleString();
 };
 
 export default function AchievementTable({ achievements }: AchievementTableProps) {
@@ -40,11 +32,11 @@ export default function AchievementTable({ achievements }: AchievementTableProps
           <thead className="bg-slate-100 text-slate-600">
             <tr>
               <th className="p-3 text-left font-medium">영업부문</th>
-              <th className="p-3 text-right font-medium">매출 목표</th>
-              <th className="p-3 text-right font-medium">매출 실적</th>
+              <th className="p-3 text-right font-medium">매출 목표 (백만원)</th>
+              <th className="p-3 text-right font-medium">매출 실적 (백만원)</th>
               <th className="p-3 text-center font-medium min-w-[200px]">달성율</th>
               <th className="p-3 text-center font-medium">상태</th>
-              <th className="p-3 text-right font-medium">매출 이익</th>
+              <th className="p-3 text-right font-medium">매출 이익 (백만원)</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -55,8 +47,12 @@ export default function AchievementTable({ achievements }: AchievementTableProps
               return (
                 <tr key={a.target.id} className="hover:bg-slate-50/50 transition-colors">
                   <td className="p-3 font-medium text-slate-700">{a.divisionName}</td>
-                  <td className="p-3 text-right text-slate-600">{formatCurrencyShort(a.target.salesTarget)}</td>
-                  <td className="p-3 text-right text-slate-800 font-medium">{formatCurrencyShort(a.actualSales)}</td>
+                  <td className="p-3 text-right text-slate-600" title={formatCurrency(a.target.salesTarget)}>
+                    {formatMillionWon(a.target.salesTarget)}
+                  </td>
+                  <td className="p-3 text-right text-slate-800 font-medium" title={formatCurrency(a.actualSales)}>
+                    {formatMillionWon(a.actualSales)}
+                  </td>
                   <td className="p-3">
                     <div className="flex items-center gap-3">
                       <div className="flex-1 h-2.5 bg-slate-200 rounded-full overflow-hidden">
@@ -75,8 +71,11 @@ export default function AchievementTable({ achievements }: AchievementTableProps
                       {config.label}
                     </span>
                   </td>
-                  <td className={`p-3 text-right font-medium ${a.actualProfit < 0 ? 'text-red-600' : 'text-slate-700'}`}>
-                    {formatCurrencyShort(a.actualProfit)}
+                  <td
+                    className={`p-3 text-right font-medium ${a.actualProfit < 0 ? 'text-red-600' : 'text-slate-700'}`}
+                    title={formatCurrency(a.actualProfit)}
+                  >
+                    {formatMillionWon(a.actualProfit)}
                   </td>
                 </tr>
               );

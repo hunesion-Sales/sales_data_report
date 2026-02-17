@@ -15,6 +15,7 @@ import {
   CheckCircle,
   XCircle,
   Filter,
+  Save,
 } from 'lucide-react';
 import { getUsers } from '@/firebase/services/userService';
 import { getDivisions } from '@/firebase/services/divisionService';
@@ -32,6 +33,12 @@ export default function UserManagementPage() {
   const [divisions, setDivisions] = useState<Division[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  const showNotification = (message: string, type: 'success' | 'error' = 'success') => {
+    setNotification({ message, type });
+    setTimeout(() => setNotification(null), 3000);
+  };
 
   // 필터
   const [filterStatus, setFilterStatus] = useState<string>('all');
@@ -150,6 +157,20 @@ export default function UserManagementPage() {
     try {
       setProcessingId(uid);
       await updateUserDivision(uid, divisionId);
+
+      // 솔루션사업본부(solution)로 배정 시 자동으로 관리자 권한 부여
+      if (divisionId === 'solution') {
+        const user = users.find(u => u.uid === uid);
+        if (user && user.role !== 'admin') {
+          await updateUserRole(uid, 'admin');
+          showNotification('솔루션사업본부 배정으로 관리자 권한이 자동 부여되었습니다.');
+        } else {
+          showNotification('부문이 변경되었습니다.');
+        }
+      } else {
+        showNotification('부문이 변경되었습니다.');
+      }
+
       await loadData();
     } catch (err) {
       setError('부문 변경에 실패했습니다.');
@@ -171,7 +192,13 @@ export default function UserManagementPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-slate-50 relative">
+      {notification && (
+        <div className={`fixed top-4 left-1/2 transform -translate-x-1/2 z-50 px-6 py-3 rounded-full shadow-lg flex items-center gap-2 animate-bounce-in ${notification.type === 'error' ? 'bg-red-500 text-white' : 'bg-emerald-600 text-white'}`}>
+          {notification.type === 'error' ? <X className="w-4 h-4" /> : <Save className="w-4 h-4" />}
+          <span className="font-medium text-sm">{notification.message}</span>
+        </div>
+      )}
       {/* Header */}
       <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex justify-between items-center">
@@ -256,9 +283,8 @@ export default function UserManagementPage() {
                 {filteredUsers.map((user) => (
                   <tr
                     key={user.uid}
-                    className={`hover:bg-slate-50/50 transition-colors ${
-                      user.status === 'pending' ? 'bg-amber-50/30' : ''
-                    }`}
+                    className={`hover:bg-slate-50/50 transition-colors ${user.status === 'pending' ? 'bg-amber-50/30' : ''
+                      }`}
                   >
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
@@ -335,11 +361,10 @@ export default function UserManagementPage() {
                             {user.status === 'approved' && (
                               <button
                                 onClick={() => handleToggleAdmin(user)}
-                                className={`p-1.5 rounded transition-colors ${
-                                  user.role === 'admin'
-                                    ? 'text-amber-600 hover:bg-amber-50'
-                                    : 'text-indigo-600 hover:bg-indigo-50'
-                                }`}
+                                className={`p-1.5 rounded transition-colors ${user.role === 'admin'
+                                  ? 'text-amber-600 hover:bg-amber-50'
+                                  : 'text-indigo-600 hover:bg-indigo-50'
+                                  }`}
                                 title={
                                   user.role === 'admin'
                                     ? '관리자 해제'

@@ -582,7 +582,41 @@ interface TargetAchievement {
 
 ---
 
-## 5. 엑셀 파일 구조 참고 (sales_data_2_4.xlsx)
+
+### Phase 11: 레이아웃 리디자인 (Sidebar Navigation) -- COMPLETED (2026-02-16)
+
+#### 11-1. 사이드바 레이아웃 적용
+50. [x] **레이아웃 컴포넌트 구현**:
+    - `src/components/layout/Sidebar.tsx`: 반응형 사이드바, 네비게이션 링크, 관리자 메뉴, 사용자 프로필
+    - `src/components/layout/MainLayout.tsx`: 사이드바 + 메인 컨텐츠 영역 구조
+51. [x] **페이지 분리 및 라우팅**:
+    - `src/pages/DataInputPage.tsx`: 대시보드 내 "개별 데이터 입력" 기능을 별도 페이지로 분리
+    - `src/router.tsx`: `MainLayout`을 보호된 라우트의 부모로 설정, `/input` 라우트 추가
+52. [x] **대시보드 리팩토링**:
+    - `SolutionBusinessDashboard.tsx`: 상단 헤더 및 탭 네비게이션 제거, 순수 대시보드 뷰로 전환
+    - `authService.ts`: 사용자 프로필 로드 시 `divisionName` 매핑 추가 (사이드바 표시용)
+
+---
+
+## 5. 추가 개선 사항 (Completed)
+
+### P1 - 데이터 정합성 강화
+- [x] **부문별 엑셀 파싱 로직 개선**: 기존 하드코딩된 월/컬럼 인덱스 제거
+    - 월별 4개 컬럼(매출, 매입, 이익, 달성율) 구조 지원
+    - `parseDivisionExcelFile` 리팩토링 및 동적 헤더 감지 적용
+- [x] **데이터 표시 오류 수정**: `dbRepair.ts` 유틸리티 추가
+    - 메타데이터(months) 누락 시 제품 데이터 기반 복구 로직 구현
+    - `DataInputPage`에 데이터 동기화 및 점검 기능 추가
+
+### P2 - 제품 마스터 관리 개선
+- [x] **제품-부문 연관 관계 제거**: 유저 요청에 따라 Product Master에서 Division 제외
+    - `ProductManagementPage.tsx` UI 수정 (필터, 입력폼, 테이블)
+    - `productMasterService.ts` 로직 수정 (divisionId 저장/조회 제거)
+    - `types/index.ts` 타입 정의 업데이트 (`divisionId` optional 처리)
+
+---
+
+## 6. 엑셀 파일 구조 참고 (sales_data_2_4.xlsx)
 
 ```
 Row 2:  제목 - ['26년_예상매출이익_90%~100%]제품별
@@ -747,4 +781,117 @@ Firestore Root
     ├── reportId, fileName, monthsAffected[]
     ├── productCount, uploadedAt
     └── uploadedBy → users/{uid}
+
+---
+
+### Phase 12: 데이터 관리 및 편의성 개선 -- COMPLETED (2026-02-17)
+
+#### 12-1. 제품 마스터 초기 데이터 등록
+53. [x] **22종 제품 일괄 등록 기능**:
+    - `src/firebase/services/productMasterService.ts`: `seedInitialProductMasters` 함수 구현
+    - `src/pages/DataInputPage.tsx`: "제품 마스터 초기화 (22종)" 버튼 추가
+    - `src/firebase/utils/dbRepair.ts`: 데이터베이스 복구 유틸리티 연동
+
+#### 12-2. 솔루션사업본부 추가 및 자동 권한
+54. [x] **신규 부문 추가**:
+    - `src/firebase/services/divisionService.ts`: `DEFAULT_DIVISIONS`에 "솔루션사업본부" 추가
+    - `seedDefaultDivisions` 로직 개선: 누락된 기본 부문 자동 생성 보장
+55. [x] **자동 관리자 권한 부여**:
+    - `src/pages/admin/UserManagementPage.tsx`: "솔루션사업본부" 배정 시 `admin` 권한 자동 부여
+    - 권한 변경 알림 시스템 적용
+
+#### 12-3. 버그 수정 및 안정화
+56. [x] **회원가입 페이지 부문 목록 표시 수정**:
+    - `firestore.rules`: `divisions` 컬렉션 읽기 권한을 모든 사용자(`true`)에게 허용 (로그인 전 조회 가능하도록)
+57. [x] **영업부문 관리 페이지 오류 수정**:
+    - `DivisionManagementPage.tsx`: 삭제된 `getProductMastersByDivision` 함수 의존성 제거 및 구문 오류 수정
+    - 부문 삭제 시 제품 연동 체크 로직 제거 (더 이상 종속되지 않음)
+
+---
+
+### Phase 13: 주차별 스냅샷 저장 및 월별 충돌 해결 -- IN PROGRESS (2026-02-17)
+
+> **목표**:
+> - 매주 업로드되는 데이터를 주차별로 구분하여 스냅샷 저장
+> - 과거 월 데이터 변동 감지 및 중복 저장 방지
+> - 월 단위 충돌 시 사용자가 기존 유지 또는 신규 대체 선택 가능
+> - 웹페이지에서 각 주별 스냅샷 데이터 조회 기능
+
+#### 13-1. 데이터베이스 스키마 확장
+
+```
+reports/report-{year}/
+  latestWeekKey: string                 # 최신 업로드 주차 키 (예: "2026-W07")
+  products/{productId}                  # 현재 활성 데이터 (기존 유지)
+
+  snapshots/{weekKey}/                  # 신규: 주차별 스냅샷
+    weekKey: string                     # ISO 주차 키
+    uploadedAt: Timestamp
+    uploadedBy: string
+    fileName: string
+    monthsIncluded: string[]
+    monthLabels: Record<string, string>
+    productCount: number
+    monthHashes: Record<string, string> # 월별 데이터 해시 (변경 감지용)
+
+    products/{productId}                # 해당 주차 시점의 제품 데이터
+      product, months, sortOrder
+```
+
+#### 13-2. 작업 항목
+
+58. [x] **타입 정의 추가**:
+    - `src/types/index.ts`: `WeekKey`, `WeeklySnapshot`, `MonthDataHash`, `MonthConflict`, `UploadAnalysisResult`, `ConflictResolution`, `ConflictResolutionSaveResult` 타입 추가
+
+59. [ ] **주차/해시 유틸리티 구현**:
+    - `src/utils/weekUtils.ts`: ISO 주차 계산, 주차 키 생성/파싱, 주차 라벨 생성
+    - `src/utils/hashUtils.ts`: SHA-256 해시 생성, 월별 데이터 해시 계산
+
+60. [ ] **스냅샷 서비스 구현**:
+    - `src/firebase/services/snapshotService.ts`:
+      - `saveWeeklySnapshot()`: 주차별 스냅샷 저장
+      - `getSnapshots()`: 스냅샷 목록 조회
+      - `getSnapshotProducts()`: 특정 주차 제품 데이터 조회
+      - `analyzeUpload()`: 업로드 데이터 분석 (충돌 감지)
+      - `saveWithResolutions()`: 충돌 해결 후 저장
+
+61. [ ] **useReport 훅 확장**:
+    - `src/hooks/useReport.ts`:
+      - `currentWeekKey`, `availableSnapshots`, `selectedSnapshot` 상태 추가
+      - `analyzeUpload()`, `saveWithConflictResolution()`, `loadSnapshot()`, `loadLatest()` 메서드 추가
+
+62. [ ] **주차 선택 UI 컴포넌트**:
+    - `src/components/upload/WeekSelector.tsx`: 주차 선택 드롭다운, 현재(최신) 옵션, 스냅샷 목록 표시
+
+63. [ ] **충돌 해결 모달 컴포넌트**:
+    - `src/components/upload/ConflictResolutionModal.tsx`:
+      - 분석 결과 요약 (신규 월, 변경 없음, 충돌 발생)
+      - 월별 충돌 항목 (기존/신규 데이터 비교)
+      - 개별 선택: "기존 유지" / "신규로 대체"
+      - 전체 선택 버튼
+
+64. [ ] **DataInputPage 통합**:
+    - `src/pages/DataInputPage.tsx`:
+      - 업로드 모드에 'smart' 추가 (자동 충돌 감지)
+      - WeekSelector 컴포넌트 연동
+      - ConflictResolutionModal 연동
+
+#### 13-3. 충돌 해결 플로우
+
+```
+파일 업로드 → 파싱 → analyzeUpload() 호출
+                 ↓
+     ┌──────────────────────────┐
+     │ 충돌 있음?               │
+     │ NO  → 바로 저장          │
+     │ YES → 충돌 모달 표시     │
+     └──────────────────────────┘
+                 ↓ (충돌 시)
+사용자가 월별로 "기존 유지" 또는 "신규 대체" 선택
+                 ↓
+saveWithConflictResolution() 호출
+                 ↓
+스냅샷 저장 + 활성 데이터 업데이트
+```
+
 ```

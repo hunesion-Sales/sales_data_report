@@ -11,7 +11,6 @@ import {
   Loader2,
   AlertCircle,
   Wrench,
-  Building2,
   Filter,
 } from 'lucide-react';
 import {
@@ -20,34 +19,29 @@ import {
   updateProductMaster,
   deleteProductMaster,
 } from '@/firebase/services/productMasterService';
-import { getDivisions } from '@/firebase/services/divisionService';
-import type { ProductMaster, Division } from '@/types';
+import type { ProductMaster } from '@/types';
 
 export default function ProductManagementPage() {
   const navigate = useNavigate();
   const [products, setProducts] = useState<ProductMaster[]>([]);
-  const [divisions, setDivisions] = useState<Division[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   // 필터
-  const [filterDivision, setFilterDivision] = useState<string>('all');
   const [filterMaintenance, setFilterMaintenance] = useState<string>('all');
 
   // 편집/추가 상태
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editData, setEditData] = useState<{
     name: string;
-    divisionId: string | null;
     isMaintenanceType: boolean;
-  }>({ name: '', divisionId: null, isMaintenanceType: false });
+  }>({ name: '', isMaintenanceType: false });
 
   const [isAdding, setIsAdding] = useState(false);
   const [newData, setNewData] = useState<{
     name: string;
-    divisionId: string | null;
     isMaintenanceType: boolean;
-  }>({ name: '', divisionId: null, isMaintenanceType: false });
+  }>({ name: '', isMaintenanceType: false });
 
   const [isSaving, setIsSaving] = useState(false);
 
@@ -62,12 +56,8 @@ export default function ProductManagementPage() {
   const loadData = async () => {
     try {
       setIsLoading(true);
-      const [productsData, divisionsData] = await Promise.all([
-        getProductMasters(),
-        getDivisions(),
-      ]);
+      const productsData = await getProductMasters();
       setProducts(productsData);
-      setDivisions(divisionsData);
       setError(null);
     } catch (err) {
       setError('데이터를 불러오는데 실패했습니다.');
@@ -79,17 +69,11 @@ export default function ProductManagementPage() {
 
   const filteredProducts = useMemo(() => {
     return products.filter((p) => {
-      if (filterDivision !== 'all' && p.divisionId !== filterDivision) return false;
       if (filterMaintenance === 'maintenance' && !p.isMaintenanceType) return false;
       if (filterMaintenance === 'regular' && p.isMaintenanceType) return false;
       return true;
     });
-  }, [products, filterDivision, filterMaintenance]);
-
-  const getDivisionName = (divisionId: string | null) => {
-    if (!divisionId) return '미배정';
-    return divisions.find((d) => d.id === divisionId)?.name || '미배정';
-  };
+  }, [products, filterMaintenance]);
 
   const handleAdd = async () => {
     if (!newData.name.trim()) return;
@@ -97,10 +81,9 @@ export default function ProductManagementPage() {
       setIsSaving(true);
       await createProductMaster({
         name: newData.name.trim(),
-        divisionId: newData.divisionId,
         isMaintenanceType: newData.isMaintenanceType,
       });
-      setNewData({ name: '', divisionId: null, isMaintenanceType: false });
+      setNewData({ name: '', isMaintenanceType: false });
       setIsAdding(false);
       await loadData();
     } catch (err) {
@@ -115,7 +98,6 @@ export default function ProductManagementPage() {
     setEditingId(product.id);
     setEditData({
       name: product.name,
-      divisionId: product.divisionId,
       isMaintenanceType: product.isMaintenanceType,
     });
   };
@@ -126,7 +108,6 @@ export default function ProductManagementPage() {
       setIsSaving(true);
       await updateProductMaster(editingId, {
         name: editData.name.trim(),
-        divisionId: editData.divisionId,
         isMaintenanceType: editData.isMaintenanceType,
       });
       setEditingId(null);
@@ -141,7 +122,7 @@ export default function ProductManagementPage() {
 
   const handleCancelEdit = () => {
     setEditingId(null);
-    setEditData({ name: '', divisionId: null, isMaintenanceType: false });
+    setEditData({ name: '', isMaintenanceType: false });
   };
 
   const handleConfirmDelete = async () => {
@@ -208,19 +189,6 @@ export default function ProductManagementPage() {
             <div className="flex items-center gap-3">
               <Filter className="w-4 h-4 text-slate-400" />
               <select
-                value={filterDivision}
-                onChange={(e) => setFilterDivision(e.target.value)}
-                className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
-              >
-                <option value="all">모든 부문</option>
-                <option value="">미배정</option>
-                {divisions.map((d) => (
-                  <option key={d.id} value={d.id}>
-                    {d.name}
-                  </option>
-                ))}
-              </select>
-              <select
                 value={filterMaintenance}
                 onChange={(e) => setFilterMaintenance(e.target.value)}
                 className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
@@ -256,20 +224,6 @@ export default function ProductManagementPage() {
                   className="flex-1 min-w-[200px] px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
                   autoFocus
                 />
-                <select
-                  value={newData.divisionId || ''}
-                  onChange={(e) =>
-                    setNewData({ ...newData, divisionId: e.target.value || null })
-                  }
-                  className="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
-                >
-                  <option value="">부문 선택</option>
-                  {divisions.map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {d.name}
-                    </option>
-                  ))}
-                </select>
                 <label className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-300 rounded-lg cursor-pointer hover:bg-slate-50">
                   <input
                     type="checkbox"
@@ -297,7 +251,7 @@ export default function ProductManagementPage() {
                 <button
                   onClick={() => {
                     setIsAdding(false);
-                    setNewData({ name: '', divisionId: null, isMaintenanceType: false });
+                    setNewData({ name: '', isMaintenanceType: false });
                   }}
                   className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
                 >
@@ -314,7 +268,6 @@ export default function ProductManagementPage() {
                 <tr>
                   <th className="px-4 py-3 text-left font-medium">#</th>
                   <th className="px-4 py-3 text-left font-medium">제품명</th>
-                  <th className="px-4 py-3 text-left font-medium">부문</th>
                   <th className="px-4 py-3 text-center font-medium">유형</th>
                   <th className="px-4 py-3 text-center font-medium">관리</th>
                 </tr>
@@ -338,25 +291,6 @@ export default function ProductManagementPage() {
                             className="w-full px-2 py-1 border border-slate-300 rounded focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
                             autoFocus
                           />
-                        </td>
-                        <td className="px-4 py-3">
-                          <select
-                            value={editData.divisionId || ''}
-                            onChange={(e) =>
-                              setEditData({
-                                ...editData,
-                                divisionId: e.target.value || null,
-                              })
-                            }
-                            className="px-2 py-1 border border-slate-300 rounded focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
-                          >
-                            <option value="">미배정</option>
-                            {divisions.map((d) => (
-                              <option key={d.id} value={d.id}>
-                                {d.name}
-                              </option>
-                            ))}
-                          </select>
                         </td>
                         <td className="px-4 py-3 text-center">
                           <label className="inline-flex items-center gap-1 cursor-pointer">
@@ -402,18 +336,6 @@ export default function ProductManagementPage() {
                         <td className="px-4 py-3 font-medium text-slate-700">
                           {product.name}
                         </td>
-                        <td className="px-4 py-3">
-                          <span
-                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs ${
-                              product.divisionId
-                                ? 'bg-indigo-100 text-indigo-700'
-                                : 'bg-slate-100 text-slate-500'
-                            }`}
-                          >
-                            <Building2 className="w-3 h-3" />
-                            {getDivisionName(product.divisionId)}
-                          </span>
-                        </td>
                         <td className="px-4 py-3 text-center">
                           {product.isMaintenanceType ? (
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-100 text-amber-700 rounded text-xs">
@@ -449,7 +371,7 @@ export default function ProductManagementPage() {
 
                 {filteredProducts.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
+                    <td colSpan={4} className="px-4 py-8 text-center text-slate-500">
                       {products.length === 0
                         ? '등록된 제품이 없습니다.'
                         : '필터 조건에 맞는 제품이 없습니다.'}

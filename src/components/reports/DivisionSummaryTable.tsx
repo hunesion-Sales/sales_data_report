@@ -1,21 +1,12 @@
-import { useState } from 'react';
+import { useState, Fragment } from 'react';
 import { ChevronDown, ChevronRight, Building2 } from 'lucide-react';
 import type { DivisionSummary, PeriodInfo } from '@/types';
+import { formatMillionWon, formatCurrency } from '@/utils/formatUtils';
 
 interface DivisionSummaryTableProps {
   summaries: DivisionSummary[];
   periodInfoList: PeriodInfo[];
 }
-
-const formatCurrency = (value: number): string => {
-  if (value === 0) return '-';
-  return Math.round(value / 1000000).toLocaleString();
-};
-
-const formatCurrencyFull = (value: number): string => {
-  if (value === 0) return '-';
-  return value.toLocaleString();
-};
 
 export default function DivisionSummaryTable({
   summaries,
@@ -95,11 +86,11 @@ export default function DivisionSummaryTable({
             <tr className="text-xs text-slate-500">
               <th className="px-4 py-2 text-left sticky left-0 bg-slate-100 z-10"></th>
               {periodInfoList.map((p) => (
-                <th key={p.key} className="contents">
+                <Fragment key={p.key}>
                   <th className="px-2 py-2 text-right border-l border-slate-200">매출</th>
                   <th className="px-2 py-2 text-right">매입</th>
                   <th className="px-2 py-2 text-right">이익</th>
-                </th>
+                </Fragment>
               ))}
               <th className="px-2 py-2 text-right border-l border-slate-300 bg-slate-200">매출</th>
               <th className="px-2 py-2 text-right bg-slate-200">매입</th>
@@ -112,20 +103,18 @@ export default function DivisionSummaryTable({
               const hasProducts = summary.products.length > 0;
 
               return (
-                <>
+                <Fragment key={summary.divisionId}>
                   {/* 부문 행 */}
                   <tr
                     key={summary.divisionId}
-                    className={`hover:bg-slate-50/50 transition-colors ${
-                      summary.divisionId === 'unassigned' ? 'bg-amber-50/30' : ''
-                    }`}
+                    className={`hover:bg-slate-50/50 transition-colors ${summary.divisionId === 'unassigned' ? 'bg-amber-50/30' : ''
+                      }`}
                   >
                     <td className="px-4 py-3 sticky left-0 bg-white z-10">
                       <button
                         onClick={() => hasProducts && toggleExpand(summary.divisionId)}
-                        className={`flex items-center gap-2 font-medium text-slate-700 ${
-                          hasProducts ? 'cursor-pointer hover:text-indigo-600' : ''
-                        }`}
+                        className={`flex items-center gap-2 font-medium text-slate-700 ${hasProducts ? 'cursor-pointer hover:text-indigo-600' : ''
+                          }`}
                         disabled={!hasProducts}
                       >
                         {hasProducts ? (
@@ -146,36 +135,36 @@ export default function DivisionSummaryTable({
                     {periodInfoList.map((p) => {
                       const pd = summary.periodBreakdown[p.key] || { sales: 0, cost: 0, profit: 0 };
                       return (
-                        <>
-                          <td key={`${p.key}-sales`} className="px-2 py-3 text-right border-l border-slate-100">
-                            {formatCurrency(pd.sales)}
+                        <Fragment key={p.key}>
+                          <td key={`${p.key}-sales`} className="px-2 py-3 text-right border-l border-slate-100" title={formatCurrency(pd.sales)}>
+                            {formatMillionWon(pd.sales)}
                           </td>
-                          <td key={`${p.key}-cost`} className="px-2 py-3 text-right text-slate-400">
-                            {formatCurrency(pd.cost)}
+                          <td key={`${p.key}-cost`} className="px-2 py-3 text-right text-slate-400" title={formatCurrency(pd.cost)}>
+                            {formatMillionWon(pd.cost)}
                           </td>
                           <td
                             key={`${p.key}-profit`}
-                            className={`px-2 py-3 text-right font-medium ${
-                              pd.profit < 0 ? 'text-red-500' : 'text-indigo-600'
-                            }`}
+                            className={`px-2 py-3 text-right font-medium ${pd.profit < 0 ? 'text-red-500' : 'text-indigo-600'
+                              }`}
+                            title={formatCurrency(pd.profit)}
                           >
-                            {formatCurrency(pd.profit)}
+                            {formatMillionWon(pd.profit)}
                           </td>
-                        </>
+                        </Fragment>
                       );
                     })}
-                    <td className="px-2 py-3 text-right font-semibold border-l border-slate-200 bg-slate-50/50">
-                      {formatCurrency(summary.totalSales)}
+                    <td className="px-2 py-3 text-right font-semibold border-l border-slate-200 bg-slate-50/50" title={formatCurrency(summary.totalSales)}>
+                      {formatMillionWon(summary.totalSales)}
                     </td>
-                    <td className="px-2 py-3 text-right text-slate-500 bg-slate-50/50">
-                      {formatCurrency(summary.totalCost)}
+                    <td className="px-2 py-3 text-right text-slate-500 bg-slate-50/50" title={formatCurrency(summary.totalCost)}>
+                      {formatMillionWon(summary.totalCost)}
                     </td>
                     <td
-                      className={`px-2 py-3 text-right font-bold bg-slate-50/50 ${
-                        summary.totalProfit < 0 ? 'text-red-600' : 'text-slate-800'
-                      }`}
+                      className={`px-2 py-3 text-right font-bold bg-slate-50/50 ${summary.totalProfit < 0 ? 'text-red-600' : 'text-slate-800'
+                        }`}
+                      title={formatCurrency(summary.totalProfit)}
                     >
-                      {formatCurrency(summary.totalProfit)}
+                      {formatMillionWon(summary.totalProfit)}
                     </td>
                   </tr>
 
@@ -200,40 +189,40 @@ export default function DivisionSummaryTable({
                             }
                           }
                           return (
-                            <>
-                              <td key={`${p.key}-sales`} className="px-2 py-2 text-right text-slate-500 text-xs border-l border-slate-100">
-                                {formatCurrency(sales)}
+                            <Fragment key={p.key}>
+                              <td key={`${p.key}-sales`} className="px-2 py-2 text-right text-slate-500 text-xs border-l border-slate-100" title={formatCurrency(sales)}>
+                                {formatMillionWon(sales)}
                               </td>
-                              <td key={`${p.key}-cost`} className="px-2 py-2 text-right text-slate-400 text-xs">
-                                {formatCurrency(cost)}
+                              <td key={`${p.key}-cost`} className="px-2 py-2 text-right text-slate-400 text-xs" title={formatCurrency(cost)}>
+                                {formatMillionWon(cost)}
                               </td>
                               <td
                                 key={`${p.key}-profit`}
-                                className={`px-2 py-2 text-right text-xs ${
-                                  profit < 0 ? 'text-red-400' : 'text-slate-500'
-                                }`}
+                                className={`px-2 py-2 text-right text-xs ${profit < 0 ? 'text-red-400' : 'text-slate-500'
+                                  }`}
+                                title={formatCurrency(profit)}
                               >
-                                {formatCurrency(profit)}
+                                {formatMillionWon(profit)}
                               </td>
-                            </>
+                            </Fragment>
                           );
                         })}
-                        <td className="px-2 py-2 text-right text-slate-600 text-xs border-l border-slate-200">
-                          {formatCurrency(product.totalSales)}
+                        <td className="px-2 py-2 text-right text-slate-600 text-xs border-l border-slate-200" title={formatCurrency(product.totalSales)}>
+                          {formatMillionWon(product.totalSales)}
                         </td>
-                        <td className="px-2 py-2 text-right text-slate-400 text-xs">
-                          {formatCurrency(product.totalCost)}
+                        <td className="px-2 py-2 text-right text-slate-400 text-xs" title={formatCurrency(product.totalCost)}>
+                          {formatMillionWon(product.totalCost)}
                         </td>
                         <td
-                          className={`px-2 py-2 text-right text-xs ${
-                            product.totalProfit < 0 ? 'text-red-500' : 'text-slate-600'
-                          }`}
+                          className={`px-2 py-2 text-right text-xs ${product.totalProfit < 0 ? 'text-red-500' : 'text-slate-600'
+                            }`}
+                          title={formatCurrency(product.totalProfit)}
                         >
-                          {formatCurrency(product.totalProfit)}
+                          {formatMillionWon(product.totalProfit)}
                         </td>
                       </tr>
                     ))}
-                </>
+                </Fragment>
               );
             })}
           </tbody>
@@ -243,27 +232,27 @@ export default function DivisionSummaryTable({
               {periodInfoList.map((p) => {
                 const pt = periodTotals[p.key] || { sales: 0, cost: 0, profit: 0 };
                 return (
-                  <>
-                    <td key={`${p.key}-sales`} className="px-2 py-3 text-right border-l border-slate-600">
-                      {formatCurrency(pt.sales)}
+                  <Fragment key={p.key}>
+                    <td className="px-2 py-3 text-right border-l border-slate-600" title={formatCurrency(pt.sales)}>
+                      {formatMillionWon(pt.sales)}
                     </td>
-                    <td key={`${p.key}-cost`} className="px-2 py-3 text-right text-slate-300">
-                      {formatCurrency(pt.cost)}
+                    <td className="px-2 py-3 text-right text-slate-300" title={formatCurrency(pt.cost)}>
+                      {formatMillionWon(pt.cost)}
                     </td>
-                    <td key={`${p.key}-profit`} className="px-2 py-3 text-right text-yellow-300">
-                      {formatCurrency(pt.profit)}
+                    <td className="px-2 py-3 text-right text-yellow-300" title={formatCurrency(pt.profit)}>
+                      {formatMillionWon(pt.profit)}
                     </td>
-                  </>
+                  </Fragment>
                 );
               })}
-              <td className="px-2 py-3 text-right border-l border-slate-600 bg-slate-900">
-                {formatCurrency(totals.sales)}
+              <td className="px-2 py-3 text-right border-l border-slate-600 bg-slate-900" title={formatCurrency(totals.sales)}>
+                {formatMillionWon(totals.sales)}
               </td>
-              <td className="px-2 py-3 text-right text-slate-300 bg-slate-900">
-                {formatCurrency(totals.cost)}
+              <td className="px-2 py-3 text-right text-slate-300 bg-slate-900" title={formatCurrency(totals.cost)}>
+                {formatMillionWon(totals.cost)}
               </td>
-              <td className="px-2 py-3 text-right text-yellow-400 bg-slate-900">
-                {formatCurrency(totals.profit)}
+              <td className="px-2 py-3 text-right text-yellow-400 bg-slate-900" title={formatCurrency(totals.profit)}>
+                {formatMillionWon(totals.profit)}
               </td>
             </tr>
           </tfoot>

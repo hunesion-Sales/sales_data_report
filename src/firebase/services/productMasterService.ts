@@ -25,7 +25,7 @@ function docToProductMaster(id: string, data: Record<string, unknown>): ProductM
   return {
     id,
     name: data.name as string,
-    divisionId: (data.divisionId as string) || null,
+    // divisionId: (data.divisionId as string) || null, // Removed
     isMaintenanceType: data.isMaintenanceType as boolean || false,
     sortOrder: data.sortOrder as number || 0,
     createdAt: (data.createdAt as Timestamp)?.toDate() || new Date(),
@@ -42,18 +42,7 @@ export async function getProductMasters(): Promise<ProductMaster[]> {
   return snapshot.docs.map((doc) => docToProductMaster(doc.id, doc.data()));
 }
 
-/**
- * 부문별 제품 마스터 조회
- */
-export async function getProductMastersByDivision(divisionId: string): Promise<ProductMaster[]> {
-  const q = query(
-    collection(db, COLLECTION_NAME),
-    where('divisionId', '==', divisionId),
-    orderBy('sortOrder', 'asc')
-  );
-  const snapshot = await getDocs(q);
-  return snapshot.docs.map((doc) => docToProductMaster(doc.id, doc.data()));
-}
+// getProductMastersByDivision removed as it is no longer used
 
 /**
  * 단일 제품 마스터 조회
@@ -91,7 +80,7 @@ export async function createProductMaster(input: ProductMasterInput): Promise<Pr
 
   const data = {
     name: input.name,
-    divisionId: input.divisionId,
+    // divisionId: input.divisionId, // Removed
     isMaintenanceType: input.isMaintenanceType,
     sortOrder,
     createdAt: serverTimestamp(),
@@ -103,7 +92,7 @@ export async function createProductMaster(input: ProductMasterInput): Promise<Pr
   return {
     id: docRef.id,
     name: input.name,
-    divisionId: input.divisionId,
+    // divisionId: input.divisionId, // Removed
     isMaintenanceType: input.isMaintenanceType,
     sortOrder,
     createdAt: new Date(),
@@ -152,7 +141,7 @@ export async function seedProductMastersFromProducts(productNames: string[]): Pr
     const docRef = doc(collection(db, COLLECTION_NAME));
     batch.set(docRef, {
       name,
-      divisionId: null, // 부문 미배정
+      // divisionId: null, // Removed
       isMaintenanceType: name.endsWith('_MA'),
       sortOrder: sortOrder++,
       createdAt: serverTimestamp(),
@@ -181,4 +170,73 @@ export async function updateProductMasterOrders(
   }
 
   await batch.commit();
+}
+
+/**
+ * 초기 제품 마스터 목록 (순서 중요)
+ */
+export const INITIAL_PRODUCT_MASTERS = [
+  'NGS',
+  'CamPASS',
+  '기타',
+  'i-oneNet',
+  'i-oneNet DD',
+  'i-oneNAC',
+  'Safe IP',
+  'i_oneJTac_MA',
+  'i-oneNAC_MA',
+  'i-oneNet_MA',
+  'i-oneNet DD_MA',
+  'i-oneNet DX_MA',
+  'TresDM_MA',
+  'NGS_MA',
+  'CamPASS_MA',
+  'MoBiCa_MA',
+  'ViSiCa_MA',
+  'Safe IP_MA',
+  'NGS CLOUD',
+  'i-oneNet CLOUD',
+  'i-oneJTac CLOUD',
+  'H/W',
+];
+
+/**
+ * 초기 제품 마스터 데이터 시딩
+ * - 기존 데이터가 있으면 건너뜀 (이름 기준)
+ * - 없으면 생성 (순서 보장)
+ * - _MA 또는 MA 포함 시 유지보수 타입 자동 지정
+ */
+export async function seedInitialProductMasters(): Promise<{ created: number; skipped: number }> {
+  const existing = await getProductMasters();
+  const existingNames = new Set(existing.map(p => p.name));
+
+  const batch = writeBatch(db);
+  let createdCount = 0;
+  let skippedCount = 0;
+
+  INITIAL_PRODUCT_MASTERS.forEach((name, index) => {
+    if (existingNames.has(name)) {
+      skippedCount++;
+      return;
+    }
+
+    const docRef = doc(collection(db, COLLECTION_NAME));
+    const isMaintenance = name.endsWith('_MA') || name.includes('_MA'); // _MA로 끝나거나 포함되면 유지보수
+
+    batch.set(docRef, {
+      name,
+      // divisionId: null, // Removed
+      isMaintenanceType: isMaintenance,
+      sortOrder: index, // 리스트 순서대로 0, 1, 2...
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+    createdCount++;
+  });
+
+  if (createdCount > 0) {
+    await batch.commit();
+  }
+
+  return { created: createdCount, skipped: skippedCount };
 }

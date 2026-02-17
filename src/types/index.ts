@@ -89,6 +89,7 @@ export interface UserProfile {
   email: string;
   displayName: string;
   divisionId: string | null;
+  divisionName?: string; // 클라이언트 편의용
   role: UserRole;
   status: UserStatus;
   createdAt: Date;
@@ -119,7 +120,7 @@ export interface AuthState {
 export interface ProductMaster {
   id: string;
   name: string;
-  divisionId: string | null;
+  divisionId?: string | null; // @deprecated
   isMaintenanceType: boolean;
   sortOrder: number;
   createdAt: Date;
@@ -129,7 +130,7 @@ export interface ProductMaster {
 /** 제품 마스터 생성/수정용 입력 타입 */
 export interface ProductMasterInput {
   name: string;
-  divisionId: string | null;
+  divisionId?: string | null; // @deprecated
   isMaintenanceType: boolean;
   sortOrder?: number;
 }
@@ -223,4 +224,73 @@ export interface TargetAchievement {
   salesAchievementRate: number;
   profitAchievementRate?: number;
   status: AchievementStatus;
+}
+
+// ============================================
+// Phase 9: 주차별 스냅샷 & 충돌 해결 타입
+// ============================================
+
+/** 주차 키 형식: "YYYY-Wnn" (ISO 8601, 예: "2026-W07") */
+export type WeekKey = string;
+
+/** 주차별 스냅샷 메타데이터 */
+export interface WeeklySnapshot {
+  weekKey: WeekKey;
+  uploadedAt: Date;
+  uploadedBy: string;
+  fileName: string;
+  monthsIncluded: string[];
+  monthLabels: Record<string, string>;
+  productCount: number;
+  monthHashes: Record<string, string>; // monthKey -> hash
+}
+
+/** 월별 데이터 해시 (변경 감지용) */
+export interface MonthDataHash {
+  monthKey: string;
+  hash: string;
+  productCount: number;
+  totalSales: number;
+  totalCost: number;
+}
+
+/** 월별 충돌 정보 */
+export interface MonthConflict {
+  monthKey: string;
+  monthLabel: string;
+  existingData: {
+    weekKey: WeekKey;
+    uploadedAt: Date;
+    totalSales: number;
+    totalCost: number;
+    hash: string;
+  };
+  newData: {
+    totalSales: number;
+    totalCost: number;
+    hash: string;
+  };
+}
+
+/** 업로드 분석 결과 */
+export interface UploadAnalysisResult {
+  weekKey: WeekKey;
+  newMonths: string[];
+  unchangedMonths: string[];
+  conflicts: MonthConflict[];
+  products: ProductData[];
+  monthLabels: Record<string, string>;
+}
+
+/** 충돌 해결 선택 */
+export interface ConflictResolution {
+  monthKey: string;
+  resolution: 'keep_existing' | 'use_new';
+}
+
+/** 충돌 해결 저장 결과 */
+export interface ConflictResolutionSaveResult {
+  newCount: number;
+  updatedCount: number;
+  skippedMonths: string[];
 }

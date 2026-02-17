@@ -15,6 +15,7 @@ import {
 } from 'firebase/firestore';
 import { auth, db } from '../config';
 import type { UserProfile, UserRole, UserStatus } from '../../types';
+import { getDivision } from './divisionService';
 
 const ADMIN_EMAIL = 'hclim@hunesion.com';
 
@@ -37,11 +38,35 @@ function docToUserProfile(uid: string, data: Record<string, unknown>): UserProfi
 /**
  * 사용자 프로필 조회
  */
+
+// ... (existing imports)
+
+// ... (existing imports, but getDivision is new)
+
+// ...
+
+/**
+ * 사용자 프로필 조회
+ */
 export async function getUserProfile(uid: string): Promise<UserProfile | null> {
   const docRef = doc(db, 'users', uid);
   const docSnap = await getDoc(docRef);
   if (!docSnap.exists()) return null;
-  return docToUserProfile(uid, docSnap.data());
+
+  const profile = docToUserProfile(uid, docSnap.data());
+
+  if (profile.divisionId) {
+    try {
+      const division = await getDivision(profile.divisionId);
+      if (division) {
+        profile.divisionName = division.name;
+      }
+    } catch (error) {
+      console.warn('Failed to fetch division name:', error);
+    }
+  }
+
+  return profile;
 }
 
 /**

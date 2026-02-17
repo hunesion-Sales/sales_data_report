@@ -13,6 +13,7 @@ import {
 } from 'recharts';
 import type { DivisionSummary, PeriodInfo } from '@/types';
 import { ChartWrapper } from '@/components/charts';
+import { formatMillionWon, formatCurrency } from '@/utils/formatUtils';
 
 interface DivisionChartsProps {
   summaries: DivisionSummary[];
@@ -31,21 +32,6 @@ const COLORS = [
   '#84cc16', // lime
   '#14b8a6', // teal
 ];
-
-const formatCurrencyShort = (value: number): string => {
-  if (Math.abs(value) >= 100000000) {
-    return `${(value / 100000000).toFixed(1)}억`;
-  } else if (Math.abs(value) >= 10000000) {
-    return `${(value / 10000000).toFixed(0)}천만`;
-  } else if (Math.abs(value) >= 1000000) {
-    return `${(value / 1000000).toFixed(0)}백만`;
-  }
-  return value.toLocaleString();
-};
-
-const formatCurrency = (value: number): string => {
-  return value.toLocaleString() + '원';
-};
 
 export default function DivisionCharts({
   summaries,
@@ -93,11 +79,11 @@ export default function DivisionCharts({
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {/* Stacked Bar Chart: 기간별 부문 매출 */}
-      <ChartWrapper title="기간별 부문 매출" height={320}>
+      <ChartWrapper title="기간별 부문 매출 (단위: 백만원)" height={320}>
         <BarChart data={stackedBarData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" vertical={false} />
           <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-          <YAxis tickFormatter={formatCurrencyShort} tick={{ fontSize: 11 }} />
+          <YAxis tickFormatter={formatMillionWon} tick={{ fontSize: 11 }} />
           <Tooltip
             formatter={(value) => formatCurrency(Number(value))}
             labelStyle={{ fontWeight: 'bold' }}
@@ -115,7 +101,7 @@ export default function DivisionCharts({
       </ChartWrapper>
 
       {/* Pie Chart: 부문별 총 매출 비율 */}
-      <ChartWrapper title="부문별 총 매출 비율" height={320}>
+      <ChartWrapper title="부문별 총 매출 비율 (단위: 백만원)" height={320}>
         <PieChart>
           <Pie
             data={pieData}
@@ -137,14 +123,14 @@ export default function DivisionCharts({
       </ChartWrapper>
 
       {/* 부문별 매출 & 이익 비교 */}
-      <ChartWrapper title="부문별 매출 및 이익 비교" height={290} className="lg:col-span-2">
+      <ChartWrapper title="부문별 매출 및 이익 비교 (단위: 백만원)" height={290} className="lg:col-span-2">
         <BarChart
           data={profitRateData}
           layout="vertical"
           margin={{ top: 5, right: 30, left: 100, bottom: 5 }}
         >
           <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-          <XAxis type="number" tickFormatter={formatCurrencyShort} tick={{ fontSize: 11 }} />
+          <XAxis type="number" tickFormatter={formatMillionWon} tick={{ fontSize: 11 }} />
           <YAxis type="category" dataKey="name" tick={{ fontSize: 12 }} width={90} />
           <Tooltip
             formatter={(value, name) => [

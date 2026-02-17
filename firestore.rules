@@ -61,8 +61,8 @@ service cloud.firestore {
     // Divisions Collection (영업부문)
     // ========================================
     match /divisions/{divisionId} {
-      // 읽기: 인증된 모든 사용자
-      allow read: if isAuthenticated();
+      // 읽기: 모든 사용자 (회원가입 시 목록 조회 필요)
+      allow read: if true;
 
       // 생성/수정/삭제: 관리자만
       allow create, update, delete: if isAdmin();

@@ -6,6 +6,7 @@ import { FirestoreErrorFallback, LoadingSpinner } from '@/components/error';
 import ReportFilterBar from '@/components/reports/ReportFilterBar';
 import DivisionSummaryTable from '@/components/reports/DivisionSummaryTable';
 import DivisionCharts from '@/components/reports/DivisionCharts';
+import { formatMillionWon, formatCurrency as formatCurrencyFull } from '@/utils/formatUtils';
 
 export default function DivisionReportPage() {
   const navigate = useNavigate();
@@ -75,20 +76,16 @@ export default function DivisionReportPage() {
           <>
             {/* Summary KPI Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                <p className="text-sm text-slate-500 mb-1">총 매출액</p>
+              <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200" title={formatCurrencyFull(summaries.reduce((acc, s) => acc + s.totalSales, 0))}>
+                <p className="text-sm text-slate-500 mb-1">총 매출액 (백만원)</p>
                 <p className="text-2xl font-bold text-slate-900">
-                  {formatCurrencyWithUnit(
-                    summaries.reduce((acc, s) => acc + s.totalSales, 0)
-                  )}
+                  {formatMillionWon(summaries.reduce((acc, s) => acc + s.totalSales, 0))}
                 </p>
               </div>
-              <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                <p className="text-sm text-slate-500 mb-1">총 매출이익</p>
+              <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200" title={formatCurrencyFull(summaries.reduce((acc, s) => acc + s.totalProfit, 0))}>
+                <p className="text-sm text-slate-500 mb-1">총 매출이익 (백만원)</p>
                 <p className="text-2xl font-bold text-emerald-600">
-                  {formatCurrencyWithUnit(
-                    summaries.reduce((acc, s) => acc + s.totalProfit, 0)
-                  )}
+                  {formatMillionWon(summaries.reduce((acc, s) => acc + s.totalProfit, 0))}
                 </p>
               </div>
               <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
@@ -115,14 +112,4 @@ export default function DivisionReportPage() {
       </main>
     </div>
   );
-}
-
-// Helper function
-function formatCurrencyWithUnit(value: number): string {
-  if (Math.abs(value) >= 100000000) {
-    return `${(value / 100000000).toFixed(1)}억`;
-  } else if (Math.abs(value) >= 1000000) {
-    return `${(value / 1000000).toFixed(0)}백만`;
-  }
-  return value.toLocaleString();
 }

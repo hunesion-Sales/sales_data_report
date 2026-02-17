@@ -152,10 +152,30 @@ export function useReport(
         if (products.length > 0) {
           // Firestore 데이터 사용
           setData(products);
-          setMonths(report.months);
-          setMonthLabels(report.monthLabels);
+
+          // 만약 report.months가 비어있다면 제품 데이터에서 직접 추출 (Fallback)
+          if (!report.months || report.months.length === 0) {
+            const monthSet = new Set<string>();
+            products.forEach(p => {
+              if (p.months) Object.keys(p.months).forEach(k => monthSet.add(k));
+            });
+            const extractedMonths = Array.from(monthSet).sort();
+            setMonths(extractedMonths);
+
+            // 라벨도 기본값 생성
+            const extractedLabels: Record<string, string> = {};
+            extractedMonths.forEach(m => {
+              const parts = m.split('-');
+              if (parts.length === 2) extractedLabels[m] = `${parts[0]}년 ${parseInt(parts[1])}월`;
+              else extractedLabels[m] = m;
+            });
+            setMonthLabels(extractedLabels);
+            console.warn('Report metadata missing months, extracted from products:', extractedMonths);
+          } else {
+            setMonths(report.months);
+            setMonthLabels(report.monthLabels);
+          }
         }
-        // products가 없으면 initialData(INITIAL_DATA) 유지
       } catch (err) {
         if (cancelled) return;
         console.error('Firestore load error:', err);

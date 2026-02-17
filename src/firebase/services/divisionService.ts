@@ -21,9 +21,10 @@ const COLLECTION_NAME = 'divisions';
 const DEFAULT_DIVISIONS = [
   { id: 'public', name: '공공사업부문', sortOrder: 0 },
   { id: 'convergence', name: '융합사업부문', sortOrder: 1 },
-  { id: 'strategy', name: '전략사업부문', sortOrder: 2 },
-  { id: 'finance', name: '금융기업사업부문', sortOrder: 3 },
+  { id: 'finance', name: '금융기업사업부문', sortOrder: 2 },
+  { id: 'strategy', name: '전략사업부문', sortOrder: 3 },
   { id: 'maintenance', name: '서비스사업팀', sortOrder: 4 },
+  { id: 'solution', name: '솔루션사업본부', sortOrder: 5 },
 ];
 
 /**
@@ -106,24 +107,34 @@ export async function deleteDivision(divisionId: string): Promise<void> {
 
 /**
  * 기본 영업부문 초기화 (seed)
- * - divisions 컬렉션이 비어있으면 기본 5개 부문 생성
+ * - 각 기본 부문이 존재하는지 확인하고 없으면 생성
  */
 export async function seedDefaultDivisions(): Promise<boolean> {
   const existing = await getDivisions();
-  if (existing.length > 0) return false;
+  const existingIds = new Set(existing.map(d => d.id));
 
   const batch = writeBatch(db);
+  let createdCount = 0;
+
   for (const div of DEFAULT_DIVISIONS) {
-    const docRef = doc(db, COLLECTION_NAME, div.id);
-    batch.set(docRef, {
-      name: div.name,
-      sortOrder: div.sortOrder,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    });
+    if (!existingIds.has(div.id)) {
+      const docRef = doc(db, COLLECTION_NAME, div.id);
+      batch.set(docRef, {
+        name: div.name,
+        sortOrder: div.sortOrder,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+      createdCount++;
+    }
   }
-  await batch.commit();
-  return true;
+
+  if (createdCount > 0) {
+    await batch.commit();
+    return true;
+  }
+
+  return false;
 }
 /**
  * 영업부문 전체 초기화 (기존 데이터 삭제 후 기본값 생성)
