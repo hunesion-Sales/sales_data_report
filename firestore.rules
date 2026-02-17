@@ -92,8 +92,10 @@ service cloud.firestore {
       // 읽기: 인증된 모든 사용자
       allow read: if isAuthenticated();
 
-      // 생성/수정/삭제: 관리자만
-      allow create, update, delete: if isAdmin();
+      // 생성/수정: 관리자 또는 승인된 사용자
+      allow create, update: if isAdmin() || isApproved();
+      // 삭제: 관리자만 (연간 보고서 전체 삭제는 위험하므로)
+      allow delete: if isAdmin();
 
       // ----------------------------------------
       // Report Sub-collections
@@ -102,20 +104,25 @@ service cloud.firestore {
       // Products (제품별 매출 데이터)
       match /products/{productDocId} {
         allow read: if isAuthenticated();
-        allow create, update, delete: if isAdmin();
+        // 데이터 입력/수정/삭제: 승인된 사용자 이상
+        allow create, update, delete: if isAdmin() || isApproved();
       }
 
       // Division Data (부문별 데이터)
       match /division_data/{divisionDataId} {
         allow read: if isAuthenticated();
-        allow create, update, delete: if isAdmin();
+        allow create, update, delete: if isAdmin() || isApproved();
       }
 
-      // Upload History (업로드 이력)
-      match /upload_history/{historyId} {
+      // Snapshots (주차별 스냅샷)
+      match /snapshots/{snapshotId} {
         allow read: if isAuthenticated();
-        allow create: if isAdmin();
-        allow update, delete: if false; // 이력은 수정/삭제 불가
+        allow create, update, delete: if isAdmin() || isApproved();
+
+        match /products/{productId} {
+          allow read: if isAuthenticated();
+          allow create, update, delete: if isAdmin() || isApproved();
+        }
       }
     }
 
@@ -129,6 +136,15 @@ service cloud.firestore {
 
       // 생성/수정/삭제: 관리자만
       allow create, update, delete: if isAdmin();
+    }
+
+    // ========================================
+    // Upload History Collection (Global)
+    // ========================================
+    match /uploadHistory/{historyId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin() || isApproved();
+      allow update, delete: if false;
     }
 
     // ========================================

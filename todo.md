@@ -798,6 +798,51 @@ Firestore Root
     - `seedDefaultDivisions` 로직 개선: 누락된 기본 부문 자동 생성 보장
 55. [x] **자동 관리자 권한 부여**:
     - `src/pages/admin/UserManagementPage.tsx`: "솔루션사업본부" 배정 시 `admin` 권한 자동 부여
+
+### Phase 13: 분기별 이익 목표 관리 -- COMPLETED (2026-02-17)
+56. [x] **이익 목표 추가**:
+    - `src/types/index.ts`: `QuarterlyTarget`에 `profitTarget` 필드 추가
+    - `src/components/targets/TargetInputTable.tsx`: 매출 목표와 함께 이익 목표 입력 UI 추가
+    - `src/pages/AchievementPage.tsx`: 이익 달성율 차트 및 테이블 컬럼 추가
+57. [x] **인덱스 최적화**:
+    - `firestore.indexes.json`: `targets` 컬렉션 복합 인덱스 (year-quarter-divisionId) 추가 및 배포
+
+### Phase 14: 엑셀 파싱 헤더 위치 수정 -- COMPLETED (2026-02-17)
+58. [x] **헤더 검색 범위 확대**:
+    - `src/utils/excelParser.ts`: 헤더 행 검색 범위를 Row 2까지 확대 (기존 Row 10)
+    - 상단(Row 3)에 위치한 월 헤더도 정상 인식하도록 개선
+
+### Phase 15: 데이터 업로드 권한 개선 -- COMPLETED (2026-02-17)
+59. [x] **Firestore 규칙 완화**:
+    - `firestore.rules`: `reports`, `products`, `division_data` 컬렉션에 대해 `isApproved()` 사용자도 `create/update` 허용
+    - 관리자 외 승인된 사용자도 데이터 업로드 가능하도록 개선
+
+### Phase 16: 업로드 기록(History) 권한 수정 -- COMPLETED (2026-02-17)
+60. [x] **History 쓰기 권한 부여**:
+    - `firestore.rules`: `uploadHistory` 컬렉션에 `isApproved()` 사용자의 `create` 권한 추가
+    - 업로드 시 기록 저장 실패로 인한 전체 트랜잭션 롤백 방지
+
+### Phase 17: 스냅샷(Smart Mode) 권한 수정 -- COMPLETED (2026-02-17)
+61. [x] **스냅샷 하위 컬렉션 규칙 추가**:
+    - `firestore.rules`: `reports/{reportId}/snapshots` 및 하위 `products` 컬렉션 규칙 명시
+    - 스마트 모드 업로드 시 스냅샷 생성 권한 오류 해결
+
+### Phase 18: 데이터 표시 누락 해결 및 디버깅 -- COMPLETED (2026-02-17)
+62. [x] **데이터 로딩 레이스 컨디션 수정**:
+    - `src/hooks/useReport.ts`: `loadedRef` 로직 제거하여 빠른 인증 상태 변경 시 로딩 스킵 방지
+    - 데이터가 존재함에도 화면에 표시되지 않는 문제 해결
+63. [x] **제품 데이터 타입 수정**:
+    - `src/types/index.ts`: `ProductData` 인터페이스에 `sortOrder` 속성 추가 (TS 에러 해결)
+
+### Phase 19: 데이터 리셋 및 파싱 로직 전면 수정 -- COMPLETED (2026-02-17)
+64. [x] **데이터 초기화 기능 추가**:
+    - `src/firebase/services/reportService.ts`: `clearReportData(reportId)` 구현 (모든 하위 컬렉션 재귀 삭제)
+    - `src/pages/DataInputPage.tsx`: "데이터 초기화 (전체 삭제)" 버튼 및 이중 경고창 추가
+65. [x] **엑셀 컬럼 매핑 로직 지능화**:
+    - `src/utils/excelParser.ts`:
+      - 월 헤더 하단 행(Sub-header) 스캔 로직 추가
+      - "매출", "매입" 키워드를 직접 찾아 컬럼 인덱스 매핑 (병합 셀로 인한 밀림 현상 완벽 해결)
+      - 상세 디버깅 로그(`[ExcelParser]`) 추가로 파싱 과정 투명화
     - 권한 변경 알림 시스템 적용
 
 #### 12-3. 버그 수정 및 안정화

@@ -16,17 +16,24 @@ import type { ProductData, MonthData } from '@/types';
  */
 export async function getProducts(reportId: string): Promise<ProductData[]> {
   const ref = collection(db, 'reports', reportId, 'products');
-  const q = query(ref, orderBy('sortOrder', 'asc'));
-  const snap = await getDocs(q);
+  // 디버깅: 정렬 조건 제거하고 기본 가져오기
+  // const q = query(ref, orderBy('sortOrder', 'asc'));
+  const snap = await getDocs(ref);
 
-  return snap.docs.map((d) => {
+  console.log(`[getProducts] Fetched ${snap.size} docs from ${reportId}/products`);
+
+  const list = snap.docs.map((d) => {
     const data = d.data();
     return {
       id: d.id,
       product: data.product as string,
       months: data.months as Record<string, MonthData>,
-    };
+      sortOrder: data.sortOrder, // Add for checking
+    } as ProductData;
   });
+
+  // Client-side sorting as fallback
+  return list.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
 }
 
 /**

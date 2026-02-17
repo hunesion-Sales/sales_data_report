@@ -10,7 +10,7 @@ import type { ProductData, Notification, Division, UploadAnalysisResult, Conflic
 import { getMonthShortLabel } from '@/types';
 import { WeekSelector, ConflictResolutionModal } from '@/components/upload';
 import {
-    Upload, FileText, Loader2, Save, X, Package, Building2, RefreshCcw, GitMerge, Cloud, CloudOff, RefreshCw, AlertTriangle, Sparkles
+    Upload, FileText, Loader2, Save, X, Package, Building2, RefreshCcw, GitMerge, Cloud, CloudOff, RefreshCw, AlertTriangle, Sparkles, Trash2
 } from 'lucide-react';
 
 // --- 초기 데이터 (동적 월 구조) ---
@@ -434,6 +434,26 @@ export default function DataInputPage() {
                                 >
                                     <Package className="w-4 h-4" />
                                     제품 마스터 초기화 (22종)
+                                </button>
+                                <button
+                                    onClick={async () => {
+                                        if (!window.confirm('경고: 2026년 보고서의 모든 데이터(제품, 스냅샷, 업로드 기록)가 영구 삭제됩니다.\n정말 초기화하시겠습니까?')) return;
+                                        if (!window.confirm('데이터는 복구할 수 없습니다. 정말 진행하시겠습니까?')) return;
+
+                                        try {
+                                            const { clearReportData } = await import('@/firebase/services/reportService');
+                                            await clearReportData(2026 as any); // TODO: Pass string 'report-2026' or fix type
+                                            alert('모든 데이터가 초기화되었습니다.');
+                                            window.location.reload();
+                                        } catch (e) {
+                                            console.error(e);
+                                            alert('초기화 중 오류가 발생했습니다.');
+                                        }
+                                    }}
+                                    className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors shadow-sm"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                    데이터 초기화 (전체 삭제)
                                 </button>
                             </div>
                         </div>

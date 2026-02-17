@@ -164,14 +164,10 @@ export function useReport(
       return;
     }
 
-    // 이미 로드했으면 스킵 (React 18 StrictMode 대응)
-    if (loadedRef.current) {
-      setIsLoading(false);
-      return;
-    }
+    // Remove loadedRef check to allow re-fetching on user change
+    // If strict mode causes double fetch, 'cancelled' flag handles it.
 
     let cancelled = false;
-    loadedRef.current = true;
 
     async function load() {
       try {
@@ -189,8 +185,10 @@ export function useReport(
 
         const { reportId, report } = reportResult;
         reportIdRef.current = reportId;
+        console.log('[useReport] Fetched Report:', report);
 
         const products = await getProducts(reportId);
+        console.log('[useReport] Fetched Products:', products.length);
 
         if (cancelled) return;
 
@@ -200,11 +198,14 @@ export function useReport(
 
           // 만약 report.months가 비어있다면 제품 데이터에서 직접 추출 (Fallback)
           if (!report.months || report.months.length === 0) {
+            console.warn('[useReport] Report metadata missing months, extracting from products...');
             const monthSet = new Set<string>();
             products.forEach(p => {
               if (p.months) Object.keys(p.months).forEach(k => monthSet.add(k));
             });
             const extractedMonths = Array.from(monthSet).sort();
+            console.log('[useReport] Extracted months:', extractedMonths);
+
             setMonths(extractedMonths);
 
             // 라벨도 기본값 생성
@@ -215,11 +216,13 @@ export function useReport(
               else extractedLabels[m] = m;
             });
             setMonthLabels(extractedLabels);
-            console.warn('Report metadata missing months, extracted from products:', extractedMonths);
           } else {
+            console.log('[useReport] Using report metadata months:', report.months);
             setMonths(report.months);
             setMonthLabels(report.monthLabels);
           }
+        } else {
+          console.log('[useReport] No products found.');
         }
       } catch (err) {
         if (cancelled) return;

@@ -9,6 +9,7 @@ export interface ProductData {
   id: number | string;
   product: string;
   months: Record<string, MonthData>; // key: "2026-01", "2026-02", ...
+  sortOrder?: number;
 }
 
 /** 월별 이익 포함 가공 데이터 */

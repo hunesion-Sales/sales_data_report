@@ -43,11 +43,13 @@ export async function parseExcelFile(buffer: ArrayBuffer): Promise<ParseResult> 
     throw new Error('워크시트를 찾을 수 없습니다.');
   }
 
-  // 1) 월 헤더 행 탐색 (row 10~20 범위에서 "월" 포함 셀 검색)
+  // 1) 월 헤더 행 탐색 (row 2~20 범위에서 "월" 포함 셀 검색 - 상단 행부터 검색하도록 수정)
   let monthHeaderRow = 0;
   const monthColumns: { key: string; display: string; salesCol: number; costCol: number }[] = [];
 
-  for (let rowNum = 10; rowNum <= 20; rowNum++) {
+  console.log(`[ExcelParser] Start parsing. Total rows: ${worksheet.rowCount}`);
+
+  for (let rowNum = 2; rowNum <= 20; rowNum++) {
     const row = worksheet.getRow(rowNum);
     let found = false;
     row.eachCell({ includeEmpty: false }, (cell, colNumber) => {
@@ -57,13 +59,37 @@ export async function parseExcelFile(buffer: ArrayBuffer): Promise<ParseResult> 
         if (!found) {
           monthHeaderRow = rowNum;
           found = true;
+          console.log(`[ExcelParser] Found month header row at ${rowNum}`);
         }
+
+        // 월 헤더 아래 행에서 매출/매입 컬럼 찾기
+        const subHeaderRow = worksheet.getRow(rowNum + 1);
+        let salesCol = colNumber;
+        let costCol = colNumber + 1;
+
+        // 현재 컬럼(colNumber) 기준 좌우 2칸 범위 내에서 "매출", "매입" 키워드 검색
+        // (병합된 셀의 경우 colNumber가 첫 번째 셀일수도, 가운데일수도, 마지막일수도 있음)
+        console.log(`[ExcelParser] Inspecting sub-headers for ${val} around col ${colNumber}`);
+
+        for (let c = colNumber - 1; c <= colNumber + 3; c++) {
+          const subVal = String(subHeaderRow.getCell(c).value ?? '').trim();
+          if (!subVal) continue;
+
+          if (subVal.includes('매출') && !subVal.includes('이익')) {
+            salesCol = c;
+            console.log(`  -> Found 'Sales' at col ${c} ("${subVal}")`);
+          } else if (subVal.includes('매입')) {
+            costCol = c;
+            console.log(`  -> Found 'Cost' at col ${c} ("${subVal}")`);
+          }
+        }
+
         const parsed = parseMonthLabel(val);
         monthColumns.push({
           key: parsed.key,
           display: parsed.display,
-          salesCol: colNumber,
-          costCol: colNumber + 1,
+          salesCol,
+          costCol,
         });
       }
     });
@@ -77,6 +103,7 @@ export async function parseExcelFile(buffer: ArrayBuffer): Promise<ParseResult> 
     headerRow.eachCell({ includeEmpty: false }, (cell, colNumber) => {
       if (String(cell.value ?? '').trim() === '제품군') {
         productCol = colNumber;
+        console.log(`[ExcelParser] Found 'Product Family' column at ${colNumber}`);
       }
     });
   }
@@ -101,6 +128,8 @@ export async function parseExcelFile(buffer: ArrayBuffer): Promise<ParseResult> 
     return Number(String(cellValue).replace(/,/g, '')) || 0;
   };
 
+  console.log(`[ExcelParser] Parsing data starting from row ${dataStartRow}`);
+
   for (let rowNum = dataStartRow; rowNum <= worksheet.rowCount; rowNum++) {
     const row = worksheet.getRow(rowNum);
     const productName = String(row.getCell(productCol).value ?? '').trim();
@@ -116,6 +145,10 @@ export async function parseExcelFile(buffer: ArrayBuffer): Promise<ParseResult> 
       };
     }
 
+    if (data.length < 3) { // Log first 3 rows for debugging
+      console.log(`[ExcelParser] Row ${rowNum} (${productName}):`, JSON.stringify(monthData));
+    }
+
     data.push({
       id: Date.now() + rowNum,
       product: productName,
@@ -127,5 +160,6 @@ export async function parseExcelFile(buffer: ArrayBuffer): Promise<ParseResult> 
     throw new Error('유효한 데이터를 찾을 수 없습니다. 엑셀 파일 형식을 확인해주세요.');
   }
 
+  console.log(`[ExcelParser] Parsing complete. Found ${data.length} items.`);
   return { data, months, monthLabels };
 }
