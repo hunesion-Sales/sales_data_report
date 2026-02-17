@@ -1,11 +1,25 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import type { ProductData } from '@/types';
+import type {
+  ProductData,
+  WeekKey,
+  WeeklySnapshot,
+  UploadAnalysisResult,
+  ConflictResolution,
+  ConflictResolutionSaveResult,
+} from '@/types';
 import { getOrCreateReport, getReport, updateReportMonths } from '@/firebase/services/reportService';
 import { getProducts, saveProducts, addProduct, deleteProduct } from '@/firebase/services/productService';
 import { recordUploadHistory } from '@/firebase/services/uploadHistoryService';
+import {
+  getSnapshots,
+  getSnapshotProducts,
+  analyzeUpload as analyzeUploadService,
+  saveWithResolutions as saveWithResolutionsService,
+} from '@/firebase/services/snapshotService';
+import { getWeekKey } from '@/utils/weekUtils';
 import type { User } from 'firebase/auth';
 
-export type UploadMergeMode = 'overwrite' | 'merge';
+export type UploadMergeMode = 'overwrite' | 'merge' | 'smart';
 
 interface UseReportOptions {
   /** Firebase Auth 사용자 (null이면 Firestore 쿼리 스킵) */
@@ -33,6 +47,32 @@ interface UseReportReturn {
   addEntry: (product: ProductData) => Promise<void>;
   /** 개별 제품 삭제 */
   removeEntry: (id: number | string) => Promise<void>;
+
+  // 스냅샷 관련 기능
+  /** 현재 주차 키 */
+  currentWeekKey: WeekKey;
+  /** 사용 가능한 스냅샷 목록 */
+  availableSnapshots: WeeklySnapshot[];
+  /** 현재 선택된 스냅샷 (null이면 최신 데이터) */
+  selectedSnapshot: WeekKey | null;
+  /** 업로드 데이터 분석 (충돌 감지) */
+  analyzeUpload: (
+    products: ProductData[],
+    months: string[],
+    monthLabels: Record<string, string>,
+  ) => Promise<UploadAnalysisResult>;
+  /** 충돌 해결 후 저장 */
+  saveWithConflictResolution: (
+    analysisResult: UploadAnalysisResult,
+    resolutions: ConflictResolution[],
+    fileName: string,
+  ) => Promise<ConflictResolutionSaveResult>;
+  /** 특정 스냅샷 로드 */
+  loadSnapshot: (weekKey: WeekKey) => Promise<void>;
+  /** 최신 데이터 로드 */
+  loadLatest: () => Promise<void>;
+  /** 스냅샷 목록 새로고침 */
+  refreshSnapshots: () => Promise<void>;
 }
 
 const CURRENT_YEAR = 2026;
@@ -105,6 +145,11 @@ export function useReport(
   const [error, setError] = useState<string | null>(null);
   const reportIdRef = useRef<string | null>(null);
   const loadedRef = useRef(false);
+
+  // 스냅샷 관련 상태
+  const [currentWeekKey] = useState<WeekKey>(getWeekKey());
+  const [availableSnapshots, setAvailableSnapshots] = useState<WeeklySnapshot[]>([]);
+  const [selectedSnapshot, setSelectedSnapshot] = useState<WeekKey | null>(null);
 
   // 초기 로드: 인증 완료 후 Firestore에서 데이터 fetch
   useEffect(() => {
@@ -279,6 +324,134 @@ export function useReport(
     }
   }, []);
 
+  // 스냅샷 목록 새로고침
+  const refreshSnapshots = useCallback(async () => {
+    if (!reportIdRef.current) return;
+    try {
+      const snapshots = await getSnapshots(reportIdRef.current);
+      setAvailableSnapshots(snapshots);
+    } catch (err) {
+      console.error('Failed to refresh snapshots:', err);
+    }
+  }, []);
+
+  // 업로드 데이터 분석 (충돌 감지)
+  const analyzeUpload = useCallback(async (
+    products: ProductData[],
+    newMonths: string[],
+    newMonthLabels: Record<string, string>,
+  ): Promise<UploadAnalysisResult> => {
+    const { reportId } = await getOrCreateReport(CURRENT_YEAR);
+    reportIdRef.current = reportId;
+    return analyzeUploadService(reportId, products, newMonths, newMonthLabels);
+  }, []);
+
+  // 충돌 해결 후 저장
+  const saveWithConflictResolution = useCallback(async (
+    analysisResult: UploadAnalysisResult,
+    resolutions: ConflictResolution[],
+    fileName: string,
+  ): Promise<ConflictResolutionSaveResult> => {
+    if (!reportIdRef.current) {
+      const { reportId } = await getOrCreateReport(CURRENT_YEAR);
+      reportIdRef.current = reportId;
+    }
+
+    setIsSaving(true);
+    try {
+      const userId = firebaseUser?.uid || 'anonymous';
+      const result = await saveWithResolutionsService(
+        reportIdRef.current,
+        analysisResult,
+        resolutions,
+        fileName,
+        userId
+      );
+
+      // 스냅샷 목록 새로고침
+      await refreshSnapshots();
+
+      // 최신 데이터 로드
+      const products = await getProducts(reportIdRef.current);
+      setData(products);
+
+      // 월 정보 업데이트
+      const allMonths = new Set<string>();
+      products.forEach(p => {
+        if (p.months) Object.keys(p.months).forEach(k => allMonths.add(k));
+      });
+      const sortedMonths = Array.from(allMonths).sort();
+      setMonths(sortedMonths);
+      setMonthLabels(analysisResult.monthLabels);
+
+      // 현재 선택 초기화 (최신 데이터로)
+      setSelectedSnapshot(null);
+
+      return result;
+    } catch (err) {
+      console.error('Save with resolutions error:', err);
+      setError('저장 실패');
+      throw err;
+    } finally {
+      setIsSaving(false);
+    }
+  }, [firebaseUser, refreshSnapshots]);
+
+  // 특정 스냅샷 로드
+  const loadSnapshot = useCallback(async (weekKey: WeekKey) => {
+    if (!reportIdRef.current) return;
+
+    setIsLoading(true);
+    try {
+      const products = await getSnapshotProducts(reportIdRef.current, weekKey);
+      setData(products);
+      setSelectedSnapshot(weekKey);
+
+      // 월 정보 추출
+      const monthSet = new Set<string>();
+      products.forEach(p => {
+        if (p.months) Object.keys(p.months).forEach(k => monthSet.add(k));
+      });
+      setMonths(Array.from(monthSet).sort());
+    } catch (err) {
+      console.error('Failed to load snapshot:', err);
+      setError('스냅샷 로드 실패');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  // 최신 데이터 로드
+  const loadLatest = useCallback(async () => {
+    if (!reportIdRef.current) return;
+
+    setIsLoading(true);
+    try {
+      const products = await getProducts(reportIdRef.current);
+      setData(products);
+      setSelectedSnapshot(null);
+
+      // 월 정보 추출
+      const monthSet = new Set<string>();
+      products.forEach(p => {
+        if (p.months) Object.keys(p.months).forEach(k => monthSet.add(k));
+      });
+      setMonths(Array.from(monthSet).sort());
+    } catch (err) {
+      console.error('Failed to load latest:', err);
+      setError('최신 데이터 로드 실패');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  // 초기 로드 시 스냅샷 목록도 로드
+  useEffect(() => {
+    if (reportIdRef.current && !isLoading) {
+      refreshSnapshots();
+    }
+  }, [isLoading, refreshSnapshots]);
+
   return {
     data,
     months,
@@ -289,5 +462,14 @@ export function useReport(
     saveUploadedData,
     addEntry,
     removeEntry,
+    // 스냅샷 관련
+    currentWeekKey,
+    availableSnapshots,
+    selectedSnapshot,
+    analyzeUpload,
+    saveWithConflictResolution,
+    loadSnapshot,
+    loadLatest,
+    refreshSnapshots,
   };
 }

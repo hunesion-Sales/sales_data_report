@@ -6,10 +6,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import { getDivisions } from '@/firebase/services/divisionService';
 import { saveDivisionData } from '@/firebase/services/divisionDataService';
 import { formatMillionWon, formatCurrency as formatCurrencyFull } from '@/utils/formatUtils';
-import type { ProductData, Notification, Division } from '@/types';
+import type { ProductData, Notification, Division, UploadAnalysisResult, ConflictResolution } from '@/types';
 import { getMonthShortLabel } from '@/types';
+import { WeekSelector, ConflictResolutionModal } from '@/components/upload';
 import {
-    Upload, FileText, Loader2, Save, X, Package, Building2, RefreshCcw, GitMerge, Cloud, CloudOff, RefreshCw, AlertTriangle
+    Upload, FileText, Loader2, Save, X, Package, Building2, RefreshCcw, GitMerge, Cloud, CloudOff, RefreshCw, AlertTriangle, Sparkles
 } from 'lucide-react';
 
 // --- 초기 데이터 (동적 월 구조) ---
@@ -29,6 +30,14 @@ export default function DataInputPage() {
         data, months,
         isLoading, isSaving, error: firestoreError,
         saveUploadedData, removeEntry,
+        // 스냅샷 관련
+        currentWeekKey,
+        availableSnapshots,
+        selectedSnapshot,
+        analyzeUpload,
+        saveWithConflictResolution,
+        loadSnapshot,
+        loadLatest,
     } = useReport(INITIAL_DATA, DEFAULT_MONTHS, DEFAULT_MONTH_LABELS, {
         firebaseUser,
         authReady,
@@ -38,7 +47,12 @@ export default function DataInputPage() {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [isUploading, setIsUploading] = useState(false);
     const [uploadType, setUploadType] = useState<'product' | 'division'>('product');
-    const [mergeMode, setMergeMode] = useState<UploadMergeMode>('overwrite');
+    const [mergeMode, setMergeMode] = useState<UploadMergeMode>('smart');
+
+    // 충돌 해결 모달 상태
+    const [showConflictModal, setShowConflictModal] = useState(false);
+    const [uploadAnalysis, setUploadAnalysis] = useState<UploadAnalysisResult | null>(null);
+    const [pendingFileName, setPendingFileName] = useState<string>('');
 
     const showNotification = (message: string, type: 'success' | 'error' = 'success') => {
         setNotification({ message, type });
@@ -113,24 +127,60 @@ export default function DataInputPage() {
                 );
             } else {
                 const result = await parseExcelFile(buffer);
-                const { newCount, updatedCount } = await saveUploadedData(
-                    result.data,
-                    result.months,
-                    result.monthLabels,
-                    file.name,
-                    mergeMode,
-                );
 
-                const monthInfo = result.months.length > 0
-                    ? ` (${result.months.map(m => getMonthShortLabel(m)).join(', ')})`
-                    : '';
+                // smart 모드: 충돌 감지
+                if (mergeMode === 'smart') {
+                    const analysis = await analyzeUpload(
+                        result.data,
+                        result.months,
+                        result.monthLabels,
+                    );
 
-                if (mergeMode === 'merge') {
+                    // 충돌이 있으면 모달 표시
+                    if (analysis.conflicts.length > 0) {
+                        setUploadAnalysis(analysis);
+                        setPendingFileName(file.name);
+                        setShowConflictModal(true);
+                        setIsUploading(false);
+                        e.target.value = '';
+                        return;
+                    }
+
+                    // 충돌 없으면 바로 저장
+                    const saveResult = await saveWithConflictResolution(
+                        analysis,
+                        [], // 충돌 없으므로 빈 배열
+                        file.name,
+                    );
+
+                    const monthInfo = result.months.length > 0
+                        ? ` (${result.months.map(m => getMonthShortLabel(m)).join(', ')})`
+                        : '';
+
                     showNotification(
-                        `데이터가 병합되었습니다: 신규 ${newCount}건, 업데이트 ${updatedCount}건${monthInfo}`
+                        `데이터가 저장되었습니다: 신규 ${analysis.newMonths.length}개 월, 변경 없음 ${saveResult.skippedMonths.length}개 월${monthInfo}`
                     );
                 } else {
-                    showNotification(`${result.data.length}건의 데이터를 불러왔습니다.${monthInfo}`);
+                    // 기존 overwrite/merge 모드
+                    const { newCount, updatedCount } = await saveUploadedData(
+                        result.data,
+                        result.months,
+                        result.monthLabels,
+                        file.name,
+                        mergeMode,
+                    );
+
+                    const monthInfo = result.months.length > 0
+                        ? ` (${result.months.map(m => getMonthShortLabel(m)).join(', ')})`
+                        : '';
+
+                    if (mergeMode === 'merge') {
+                        showNotification(
+                            `데이터가 병합되었습니다: 신규 ${newCount}건, 업데이트 ${updatedCount}건${monthInfo}`
+                        );
+                    } else {
+                        showNotification(`${result.data.length}건의 데이터를 불러왔습니다.${monthInfo}`);
+                    }
                 }
             }
         } catch (error) {
@@ -141,31 +191,72 @@ export default function DataInputPage() {
             setIsUploading(false);
         }
         e.target.value = '';
-    }, [saveUploadedData, uploadType, mergeMode]);
+    }, [saveUploadedData, uploadType, mergeMode, analyzeUpload, saveWithConflictResolution]);
+
+    // --- 충돌 해결 처리 ---
+    const handleConflictResolve = useCallback(async (resolutions: ConflictResolution[]) => {
+        if (!uploadAnalysis) return;
+
+        setIsUploading(true);
+        try {
+            const result = await saveWithConflictResolution(
+                uploadAnalysis,
+                resolutions,
+                pendingFileName,
+            );
+
+            setShowConflictModal(false);
+            setUploadAnalysis(null);
+            setPendingFileName('');
+
+            const useNewCount = resolutions.filter(r => r.resolution === 'use_new').length;
+            showNotification(
+                `데이터가 저장되었습니다: 신규 ${result.newCount}개 월, 대체 ${useNewCount}개 월, 스킵 ${result.skippedMonths.length}개 월`
+            );
+        } catch (error) {
+            console.error('Conflict resolution error:', error);
+            showNotification('저장 중 오류가 발생했습니다.', 'error');
+        } finally {
+            setIsUploading(false);
+        }
+    }, [uploadAnalysis, pendingFileName, saveWithConflictResolution]);
 
     return (
         <div className="max-w-7xl mx-auto space-y-8 animate-fade-in p-6">
             <div className="flex justify-between items-center mb-6">
                 <h2 className="text-2xl font-bold text-slate-900">데이터 관리</h2>
 
-                {/* Firestore Status */}
-                <div className="flex items-center gap-3">
-                    {isSaving ? (
-                        <span className="flex items-center gap-1 text-xs text-amber-600">
-                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                            저장 중...
-                        </span>
-                    ) : firestoreError ? (
-                        <span className="flex items-center gap-1 text-xs text-red-500" title={firestoreError}>
-                            <CloudOff className="w-3.5 h-3.5" />
-                            오프라인
-                        </span>
-                    ) : !isLoading ? (
-                        <span className="flex items-center gap-1 text-xs text-accent-600">
-                            <Cloud className="w-3.5 h-3.5" />
-                            동기화됨
-                        </span>
-                    ) : null}
+                {/* 주차 선택 및 상태 */}
+                <div className="flex items-center gap-4">
+                    {/* 주차 선택 */}
+                    <WeekSelector
+                        snapshots={availableSnapshots}
+                        selectedWeek={selectedSnapshot}
+                        currentWeekKey={currentWeekKey}
+                        onSelectWeek={loadSnapshot}
+                        onSelectLatest={loadLatest}
+                        isLoading={isLoading}
+                    />
+
+                    {/* Firestore Status */}
+                    <div className="flex items-center gap-3">
+                        {isSaving ? (
+                            <span className="flex items-center gap-1 text-xs text-amber-600">
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                저장 중...
+                            </span>
+                        ) : firestoreError ? (
+                            <span className="flex items-center gap-1 text-xs text-red-500" title={firestoreError}>
+                                <CloudOff className="w-3.5 h-3.5" />
+                                오프라인
+                            </span>
+                        ) : !isLoading ? (
+                            <span className="flex items-center gap-1 text-xs text-accent-600">
+                                <Cloud className="w-3.5 h-3.5" />
+                                동기화됨
+                            </span>
+                        ) : null}
+                    </div>
                 </div>
             </div>
 
@@ -215,8 +306,22 @@ export default function DataInputPage() {
                 {uploadType === 'product' && (
                     <div className="mb-6 p-4 bg-slate-50 rounded-lg border border-slate-200">
                         <p className="text-sm font-medium text-slate-700 mb-3">업로드 방식</p>
-                        <div className="flex gap-3">
-                            <label className="flex items-center gap-2 cursor-pointer">
+                        <div className="flex flex-wrap gap-3">
+                            <label className="flex items-center gap-2 cursor-pointer p-2 rounded-lg hover:bg-slate-100 transition-colors">
+                                <input
+                                    type="radio"
+                                    name="mergeMode"
+                                    checked={mergeMode === 'smart'}
+                                    onChange={() => setMergeMode('smart')}
+                                    className="w-4 h-4 text-primary-600 focus:ring-primary-500"
+                                />
+                                <Sparkles className="w-4 h-4 text-amber-500" />
+                                <div>
+                                    <span className="text-sm font-medium text-slate-700">스마트 (권장)</span>
+                                    <p className="text-xs text-slate-500">변경된 월만 감지, 충돌 시 선택</p>
+                                </div>
+                            </label>
+                            <label className="flex items-center gap-2 cursor-pointer p-2 rounded-lg hover:bg-slate-100 transition-colors">
                                 <input
                                     type="radio"
                                     name="mergeMode"
@@ -230,7 +335,7 @@ export default function DataInputPage() {
                                     <p className="text-xs text-slate-500">기존 데이터를 새 데이터로 대체</p>
                                 </div>
                             </label>
-                            <label className="flex items-center gap-2 cursor-pointer">
+                            <label className="flex items-center gap-2 cursor-pointer p-2 rounded-lg hover:bg-slate-100 transition-colors">
                                 <input
                                     type="radio"
                                     name="mergeMode"
@@ -241,7 +346,7 @@ export default function DataInputPage() {
                                 <GitMerge className="w-4 h-4 text-slate-500" />
                                 <div>
                                     <span className="text-sm font-medium text-slate-700">병합</span>
-                                    <p className="text-xs text-slate-500">기존 데이터와 합치기 (같은 제품은 업데이트)</p>
+                                    <p className="text-xs text-slate-500">기존 데이터와 합치기</p>
                                 </div>
                             </label>
                         </div>
@@ -352,7 +457,14 @@ export default function DataInputPage() {
 
             {/* 목록 리스트 */}
             <div className="bg-white p-6 rounded-xl shadow border border-slate-200">
-                <h4 className="text-lg font-bold text-slate-800 mb-4">현재 데이터 목록({data.length}건)</h4>
+                <h4 className="text-lg font-bold text-slate-800 mb-4">
+                    현재 데이터 목록({data.length}건)
+                    {selectedSnapshot && (
+                        <span className="ml-2 text-sm font-normal text-amber-600">
+                            (스냅샷: {selectedSnapshot})
+                        </span>
+                    )}
+                </h4>
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm text-left">
                         <thead className="bg-slate-50 text-slate-500">
@@ -387,6 +499,21 @@ export default function DataInputPage() {
                     </table>
                 </div>
             </div>
+
+            {/* 충돌 해결 모달 */}
+            {uploadAnalysis && (
+                <ConflictResolutionModal
+                    isOpen={showConflictModal}
+                    onClose={() => {
+                        setShowConflictModal(false);
+                        setUploadAnalysis(null);
+                        setPendingFileName('');
+                    }}
+                    analysis={uploadAnalysis}
+                    onResolve={handleConflictResolve}
+                    isProcessing={isUploading}
+                />
+            )}
         </div>
     );
 }

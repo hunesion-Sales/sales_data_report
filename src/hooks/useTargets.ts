@@ -36,9 +36,13 @@ export function useTargets(): UseTargetsReturn {
 
       setDivisions(divisionsData);
       setTargets(targetsData);
-    } catch (err) {
+    } catch (err: any) {
       console.error('useTargets load error:', err);
-      setError('목표 데이터를 불러오는데 실패했습니다.');
+      if (err?.code === 'failed-precondition') {
+        setError('데이터베이스 인덱스가 필요합니다. 관리자에게 문의하세요.');
+      } else {
+        setError('목표 데이터를 불러오는 중 오류가 발생했습니다.');
+      }
     } finally {
       setIsLoading(false);
     }

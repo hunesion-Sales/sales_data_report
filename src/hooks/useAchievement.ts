@@ -133,7 +133,7 @@ export function useAchievement(
   const productDivisionMap = useMemo(() => {
     const map: Record<string, string | null> = {};
     for (const pm of productMasters) {
-      map[pm.name] = pm.divisionId;
+      map[pm.name] = pm.divisionId ?? null;
     }
     return map;
   }, [productMasters]);

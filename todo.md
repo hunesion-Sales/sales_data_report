@@ -809,7 +809,7 @@ Firestore Root
 
 ---
 
-### Phase 13: 주차별 스냅샷 저장 및 월별 충돌 해결 -- IN PROGRESS (2026-02-17)
+### Phase 13: 주차별 스냅샷 저장 및 월별 충돌 해결 -- COMPLETED (2026-02-17)
 
 > **목표**:
 > - 매주 업로드되는 데이터를 주차별로 구분하여 스냅샷 저장
@@ -843,11 +843,11 @@ reports/report-{year}/
 58. [x] **타입 정의 추가**:
     - `src/types/index.ts`: `WeekKey`, `WeeklySnapshot`, `MonthDataHash`, `MonthConflict`, `UploadAnalysisResult`, `ConflictResolution`, `ConflictResolutionSaveResult` 타입 추가
 
-59. [ ] **주차/해시 유틸리티 구현**:
+59. [x] **주차/해시 유틸리티 구현**:
     - `src/utils/weekUtils.ts`: ISO 주차 계산, 주차 키 생성/파싱, 주차 라벨 생성
     - `src/utils/hashUtils.ts`: SHA-256 해시 생성, 월별 데이터 해시 계산
 
-60. [ ] **스냅샷 서비스 구현**:
+60. [x] **스냅샷 서비스 구현**:
     - `src/firebase/services/snapshotService.ts`:
       - `saveWeeklySnapshot()`: 주차별 스냅샷 저장
       - `getSnapshots()`: 스냅샷 목록 조회
@@ -855,22 +855,22 @@ reports/report-{year}/
       - `analyzeUpload()`: 업로드 데이터 분석 (충돌 감지)
       - `saveWithResolutions()`: 충돌 해결 후 저장
 
-61. [ ] **useReport 훅 확장**:
+61. [x] **useReport 훅 확장**:
     - `src/hooks/useReport.ts`:
       - `currentWeekKey`, `availableSnapshots`, `selectedSnapshot` 상태 추가
       - `analyzeUpload()`, `saveWithConflictResolution()`, `loadSnapshot()`, `loadLatest()` 메서드 추가
 
-62. [ ] **주차 선택 UI 컴포넌트**:
+62. [x] **주차 선택 UI 컴포넌트**:
     - `src/components/upload/WeekSelector.tsx`: 주차 선택 드롭다운, 현재(최신) 옵션, 스냅샷 목록 표시
 
-63. [ ] **충돌 해결 모달 컴포넌트**:
+63. [x] **충돌 해결 모달 컴포넌트**:
     - `src/components/upload/ConflictResolutionModal.tsx`:
       - 분석 결과 요약 (신규 월, 변경 없음, 충돌 발생)
       - 월별 충돌 항목 (기존/신규 데이터 비교)
       - 개별 선택: "기존 유지" / "신규로 대체"
       - 전체 선택 버튼
 
-64. [ ] **DataInputPage 통합**:
+64. [x] **DataInputPage 통합**:
     - `src/pages/DataInputPage.tsx`:
       - 업로드 모드에 'smart' 추가 (자동 충돌 감지)
       - WeekSelector 컴포넌트 연동
