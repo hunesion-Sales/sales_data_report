@@ -10,6 +10,7 @@ import {
   PieChart,
   Pie,
   Cell,
+  ResponsiveContainer,
 } from 'recharts';
 import type { DivisionSummary, PeriodInfo } from '@/types';
 import { ChartWrapper } from '@/components/charts';
@@ -18,6 +19,7 @@ import { formatMillionWon, formatCurrency } from '@/utils/formatUtils';
 interface DivisionChartsProps {
   summaries: DivisionSummary[];
   periodInfoList: PeriodInfo[];
+  viewMode: 'sales' | 'profit';
 }
 
 const COLORS = [
@@ -36,50 +38,51 @@ const COLORS = [
 export default function DivisionCharts({
   summaries,
   periodInfoList,
+  viewMode,
 }: DivisionChartsProps) {
-  // Stacked Bar Chart용 데이터: 기간별로 부문별 매출 스택
+  // 1. Stacked Bar Chart용 데이터: 기간별로 부문별 매출/이익 스택
   const stackedBarData = useMemo(() => {
     return periodInfoList.map((period) => {
       const entry: Record<string, string | number> = { name: period.label };
       for (const summary of summaries) {
         const pd = summary.periodBreakdown[period.key];
-        entry[summary.divisionName] = pd?.sales || 0;
+        const value = viewMode === 'sales' ? (pd?.sales || 0) : ((pd?.sales || 0) - (pd?.cost || 0));
+        entry[summary.divisionName] = value;
       }
       return entry;
     });
-  }, [summaries, periodInfoList]);
+  }, [summaries, periodInfoList, viewMode]);
 
-  // Pie Chart용 데이터: 부문별 총 매출 비율
+  // 2. Pie Chart용 데이터: 부문별 총 매출/이익 비율
   const pieData = useMemo(() => {
     return summaries
       .filter((s) => s.totalSales > 0)
       .map((s) => ({
         name: s.divisionName,
-        value: s.totalSales,
+        value: viewMode === 'sales' ? s.totalSales : s.totalProfit,
       }));
-  }, [summaries]);
+  }, [summaries, viewMode]);
 
-  // 이익률 비교 Bar Chart용 데이터
-  const profitRateData = useMemo(() => {
+  // 3. Ranking Bar Chart용 데이터: 부문별 총 매출/이익 순위
+  const rankingData = useMemo(() => {
     return summaries
-      .filter((s) => s.totalSales > 0)
       .map((s) => ({
         name: s.divisionName,
-        sales: s.totalSales,
-        profit: s.totalProfit,
-        profitRate: ((s.totalProfit / s.totalSales) * 100).toFixed(1),
+        value: viewMode === 'sales' ? s.totalSales : s.totalProfit,
       }))
-      .sort((a, b) => b.sales - a.sales);
-  }, [summaries]);
+      .sort((a, b) => b.value - a.value);
+  }, [summaries, viewMode]);
 
   if (summaries.length === 0) {
     return null;
   }
 
+  const metricLabel = viewMode === 'sales' ? '매출액' : '매출이익';
+
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      {/* Stacked Bar Chart: 기간별 부문 매출 */}
-      <ChartWrapper title="기간별 부문 매출 (단위: 백만원)" height={320}>
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 print-avoid-break">
+      {/* 1. Stacked Bar Chart: 기간별 부문별 추이 (Full Width) */}
+      <ChartWrapper title={`기간별 부문 ${metricLabel} 추이 (단위: 백만원)`} height={350} className="lg:col-span-2">
         <BarChart data={stackedBarData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" vertical={false} />
           <XAxis dataKey="name" tick={{ fontSize: 12 }} />
@@ -100,8 +103,8 @@ export default function DivisionCharts({
         </BarChart>
       </ChartWrapper>
 
-      {/* Pie Chart: 부문별 총 매출 비율 */}
-      <ChartWrapper title="부문별 총 매출 비율 (단위: 백만원)" height={320}>
+      {/* 2. Pie Chart: 부문별 점유율 */}
+      <ChartWrapper title={`부문별 ${metricLabel} 비율`} height={350}>
         <PieChart>
           <Pie
             data={pieData}
@@ -122,28 +125,27 @@ export default function DivisionCharts({
         </PieChart>
       </ChartWrapper>
 
-      {/* 부문별 매출 & 이익 비교 */}
-      <ChartWrapper title="부문별 매출 및 이익 비교 (단위: 백만원)" height={290} className="lg:col-span-2">
+      {/* 3. Ranking Bar Chart: 부문별 순위 */}
+      <ChartWrapper title={`부문별 ${metricLabel} 순위 (단위: 백만원)`} height={350}>
         <BarChart
-          data={profitRateData}
+          data={rankingData}
           layout="vertical"
-          margin={{ top: 5, right: 30, left: 100, bottom: 5 }}
+          margin={{ top: 5, right: 30, left: 60, bottom: 5 }}
         >
           <CartesianGrid strokeDasharray="3 3" horizontal={false} />
           <XAxis type="number" tickFormatter={formatMillionWon} tick={{ fontSize: 11 }} />
-          <YAxis type="category" dataKey="name" tick={{ fontSize: 12 }} width={90} />
+          <YAxis type="category" dataKey="name" tick={{ fontSize: 12 }} width={80} />
           <Tooltip
-            formatter={(value, name) => [
-              formatCurrency(Number(value)),
-              name === 'sales' ? '매출액' : '매출이익',
-            ]}
+            formatter={(value) => formatCurrency(Number(value))}
+            cursor={{ fill: 'transparent' }}
           />
-          <Legend
-            formatter={(value) => (value === 'sales' ? '매출액' : '매출이익')}
-            wrapperStyle={{ fontSize: 12 }}
+          <Bar
+            dataKey="value"
+            name={metricLabel}
+            fill={viewMode === 'sales' ? '#6366f1' : '#10b981'}
+            radius={[0, 4, 4, 0]}
+            barSize={24}
           />
-          <Bar dataKey="sales" name="sales" fill="#6366f1" radius={[0, 4, 4, 0]} barSize={16} />
-          <Bar dataKey="profit" name="profit" fill="#10b981" radius={[0, 4, 4, 0]} barSize={16} />
         </BarChart>
       </ChartWrapper>
     </div>

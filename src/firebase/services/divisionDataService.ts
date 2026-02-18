@@ -16,38 +16,89 @@ export interface DivisionDataItem {
 }
 
 /**
- * 부문별 데이터 일괄 저장 (batch write)
- * 기존 데이터를 모두 삭제 후 새로 저장
+ * 부문별 데이터 저장
+ * @param reportId 보고서 ID
+ * @param items 저장할 데이터
+ * @param mergeMode 병합 모드 ('overwrite' | 'merge' | 'smart')
  */
 export async function saveDivisionData(
   reportId: string,
   items: DivisionDataItem[],
+  mergeMode: 'overwrite' | 'merge' | 'smart' = 'overwrite'
 ): Promise<void> {
   const colRef = collection(db, 'reports', reportId, 'division_data');
 
-  // 기존 문서 전체 삭제
-  const existing = await getDocs(colRef);
-  const deleteBatch = writeBatch(db);
-  existing.docs.forEach((d) => deleteBatch.delete(d.ref));
-  await deleteBatch.commit();
+  if (mergeMode === 'overwrite') {
+    // 1. Overwrite 모드: 기존 데이터 전체 삭제 후 저장
+    const existing = await getDocs(colRef);
+    const deleteBatch = writeBatch(db);
+    existing.docs.forEach((d) => deleteBatch.delete(d.ref));
+    await deleteBatch.commit();
 
-  // 새 데이터 일괄 저장 (500건 단위 batch 제한 대응)
-  const BATCH_LIMIT = 450;
-  for (let i = 0; i < items.length; i += BATCH_LIMIT) {
-    const batch = writeBatch(db);
-    const chunk = items.slice(i, i + BATCH_LIMIT);
+    // 새 데이터 일괄 저장 (500건 단위 batch 제한 대응)
+    const BATCH_LIMIT = 450;
+    for (let i = 0; i < items.length; i += BATCH_LIMIT) {
+      const batch = writeBatch(db);
+      const chunk = items.slice(i, i + BATCH_LIMIT);
 
-    chunk.forEach((item) => {
-      const docRef = doc(colRef);
-      batch.set(docRef, {
-        divisionName: item.divisionName,
-        divisionId: item.divisionId,
-        months: item.months,
-        updatedAt: serverTimestamp(),
+      chunk.forEach((item) => {
+        const docRef = doc(colRef);
+        batch.set(docRef, {
+          divisionName: item.divisionName,
+          divisionId: item.divisionId,
+          months: item.months,
+          updatedAt: serverTimestamp(),
+        });
       });
+
+      await batch.commit();
+    }
+  } else {
+    // 2. Merge / Smart 모드: 기존 데이터와 병합
+    // 기존 데이터 조회
+    const existingSnap = await getDocs(colRef);
+    const existingMap = new Map<string, any>(); // key: divisionName
+
+    existingSnap.docs.forEach(d => {
+      const data = d.data();
+      existingMap.set(data.divisionName, { ref: d.ref, ...data });
     });
 
-    await batch.commit();
+    const batch = writeBatch(db);
+    let opCount = 0;
+
+    for (const item of items) {
+      const existingItem = existingMap.get(item.divisionName);
+
+      if (existingItem) {
+        // 기존 부문 존재: 월 데이터 병합
+        const mergedMonths = { ...existingItem.months, ...item.months };
+        batch.update(existingItem.ref, {
+          months: mergedMonths,
+          updatedAt: serverTimestamp(),
+          divisionId: item.divisionId // ID 업데이트 (필요시)
+        });
+      } else {
+        // 신규 부문: 추가
+        const newDocRef = doc(colRef);
+        batch.set(newDocRef, {
+          divisionName: item.divisionName,
+          divisionId: item.divisionId,
+          months: item.months,
+          updatedAt: serverTimestamp(),
+        });
+      }
+
+      opCount++;
+      if (opCount >= 450) {
+        await batch.commit();
+        opCount = 0;
+      }
+    }
+
+    if (opCount > 0) {
+      await batch.commit();
+    }
   }
 }
 

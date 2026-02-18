@@ -120,7 +120,8 @@ export default function DataInputPage() {
 
                 const currentYear = new Date().getFullYear();
                 const reportId = `report-${currentYear}`;
-                await saveDivisionData(reportId, items);
+                // pass mergeMode to saveDivisionData
+                await saveDivisionData(reportId, items, mergeMode);
 
                 showNotification(
                     `${items.length}개 부문 데이터가 업로드되었습니다 (${matchedCount}개 매칭, ${unmatchedCount}개 미매칭)`
@@ -302,56 +303,58 @@ export default function DataInputPage() {
                     </button>
                 </div>
 
-                {/* 병합 모드 (제품별 데이터에서만 표시) */}
-                {uploadType === 'product' && (
-                    <div className="mb-6 p-4 bg-slate-50 rounded-lg border border-slate-200">
-                        <p className="text-sm font-medium text-slate-700 mb-3">업로드 방식</p>
-                        <div className="flex flex-wrap gap-3">
-                            <label className="flex items-center gap-2 cursor-pointer p-2 rounded-lg hover:bg-slate-100 transition-colors">
-                                <input
-                                    type="radio"
-                                    name="mergeMode"
-                                    checked={mergeMode === 'smart'}
-                                    onChange={() => setMergeMode('smart')}
-                                    className="w-4 h-4 text-primary-600 focus:ring-primary-500"
-                                />
-                                <Sparkles className="w-4 h-4 text-amber-500" />
-                                <div>
-                                    <span className="text-sm font-medium text-slate-700">스마트 (권장)</span>
-                                    <p className="text-xs text-slate-500">변경된 월만 감지, 충돌 시 선택</p>
-                                </div>
-                            </label>
-                            <label className="flex items-center gap-2 cursor-pointer p-2 rounded-lg hover:bg-slate-100 transition-colors">
-                                <input
-                                    type="radio"
-                                    name="mergeMode"
-                                    checked={mergeMode === 'overwrite'}
-                                    onChange={() => setMergeMode('overwrite')}
-                                    className="w-4 h-4 text-primary-600 focus:ring-primary-500"
-                                />
-                                <RefreshCcw className="w-4 h-4 text-slate-500" />
-                                <div>
-                                    <span className="text-sm font-medium text-slate-700">덮어쓰기</span>
-                                    <p className="text-xs text-slate-500">기존 데이터를 새 데이터로 대체</p>
-                                </div>
-                            </label>
-                            <label className="flex items-center gap-2 cursor-pointer p-2 rounded-lg hover:bg-slate-100 transition-colors">
-                                <input
-                                    type="radio"
-                                    name="mergeMode"
-                                    checked={mergeMode === 'merge'}
-                                    onChange={() => setMergeMode('merge')}
-                                    className="w-4 h-4 text-primary-600 focus:ring-primary-500"
-                                />
-                                <GitMerge className="w-4 h-4 text-slate-500" />
-                                <div>
-                                    <span className="text-sm font-medium text-slate-700">병합</span>
-                                    <p className="text-xs text-slate-500">기존 데이터와 합치기</p>
-                                </div>
-                            </label>
-                        </div>
+                {/* 병합 모드 (제품별/부문별 모두 표시) */}
+                <div className="mb-6 p-4 bg-slate-50 rounded-lg border border-slate-200">
+                    <p className="text-sm font-medium text-slate-700 mb-3">업로드 방식</p>
+                    <div className="flex flex-wrap gap-3">
+                        <label className="flex items-center gap-2 cursor-pointer p-2 rounded-lg hover:bg-slate-100 transition-colors">
+                            <input
+                                type="radio"
+                                name="mergeMode"
+                                checked={mergeMode === 'smart'}
+                                onChange={() => setMergeMode('smart')}
+                                className="w-4 h-4 text-primary-600 focus:ring-primary-500"
+                            />
+                            <Sparkles className="w-4 h-4 text-amber-500" />
+                            <div>
+                                <span className="text-sm font-medium text-slate-700">스마트 (권장)</span>
+                                <p className="text-xs text-slate-500">
+                                    {uploadType === 'product'
+                                        ? '변경된 월만 감지, 충돌 시 선택'
+                                        : '기존 데이터와 병합 (충돌 시 자동 병합)'}
+                                </p>
+                            </div>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer p-2 rounded-lg hover:bg-slate-100 transition-colors">
+                            <input
+                                type="radio"
+                                name="mergeMode"
+                                checked={mergeMode === 'overwrite'}
+                                onChange={() => setMergeMode('overwrite')}
+                                className="w-4 h-4 text-primary-600 focus:ring-primary-500"
+                            />
+                            <RefreshCcw className="w-4 h-4 text-slate-500" />
+                            <div>
+                                <span className="text-sm font-medium text-slate-700">덮어쓰기</span>
+                                <p className="text-xs text-slate-500">기존 데이터를 새 데이터로 대체</p>
+                            </div>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer p-2 rounded-lg hover:bg-slate-100 transition-colors">
+                            <input
+                                type="radio"
+                                name="mergeMode"
+                                checked={mergeMode === 'merge'}
+                                onChange={() => setMergeMode('merge')}
+                                className="w-4 h-4 text-primary-600 focus:ring-primary-500"
+                            />
+                            <GitMerge className="w-4 h-4 text-slate-500" />
+                            <div>
+                                <span className="text-sm font-medium text-slate-700">병합</span>
+                                <p className="text-xs text-slate-500">기존 데이터와 합치기</p>
+                            </div>
+                        </label>
                     </div>
-                )}
+                </div>
                 <div
                     className={`border-2 border-dashed border-primary-200 rounded-xl p-8 bg-primary-50/50 text-center transition-colors ${isUploading ? 'opacity-60 cursor-wait' : 'hover:bg-primary-50 cursor-pointer'}`}
                     onClick={() => !isUploading && fileInputRef.current?.click()}
@@ -368,73 +371,23 @@ export default function DataInputPage() {
                         <div className="p-6 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
                             <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
                                 <RefreshCw className="w-5 h-5 text-indigo-600" />
-                                데이터 동기화 및 점검
+                                데이터 관리 도구
                             </h2>
                         </div>
                         <div className="p-6">
                             <div className="flex items-start gap-4 mb-4">
                                 <AlertTriangle className="w-5 h-5 text-amber-500 mt-1 flex-shrink-0" />
                                 <div className="text-sm text-slate-600">
-                                    <p className="font-medium text-slate-800 mb-1">데이터가 보이지 않나요?</p>
+                                    <p className="font-medium text-slate-800 mb-1">데이터 초기화 주의</p>
                                     <p>
-                                        데이터베이스에 제품 데이터는 존재하지만 화면에 나타나지 않는 경우,
-                                        보고서의 월 정보가 동기화되지 않았을 수 있습니다. 아래 버튼을 눌러 데이터를 동기화해주세요.
+                                        데이터 초기화는 되돌릴 수 없습니다. 신중하게 결정해주세요.
+                                        문제가 지속될 경우 관리자에게 문의하세요.
                                     </p>
                                 </div>
                             </div>
 
                             <div className="flex gap-3">
-                                <button
-                                    onClick={async () => {
-                                        if (!window.confirm('데이터베이스 동기화를 진행하시겠습니까?')) return;
-                                        try {
-                                            const { repairReportMetadata, checkAndSeedDivisions } = await import('@/firebase/utils/dbRepair');
-
-                                            // 1. Report Metadata Repair
-                                            const result = await repairReportMetadata(2026);
-                                            if (result.success) {
-                                                alert(`보고서 동기화 완료: ${result.message}\n` + (result.details?.join('\n') || ''));
-                                            } else {
-                                                alert(`보고서 동기화 실패: ${result.message}`);
-                                            }
-
-                                            // 2. Division Check
-                                            const divResult = await checkAndSeedDivisions();
-                                            console.log('Division Check:', divResult);
-
-                                            // Refresh page to reflect changes
-                                            window.location.reload();
-                                        } catch (e) {
-                                            console.error(e);
-                                            alert('동기화 중 오류가 발생했습니다.');
-                                        }
-                                    }}
-                                    className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-sm"
-                                >
-                                    <RefreshCw className="w-4 h-4" />
-                                    데이터 동기화 실행
-                                </button>
-                                <button
-                                    onClick={async () => {
-                                        if (!window.confirm('제품 마스터를 초기화하시겠습니까? (기존 데이터 유지, 신규 추가)')) return;
-                                        try {
-                                            const { registerInitialProductMasters } = await import('@/firebase/utils/dbRepair');
-                                            const result = await registerInitialProductMasters();
-                                            if (result.success) {
-                                                alert(result.message);
-                                            } else {
-                                                alert(`실패: ${result.message}`);
-                                            }
-                                        } catch (e) {
-                                            console.error(e);
-                                            alert('오류가 발생했습니다.');
-                                        }
-                                    }}
-                                    className="flex items-center gap-2 px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700 transition-colors shadow-sm"
-                                >
-                                    <Package className="w-4 h-4" />
-                                    제품 마스터 초기화 (22종)
-                                </button>
+                                {/* Sync and Init buttons removed as requested */}
                                 <button
                                     onClick={async () => {
                                         if (!window.confirm('경고: 2026년 보고서의 모든 데이터(제품, 스냅샷, 업로드 기록)가 영구 삭제됩니다.\n정말 초기화하시겠습니까?')) return;
@@ -442,7 +395,16 @@ export default function DataInputPage() {
 
                                         try {
                                             const { clearReportData } = await import('@/firebase/services/reportService');
-                                            await clearReportData(2026 as any); // TODO: Pass string 'report-2026' or fix type
+                                            const { terminate, clearIndexedDbPersistence } = await import('firebase/firestore');
+                                            const { db } = await import('@/firebase/config');
+
+                                            // 1. Delete all data
+                                            await clearReportData('report-2026');
+
+                                            // 2. Clear local cache to prevent BloomFilter errors
+                                            await terminate(db);
+                                            await clearIndexedDbPersistence(db);
+
                                             alert('모든 데이터가 초기화되었습니다.');
                                             window.location.reload();
                                         } catch (e) {

@@ -1,10 +1,11 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import type { ProductData, ProcessedProduct, Totals } from '@/types';
 import { getMonthFullLabel } from '@/types';
 import { useReport } from '@/hooks/useReport';
 import { Table as TableIcon, Printer, Cloud, CloudOff, Loader2, Package } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatMillionWon, formatCurrency as formatCurrencyFull } from '@/utils/formatUtils';
+import ProductCharts from '@/components/reports/ProductCharts';
 
 // --- 초기 데이터 (동적 월 구조) ---
 // --- 초기 데이터 (DB 로딩 전 빈 상태) ---
@@ -139,6 +140,9 @@ export default function ProductReportPage() {
         let totalCost = 0;
 
         processedData.forEach(item => {
+            // Cloud 소계는 개별 항목들의 합이므로 전체 합계 계산 시 제외 (중복 방지)
+            if (item.id === 'cloud_total') return;
+
             months.forEach(mk => {
                 const md = item.months[mk] ?? { sales: 0, cost: 0, profit: 0 };
                 byMonth[mk].sales += md.sales;
@@ -152,6 +156,8 @@ export default function ProductReportPage() {
         return { byMonth, totalSales, totalCost, totalProfit: totalSales - totalCost };
     }, [processedData, months]);
 
+    const [viewMode, setViewMode] = useState<'sales' | 'profit'>('sales');
+
     return (
         <div className="space-y-6 animate-fade-in p-6">
             <div className="flex items-center justify-between mb-6">
@@ -160,26 +166,77 @@ export default function ProductReportPage() {
                     <h1 className="text-2xl font-bold text-slate-900">제품별 보고서</h1>
                 </div>
 
-                {/* Firestore Data Status */}
-                <div className="flex items-center gap-3">
-                    {isSaving ? (
-                        <span className="flex items-center gap-1 text-xs text-amber-600">
-                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                            저장 중...
-                        </span>
-                    ) : firestoreError ? (
-                        <span className="flex items-center gap-1 text-xs text-red-500" title={firestoreError}>
-                            <CloudOff className="w-3.5 h-3.5" />
-                            오프라인
-                        </span>
-                    ) : !isLoading ? (
-                        <span className="flex items-center gap-1 text-xs text-accent-600">
-                            <Cloud className="w-3.5 h-3.5" />
-                            동기화됨
-                        </span>
-                    ) : null}
+                <div className="flex items-center gap-4">
+                    {/* View Mode Toggle */}
+                    <div className="flex bg-slate-100 p-1 rounded-lg">
+                        <button
+                            onClick={() => setViewMode('sales')}
+                            className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${viewMode === 'sales'
+                                ? 'bg-white text-indigo-600 shadow-sm'
+                                : 'text-slate-500 hover:text-slate-700'
+                                }`}
+                        >
+                            매출액 보기
+                        </button>
+                        <button
+                            onClick={() => setViewMode('profit')}
+                            className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${viewMode === 'profit'
+                                ? 'bg-white text-emerald-600 shadow-sm'
+                                : 'text-slate-500 hover:text-slate-700'
+                                }`}
+                        >
+                            매출이익 보기
+                        </button>
+                    </div>
+
+                    {/* Firestore Data Status */}
+                    <div className="flex items-center gap-3">
+                        {isSaving ? (
+                            <span className="flex items-center gap-1 text-xs text-amber-600">
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                저장 중...
+                            </span>
+                        ) : firestoreError ? (
+                            <span className="flex items-center gap-1 text-xs text-red-500" title={firestoreError}>
+                                <CloudOff className="w-3.5 h-3.5" />
+                                오프라인
+                            </span>
+                        ) : !isLoading ? (
+                            <span className="flex items-center gap-1 text-xs text-accent-600">
+                                <Cloud className="w-3.5 h-3.5" />
+                                동기화됨
+                            </span>
+                        ) : null}
+                    </div>
                 </div>
             </div>
+
+            {/* Summary KPI Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 print-avoid-break">
+                <div className={`bg-white p-6 rounded-xl shadow-sm border transition-all ${viewMode === 'sales' ? 'border-indigo-200 ring-1 ring-indigo-100' : 'border-slate-200'}`} title={formatCurrencyFull(totals.totalSales)}>
+                    <p className="text-sm text-slate-500 mb-1">총 매출액 (백만원)</p>
+                    <p className="text-2xl font-bold text-slate-900">
+                        {formatMillionWon(totals.totalSales)}
+                    </p>
+                </div>
+                <div className={`bg-white p-6 rounded-xl shadow-sm border transition-all ${viewMode === 'profit' ? 'border-emerald-200 ring-1 ring-emerald-100' : 'border-slate-200'}`} title={formatCurrencyFull(totals.totalProfit)}>
+                    <p className="text-sm text-slate-500 mb-1">총 매출이익 (백만원)</p>
+                    <p className="text-2xl font-bold text-emerald-600">
+                        {formatMillionWon(totals.totalProfit)}
+                    </p>
+                </div>
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                    <p className="text-sm text-slate-500 mb-1">평균 이익률</p>
+                    <p className="text-2xl font-bold text-indigo-600">
+                        {totals.totalSales > 0
+                            ? `${((totals.totalProfit / totals.totalSales) * 100).toFixed(1)}%`
+                            : '-'}
+                    </p>
+                </div>
+            </div>
+
+            {/* Product Charts */}
+            <ProductCharts items={processedData} months={months} viewMode={viewMode} />
 
             {/* Detailed Report Table */}
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden print-avoid-break">

@@ -79,15 +79,16 @@ export async function parseDivisionExcelFile(buffer: ArrayBuffer): Promise<Divis
         let salesCol = colNumber;
         let costCol = colNumber + 1;
 
-        // 현재 컬럼(colNumber) 기준 좌우 3칸 범위 내에서 "매출", "매입" 키워드 검색
-        // (4컬럼 구조이므로 +3까지 검색 안전)
+        // 현재 컬럼(colNumber) 기준 우측 3칸 범위 내에서 "매출", "매입" 키워드 검색
+        // (4컬럼 구조이므로 +3까지 검색 안전. 이전 컬럼(-1) 검색은 "매출코드" 오인식 방지를 위해 제거)
         console.log(`[DivisionExcelParser] Inspecting sub-headers for ${val} around col ${colNumber}`);
 
-        for (let c = colNumber - 1; c <= colNumber + 3; c++) {
+        for (let c = colNumber; c <= colNumber + 3; c++) {
           const subVal = String(subHeaderRow.getCell(c).value ?? '').trim();
           if (!subVal) continue;
 
-          if (subVal.includes('매출') && !subVal.includes('이익')) {
+          // "매출" 포함하되 "이익", "코드"는 제외
+          if (subVal.includes('매출') && !subVal.includes('이익') && !subVal.includes('코드')) {
             if (salesCol === colNumber) {
               salesCol = c;
               console.log(`  -> Found 'Sales' at col ${c} ("${subVal}")`);

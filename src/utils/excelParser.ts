@@ -80,17 +80,19 @@ export async function parseExcelFile(buffer: ArrayBuffer): Promise<ParseResult> 
         let salesCol = colNumber;
         let costCol = colNumber + 1;
 
-        // 현재 컬럼(colNumber) 기준 좌우 2칸 범위 내에서 "매출", "매입" 키워드 검색
+        // 현재 컬럼(colNumber) 기준 우측 2칸 범위 내에서 "매출", "매입" 키워드 검색
         // (병합된 셀의 경우 colNumber가 첫 번째 셀일수도, 가운데일수도, 마지막일수도 있음)
+        // 이전 컬럼(-1) 검색은 "매출코드" 오인식 방지를 위해 제거
         console.log(`[ExcelParser] Inspecting sub-headers for ${val} around col ${colNumber}`);
 
         // 중요: +3을 하면 다음 달의 '매출' 컬럼(3칸 뒤)까지 침범하여 덮어쓰는 문제 발생
         // 따라서 +2까지만 검색해야 함 (Start, Start+1, Start+2 = 총 3칸)
-        for (let c = colNumber - 1; c <= colNumber + 2; c++) {
+        for (let c = colNumber; c <= colNumber + 2; c++) {
           const subVal = String(subHeaderRow.getCell(c).value ?? '').trim();
           if (!subVal) continue;
 
-          if (subVal.includes('매출') && !subVal.includes('이익')) {
+          // "매출" 포함하되 "이익", "코드"는 제외 ("매출코드" 방지)
+          if (subVal.includes('매출') && !subVal.includes('이익') && !subVal.includes('코드')) {
             // 이미 찾았으면(그리고 더 왼쪽 거라면) 덮어쓰지 않음
             // (보통 왼쪽->오른쪽 순회하므로, 루프 내에서 나중에 찾은게 더 오른쪽일 확률 높음)
             // 하지만 현재는 c가 증가하므로, 첫 번째 찾은게 가장 왼쪽임. 
