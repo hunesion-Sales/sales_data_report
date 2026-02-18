@@ -71,13 +71,25 @@ export async function parseExcelFile(buffer: ArrayBuffer): Promise<ParseResult> 
         // (병합된 셀의 경우 colNumber가 첫 번째 셀일수도, 가운데일수도, 마지막일수도 있음)
         console.log(`[ExcelParser] Inspecting sub-headers for ${val} around col ${colNumber}`);
 
-        for (let c = colNumber - 1; c <= colNumber + 3; c++) {
+        // 중요: +3을 하면 다음 달의 '매출' 컬럼(3칸 뒤)까지 침범하여 덮어쓰는 문제 발생
+        // 따라서 +2까지만 검색해야 함 (Start, Start+1, Start+2 = 총 3칸)
+        for (let c = colNumber - 1; c <= colNumber + 2; c++) {
           const subVal = String(subHeaderRow.getCell(c).value ?? '').trim();
           if (!subVal) continue;
 
           if (subVal.includes('매출') && !subVal.includes('이익')) {
-            salesCol = c;
-            console.log(`  -> Found 'Sales' at col ${c} ("${subVal}")`);
+            // 이미 찾았으면(그리고 더 왼쪽 거라면) 덮어쓰지 않음
+            // (보통 왼쪽->오른쪽 순회하므로, 루프 내에서 나중에 찾은게 더 오른쪽일 확률 높음)
+            // 하지만 현재는 c가 증가하므로, 첫 번째 찾은게 가장 왼쪽임. 
+            // 단, colNumber와 가까운걸 선호해야 하나? 
+            // 보통 구조상 [매출][매입][이익] 이므로 가장 왼쪽이 맞음.
+            if (salesCol === colNumber) { // 아직 초기값(기본값) 상태라면 업데이트
+              salesCol = c;
+              console.log(`  -> Found 'Sales' at col ${c} ("${subVal}")`);
+            } else {
+              // 이미 찾았는데 또 나왔다? (범위를 줄였으므로 이 케이스는 드물 것)
+              console.log(`  -> Ignored duplicate 'Sales' at col ${c} (already found at ${salesCol})`);
+            }
           } else if (subVal.includes('매입')) {
             costCol = c;
             console.log(`  -> Found 'Cost' at col ${c} ("${subVal}")`);
