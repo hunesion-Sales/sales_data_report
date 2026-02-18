@@ -57,24 +57,53 @@ export async function parseDivisionExcelFile(buffer: ArrayBuffer): Promise<Divis
 
       // "1월 2026" 또는 "1월" 패턴 확인, "전체" 제외
       if (/^\d{1,2}월/.test(val) && val !== '전체') {
+        // 월 헤더 분석
         const parsed = parseMonthLabel(val);
 
-        if (!seenMonthKeys.has(parsed.key)) {
-          seenMonthKeys.add(parsed.key);
-          if (!found) {
-            monthHeaderRow = rowNum;
-            found = true;
-          }
-
-          // 4컬럼 구조: [매출, 매입, 이익, 달성율]
-          // cell.col 이 시작점(매출)
-          monthColumns.push({
-            key: parsed.key,
-            display: parsed.display,
-            salesCol: colNumber,       // 1번째: 매출액
-            costCol: colNumber + 1,    // 2번째: 매입액
-          });
+        // [CRITICAL] 중복 월 헤더 방지 (병합된 셀 처리)
+        // 이미 처리된 월 키라면 무시 (seenMonthKeys 대신 monthColumns 검사로 일원화)
+        const isDuplicate = monthColumns.some(m => m.key === parsed.key);
+        if (isDuplicate) {
+          console.log(`[DivisionExcelParser] Skipping duplicate month header '${parsed.key}' at col ${colNumber}`);
+          return;
         }
+
+        if (!found) {
+          monthHeaderRow = rowNum;
+          found = true;
+          console.log(`[DivisionExcelParser] Found month header row at ${rowNum}`);
+        }
+
+        // 월 헤더 아래 행에서 매출/매입 컬럼 찾기 (4컬럼 구조: 매출, 매입, 이익, 달성율)
+        const subHeaderRow = worksheet.getRow(rowNum + 1);
+        let salesCol = colNumber;
+        let costCol = colNumber + 1;
+
+        // 현재 컬럼(colNumber) 기준 좌우 3칸 범위 내에서 "매출", "매입" 키워드 검색
+        // (4컬럼 구조이므로 +3까지 검색 안전)
+        console.log(`[DivisionExcelParser] Inspecting sub-headers for ${val} around col ${colNumber}`);
+
+        for (let c = colNumber - 1; c <= colNumber + 3; c++) {
+          const subVal = String(subHeaderRow.getCell(c).value ?? '').trim();
+          if (!subVal) continue;
+
+          if (subVal.includes('매출') && !subVal.includes('이익')) {
+            if (salesCol === colNumber) {
+              salesCol = c;
+              console.log(`  -> Found 'Sales' at col ${c} ("${subVal}")`);
+            }
+          } else if (subVal.includes('매입')) {
+            costCol = c;
+            console.log(`  -> Found 'Cost' at col ${c} ("${subVal}")`);
+          }
+        }
+
+        monthColumns.push({
+          key: parsed.key,
+          display: parsed.display,
+          salesCol,
+          costCol,
+        });
       }
     });
     if (found) break; // 월 헤더 행을 찾았으면 중단
