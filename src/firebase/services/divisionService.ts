@@ -111,13 +111,17 @@ export async function deleteDivision(divisionId: string): Promise<void> {
  */
 export async function seedDefaultDivisions(): Promise<boolean> {
   const existing = await getDivisions();
-  const existingIds = new Set(existing.map(d => d.id));
+  // Map for quick lookup
+  const existingMap = new Map(existing.map(d => [d.id, d]));
 
   const batch = writeBatch(db);
-  let createdCount = 0;
+  let operationCount = 0;
 
   for (const div of DEFAULT_DIVISIONS) {
-    if (!existingIds.has(div.id)) {
+    const existingDiv = existingMap.get(div.id);
+
+    if (!existingDiv) {
+      // Create new
       const docRef = doc(db, COLLECTION_NAME, div.id);
       batch.set(docRef, {
         name: div.name,
@@ -125,11 +129,19 @@ export async function seedDefaultDivisions(): Promise<boolean> {
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
-      createdCount++;
+      operationCount++;
+    } else if (existingDiv.sortOrder !== div.sortOrder) {
+      // Update existing if sortOrder changed
+      const docRef = doc(db, COLLECTION_NAME, div.id);
+      batch.update(docRef, {
+        sortOrder: div.sortOrder,
+        updatedAt: serverTimestamp(),
+      });
+      operationCount++;
     }
   }
 
-  if (createdCount > 0) {
+  if (operationCount > 0) {
     await batch.commit();
     return true;
   }

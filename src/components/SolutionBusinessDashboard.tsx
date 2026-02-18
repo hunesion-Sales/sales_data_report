@@ -15,7 +15,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useAchievement } from '@/hooks/useAchievement';
 import { getCurrentQuarter, getQuarterLabel } from '@/utils/periodUtils';
 import { ChartWrapper } from '@/components/charts';
-import { formatMillionWon, formatCurrency as formatCurrencyFull } from '@/utils/formatUtils';
+import { formatMillionWon, formatCurrency as formatCurrencyFull, formatMillionWonChart } from '@/utils/formatUtils';
 
 // --- 초기 데이터 (동적 월 구조) ---
 // --- 초기 데이터 (DB 로딩 전 빈 상태) ---
@@ -26,7 +26,7 @@ const INITIAL_DATA: ProductData[] = [];
 export default function SolutionBusinessDashboard() {
   const navigate = useNavigate();
   const { user, firebaseUser, authReady, isAdmin } = useAuth();
-  const { overallAchievementRate } = useAchievement(user?.divisionId, isAdmin);
+  const { overallSalesAchievementRate: overallAchievementRate } = useAchievement(user?.divisionId, isAdmin);
 
   const {
     data, months,
@@ -174,34 +174,40 @@ export default function SolutionBusinessDashboard() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* 누적 총 매출액 */}
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200" title={formatCurrencyFull(totals.totalSales)}>
+        {/* 누적 총 매출액 - Blue Theme */}
+        <div className="bg-white p-6 rounded-xl shadow-sm border-t-4 border-blue-500 border-x border-b" title={formatCurrencyFull(totals.totalSales)}>
           <div className="flex justify-between items-center mb-2">
             <h3 className="text-sm font-medium text-slate-500">누적 총 매출액 (백만원)</h3>
-            <DollarSign className="w-5 h-5 text-primary-600" />
+            <span className="bg-blue-100 text-blue-600 text-xs font-semibold px-2 py-0.5 rounded">Total</span>
           </div>
           <div className="text-2xl font-bold text-slate-900">{formatMillionWon(totals.totalSales)}</div>
           <p className="text-xs text-slate-400 mt-1">{monthRangeText} 합계</p>
         </div>
-        {/* 누적 매출이익 */}
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200" title={formatCurrencyFull(totals.totalProfit)}>
+
+        {/* 누적 매출이익 - Emerald Theme */}
+        <div className="bg-white p-6 rounded-xl shadow-sm border-t-4 border-emerald-500 border-x border-b" title={formatCurrencyFull(totals.totalProfit)}>
           <div className="flex justify-between items-center mb-2">
             <h3 className="text-sm font-medium text-slate-500">누적 매출이익 (백만원)</h3>
-            <TrendingUp className="w-5 h-5 text-accent-600" />
+            <span className="bg-emerald-100 text-emerald-600 text-xs font-semibold px-2 py-0.5 rounded">Profit</span>
           </div>
-          <div className="text-2xl font-bold text-slate-900">{formatMillionWon(totals.totalProfit)}</div>
-          <p className="text-xs text-accent-600 mt-1">
+          <div className="text-2xl font-bold text-emerald-600">{formatMillionWon(totals.totalProfit)}</div>
+          <p className="text-xs text-emerald-600 mt-1">
             이익률 {totals.totalSales > 0 ? ((totals.totalProfit / totals.totalSales) * 100).toFixed(1) : 0}%
           </p>
         </div>
-        {/* 월별 KPI (최근 2개월) */}
-        {months.slice(-2).map(mk => {
+
+        {/* 월별 KPI (최근 2개월) - Indigo/Violet Theme */}
+        {months.slice(-2).map((mk, idx) => {
           const md = totals.byMonth[mk];
+          const isLast = idx === 1; // Last one gets distinct color if needed
+          const borderColor = isLast ? 'border-indigo-500' : 'border-slate-400';
+          const badgeColor = isLast ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-100 text-slate-600';
+
           return (
-            <div key={mk} className="bg-white p-6 rounded-xl shadow-sm border border-slate-200" title={`매출: ${formatCurrencyFull(md?.sales)} / 이익: ${formatCurrencyFull(md?.profit)}`}>
+            <div key={mk} className={`bg-white p-6 rounded-xl shadow-sm border-t-4 ${borderColor} border-x border-b`} title={`매출: ${formatCurrencyFull(md?.sales)} / 이익: ${formatCurrencyFull(md?.profit)}`}>
               <div className="flex justify-between items-center mb-2">
                 <h3 className="text-sm font-medium text-slate-500">{getMonthShortLabel(mk)} 매출 (백만원)</h3>
-                <Calendar className="w-5 h-5 text-indigo-500" />
+                <span className={`${badgeColor} text-xs font-semibold px-2 py-0.5 rounded`}>Month</span>
               </div>
               <div className="text-2xl font-bold text-slate-900">{formatMillionWon(md?.sales ?? 0)}</div>
               <p className="text-xs text-slate-400 mt-1">이익 {formatMillionWon(md?.profit ?? 0)}</p>
@@ -240,12 +246,12 @@ export default function SolutionBusinessDashboard() {
             <ComposedChart data={topProducts} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
               <XAxis dataKey="product" scale="point" padding={{ left: 30, right: 30 }} tick={{ fontSize: 12 }} />
-              <YAxis yAxisId="left" tickFormatter={formatMillionWon} tick={{ fontSize: 11 }} />
-              <YAxis yAxisId="right" orientation="right" tickFormatter={formatMillionWon} tick={{ fontSize: 11 }} />
-              <Tooltip formatter={(value) => formatCurrencyFull(Number(value))} />
+              <YAxis yAxisId="left" tickFormatter={formatMillionWonChart} tick={{ fontSize: 11 }} />
+              <YAxis yAxisId="right" orientation="right" tickFormatter={formatMillionWonChart} tick={{ fontSize: 11 }} />
+              <Tooltip formatter={(value) => formatMillionWonChart(Number(value))} />
               <Legend />
-              <Bar yAxisId="left" dataKey="totalSales" name="매출액" fill="#a855f7" barSize={30} radius={[4, 4, 0, 0]} />
-              <Line yAxisId="right" type="monotone" dataKey="totalProfit" name="매출이익" stroke="#10b981" strokeWidth={3} dot={{ r: 4 }} />
+              <Bar yAxisId="left" dataKey="totalSales" name="매출액" fill="#2563eb" barSize={30} radius={[4, 4, 0, 0]} />
+              <Line yAxisId="right" type="monotone" dataKey="totalProfit" name="매출이익" stroke="#0ea5e9" strokeWidth={3} dot={{ r: 4 }} />
             </ComposedChart>
           </ChartWrapper>
         </div>
@@ -255,9 +261,9 @@ export default function SolutionBusinessDashboard() {
             <BarChart data={monthlyTrend}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
               <XAxis dataKey="name" />
-              <YAxis tickFormatter={formatMillionWon} tick={{ fontSize: 11 }} width={45} />
-              <Tooltip formatter={(value) => formatCurrencyFull(Number(value))} />
-              <Bar dataKey="sales" name="매출" fill="#a855f7" radius={[6, 6, 0, 0]} barSize={40} />
+              <YAxis tickFormatter={formatMillionWonChart} tick={{ fontSize: 11 }} width={45} />
+              <Tooltip formatter={(value) => formatMillionWonChart(Number(value))} />
+              <Bar dataKey="sales" name="매출" fill="#6366f1" radius={[6, 6, 0, 0]} barSize={40} />
             </BarChart>
           </ChartWrapper>
         </div>

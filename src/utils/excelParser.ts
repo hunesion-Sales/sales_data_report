@@ -122,14 +122,25 @@ export async function parseExcelFile(buffer: ArrayBuffer): Promise<ParseResult> 
     if (found) break;
   }
 
-  // 2) 제품군 컬럼 탐색 (월 헤더 행 다음 행에서 "제품군" 검색)
+  // 2) 제품군 & 영업부문 컬럼 탐색 (월 헤더 행 다음 행에서 검색)
   let productCol = 2; // 기본값: B열
+  let divisionCol = -1; // 기본값: 없음
   if (monthHeaderRow > 0) {
     const headerRow = worksheet.getRow(monthHeaderRow + 1);
     headerRow.eachCell({ includeEmpty: false }, (cell, colNumber) => {
       if (String(cell.value ?? '').trim() === '제품군') {
         productCol = colNumber;
         console.log(`[ExcelParser] Found 'Product Family' column at ${colNumber}`);
+      }
+    });
+
+    // Division Column Search
+    // Reuse headerRow from above
+    headerRow.eachCell({ includeEmpty: false }, (cell, colNumber) => {
+      const val = String(cell.value ?? '').trim().replace(/\s+/g, ''); // Remove spaces
+      if (['영업부문', '부문', '사업부문', 'Division', 'Dept'].includes(val)) {
+        divisionCol = colNumber;
+        console.log(`[ExcelParser] Found 'Division' column at ${colNumber} (Header: "${cell.value}")`);
       }
     });
   }
@@ -159,6 +170,7 @@ export async function parseExcelFile(buffer: ArrayBuffer): Promise<ParseResult> 
   for (let rowNum = dataStartRow; rowNum <= worksheet.rowCount; rowNum++) {
     const row = worksheet.getRow(rowNum);
     const productName = String(row.getCell(productCol).value ?? '').trim();
+    const divisionName = divisionCol > 0 ? String(row.getCell(divisionCol).value ?? '').trim() : undefined;
 
     // 빈 행이거나 "전체" 합계 행이면 종료
     if (!productName || productName === '전체') break;
@@ -178,6 +190,7 @@ export async function parseExcelFile(buffer: ArrayBuffer): Promise<ParseResult> 
     data.push({
       id: Date.now() + rowNum,
       product: productName,
+      division: divisionName,
       months: monthData,
     });
   }

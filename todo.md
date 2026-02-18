@@ -799,6 +799,21 @@ Firestore Root
 55. [x] **자동 관리자 권한 부여**:
     - `src/pages/admin/UserManagementPage.tsx`: "솔루션사업본부" 배정 시 `admin` 권한 자동 부여
 
+### Phase 32: Visual Enhancements (Blue Theme Update) -- COMPLETED (2026-02-18)
+
+#### 32-1. React App Design Update
+56. [x] **ProductReportPage & Dashboard Design**:
+    - `webdesign.md` 가이드라인 적용: KPIs, Charts, Layout
+    - **KPI Cards**: `border-t-4` 스타일 적용 (Blue: Sales, Emerald: Profit, Indigo: Cloud/Others)
+    - **Cloud Section**: Indigo 테마로 별도 섹션 구분
+    - **Charts**: `COLORS` 팔레트 업데이트 (Blue/Indigo variants), `Dashboard` Bar Chart 색상 변경
+    - **Stability**: 불필요한 `transform` 효과 제거
+    - **Formatting**: 모든 차트 숫자 포맷을 백만원 단위 소수점 2자리로 통일 (`formatMillionWonChart`)
+    - **Navigation**: 메뉴 순서 변경 (대시보드 -> 제품별 -> 부문별 -> 달성율 -> 설정) 및 명칭 변경 (달성 현황 -> 달성율)
+    - **Branding**: 로고 변경 (HUNESION_Huni.png), 타이틀 변경 (HSR), 사이드바 접힘 시 아이콘만 표시, 스크롤 시 메뉴 이동(Sticky)
+    - **Login**: 배경화면 변경 (sales_growth_bg.png, 투명도 80% 적용) 및 문구 수정 (매출 관리 -> 매출 보고, 타이틀 System 추가/사이즈 조정)
+
+
 ### Phase 14: 제품별 보고서 차트 및 통계 (2026-02-18)
 
 #### 14-1. 제품별 통계 및 차트 구현
@@ -963,3 +978,26 @@ saveWithConflictResolution() 호출
 ```
 
 ```
+
+---
+
+### Phase 28: Period Selection & Enhanced Metrics -- COMPLETED (2026-02-18)
+
+#### 28-1. 기간별 조회 기능 강화
+- [x] **상반기(H1)/하반기(H2)/연간(Year) 조회 지원**:
+    - `useAchievement.ts` 훅 개선: `period` 상태를 도입하여 분기뿐만 아니라 반기/연간 데이터 집계 지원
+    - `periodUtils.ts` 업데이트: `getMonthsInPeriod` 등 기간별 월 목록 조회 유틸리티 추가
+    - `AchievementPage.tsx`: 기간 선택 버튼(H1, H2, Year) 추가 및 선택된 기간에 따른 동적 UI 업데이트
+
+#### 28-2. 동적 달성율 및 지표 개선
+- [x] **View Mode(매출/이익)에 따른 동적 지표**:
+    - "매출액 보기" 모드: 매출 목표 vs 매출 실적 -> 매출 달성율
+    - "매출이익 보기" 모드: 이익 목표 vs 이익 실적 -> 이익 달성율
+    - KPI 카드 및 차트 제목/데이터가 모드에 따라 자동 변경되도록 수정
+
+#### 28-3. 차트 가독성 및 안정성 개선
+- [x] **단위 및 서식 최적화**:
+    - 막대 차트(목표 vs 실적): 단위를 '원'에서 **'백만원'**으로 변경하여 가독성 향상
+    - 달성율 차트: 소수점 **첫째 자리**까지 표시 (예: 52.8%)
+- [x] **대시보드 안정화**:
+    - `SolutionBusinessDashboard.tsx`의 `toFixed` 오류 수정 (훅 반환값 변경에 따른 대응)

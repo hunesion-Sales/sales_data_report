@@ -8,6 +8,7 @@ export interface MonthData {
 export interface ProductData {
   id: number | string;
   product: string;
+  division?: string; // Excel에서 추출된 영업부문명
   months: Record<string, MonthData>; // key: "2026-01", "2026-02", ...
   sortOrder?: number;
 }
@@ -148,6 +149,9 @@ export interface ProductDataExtended extends ProductData {
 
 /** 기간 유형 */
 export type PeriodType = 'monthly' | 'quarterly' | 'semi-annual' | 'annual';
+
+/** 달성 현황 조회 기간 */
+export type AchievementPeriod = 'Q1' | 'Q2' | 'Q3' | 'Q4' | 'H1' | 'H2' | 'Year';
 
 /** 분기 */
 export type Quarter = 'Q1' | 'Q2' | 'Q3' | 'Q4';

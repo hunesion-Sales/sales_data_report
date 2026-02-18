@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import hSRLogo from '@/assets/HUNESION_Huni.png';
 import {
     LayoutDashboard,
     FileText,
@@ -39,9 +40,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleCollapse })
 
     const navItems = [
         { path: '/', label: '대시보드', icon: LayoutDashboard },
-        { path: '/input', label: '매출 관리', icon: FileText },
+        { path: '/product-reports', label: '제품별 보고서', icon: Package },
         { path: '/reports', label: '부문별 보고서', icon: BarChart3 },
-        { path: '/achievement', label: '달성 현황', icon: Target },
+        { path: '/achievement', label: '달성율', icon: Target },
     ];
 
     const adminItems = [
@@ -55,36 +56,33 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleCollapse })
 
     return (
         <aside
-            className={`${isCollapsed ? 'w-20' : 'w-64'
-                } bg-white border-r border-slate-200 transition-all duration-300 ease-in-out flex flex-col h-screen z-20 sticky top-0`}
+            className={`${isCollapsed ? 'w-20' : 'w-72'
+                } bg-white border-r border-slate-200 transition-all duration-300 ease-in-out flex flex-col h-screen z-20 sticky top-0 shadow-lg`}
         >
             {/* Header / Logo */}
-            <div className="h-16 flex items-center justify-between px-4 border-b border-slate-100">
-                {!isCollapsed && (
-                    <div className="flex items-center gap-2">
-                        <div className="bg-primary-600 p-1.5 rounded-lg">
-                            <LayoutDashboard className="w-5 h-5 text-white" />
-                        </div>
-                        <span className="font-bold text-lg text-slate-800 tracking-tight">Hunesion Sales Report</span>
-                    </div>
-                )}
+            <div className="h-16 flex items-center px-4 border-b border-slate-100 shrink-0 relative">
+                <div className={`flex items-center gap-3 overflow-hidden w-full ${isCollapsed ? 'justify-center' : ''}`}>
+                    <img src={hSRLogo} alt="HSR Logo" className="w-8 h-8 object-contain shrink-0" />
+                    {!isCollapsed && (
+                        <span className="font-bold text-lg text-slate-800 tracking-tight whitespace-nowrap overflow-hidden text-ellipsis">
+                            HSR(Huni Sales Report)
+                        </span>
+                    )}
+                </div>
+
                 <button
                     onClick={toggleCollapse}
-                    className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 transition-colors ml-auto"
+                    className="absolute -right-3 top-1/2 -translate-y-1/2 bg-white border border-slate-200 p-1.5 rounded-full shadow-md hover:bg-slate-50 text-slate-500 transition-colors z-50"
+                    title={isCollapsed ? "펼치기" : "접기"}
                 >
-                    {isCollapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
+                    {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
                 </button>
             </div>
 
             {/* Navigation */}
             <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
                 {/* Main Menu */}
-                {[
-                    { path: '/', label: '대시보드', icon: LayoutDashboard },
-                    { path: '/reports', label: '부문별 보고서', icon: BarChart3 },
-                    { path: '/product-reports', label: '제품별 보고서', icon: Package }, // New
-                    { path: '/achievement', label: '달성 현황', icon: Target },
-                ].map((item) => (
+                {navItems.map((item) => (
                     <NavLink
                         key={item.path}
                         to={item.path}

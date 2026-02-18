@@ -14,7 +14,7 @@ import {
 } from 'recharts';
 import type { DivisionSummary, PeriodInfo } from '@/types';
 import { ChartWrapper } from '@/components/charts';
-import { formatMillionWon, formatCurrency } from '@/utils/formatUtils';
+import { formatMillionWon, formatCurrency, formatMillionWonChart } from '@/utils/formatUtils';
 
 interface DivisionChartsProps {
   summaries: DivisionSummary[];
@@ -23,16 +23,16 @@ interface DivisionChartsProps {
 }
 
 const COLORS = [
-  '#6366f1', // indigo
-  '#10b981', // emerald
-  '#f59e0b', // amber
-  '#ef4444', // red
-  '#8b5cf6', // violet
-  '#06b6d4', // cyan
-  '#f97316', // orange
-  '#ec4899', // pink
-  '#84cc16', // lime
-  '#14b8a6', // teal
+  '#2563eb', // blue-600
+  '#0ea5e9', // sky-500
+  '#6366f1', // indigo-500
+  '#06b6d4', // cyan-500
+  '#1d4ed8', // blue-700
+  '#0284c7', // sky-600
+  '#4f46e5', // indigo-600
+  '#0891b2', // cyan-600
+  '#60a5fa', // blue-400
+  '#818cf8', // indigo-400
 ];
 
 export default function DivisionCharts({
@@ -86,9 +86,9 @@ export default function DivisionCharts({
         <BarChart data={stackedBarData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" vertical={false} />
           <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-          <YAxis tickFormatter={formatMillionWon} tick={{ fontSize: 11 }} />
+          <YAxis tickFormatter={formatMillionWonChart} tick={{ fontSize: 11 }} />
           <Tooltip
-            formatter={(value) => formatCurrency(Number(value))}
+            formatter={(value) => formatMillionWonChart(Number(value))}
             labelStyle={{ fontWeight: 'bold' }}
           />
           <Legend wrapperStyle={{ fontSize: 12 }} />
@@ -121,7 +121,7 @@ export default function DivisionCharts({
               <Cell key={`cell-${idx}`} fill={COLORS[idx % COLORS.length]} />
             ))}
           </Pie>
-          <Tooltip formatter={(value) => formatCurrency(Number(value))} />
+          <Tooltip formatter={(value) => formatMillionWonChart(Number(value))} />
         </PieChart>
       </ChartWrapper>
 
@@ -133,16 +133,16 @@ export default function DivisionCharts({
           margin={{ top: 5, right: 30, left: 60, bottom: 5 }}
         >
           <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-          <XAxis type="number" tickFormatter={formatMillionWon} tick={{ fontSize: 11 }} />
+          <XAxis type="number" tickFormatter={formatMillionWonChart} tick={{ fontSize: 11 }} />
           <YAxis type="category" dataKey="name" tick={{ fontSize: 12 }} width={80} />
           <Tooltip
-            formatter={(value) => formatCurrency(Number(value))}
+            formatter={(value) => formatMillionWonChart(Number(value))}
             cursor={{ fill: 'transparent' }}
           />
           <Bar
             dataKey="value"
             name={metricLabel}
-            fill={viewMode === 'sales' ? '#6366f1' : '#10b981'}
+            fill={viewMode === 'sales' ? '#2563eb' : '#06b6d4'}
             radius={[0, 4, 4, 0]}
             barSize={24}
           />

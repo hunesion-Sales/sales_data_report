@@ -204,3 +204,41 @@ export const PERIOD_TYPE_LABELS: Record<PeriodType, string> = {
   'semi-annual': '반기별',
   annual: '연간',
 };
+
+/**
+ * 달성 현황 기간 조회용 월 목록 반환
+ */
+import type { AchievementPeriod } from '@/types';
+
+export function getMonthsInAchievementPeriod(year: number, period: AchievementPeriod): string[] {
+  if (['Q1', 'Q2', 'Q3', 'Q4'].includes(period)) {
+    return getMonthsInQuarter(year, period as Quarter);
+  }
+
+  if (period === 'H1') {
+    return getMonthsInHalfYear(year, 'H1');
+  }
+
+  if (period === 'H2') {
+    return getMonthsInHalfYear(year, 'H2');
+  }
+
+  // Year
+  return getMonthsInYear(year);
+}
+
+/**
+ * 달성 현황 기간 라벨 반환
+ */
+export function getAchievementPeriodLabel(period: AchievementPeriod): string {
+  const labels: Record<AchievementPeriod, string> = {
+    Q1: '1분기',
+    Q2: '2분기',
+    Q3: '3분기',
+    Q4: '4분기',
+    H1: '상반기',
+    H2: '하반기',
+    Year: '연간',
+  };
+  return labels[period];
+}

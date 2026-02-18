@@ -27,6 +27,7 @@ export async function getProducts(reportId: string): Promise<ProductData[]> {
     return {
       id: d.id,
       product: data.product as string,
+      division: data.division as string | undefined,
       months: data.months as Record<string, MonthData>,
       sortOrder: data.sortOrder, // Add for checking
     } as ProductData;
@@ -60,8 +61,11 @@ export async function saveProducts(
 
     chunk.forEach((product, idx) => {
       const docRef = doc(colRef);
+      // division 필드가 undefined일 경우 제외되지 않도록 처리 (필요시)
+      // Firestore는 undefined 필드를 무시함
       batch.set(docRef, {
         product: product.product,
+        ...(product.division && { division: product.division }),
         months: product.months,
         sortOrder: i + idx,
         updatedAt: serverTimestamp(),
@@ -86,6 +90,7 @@ export async function addProduct(
   const batch = writeBatch(db);
   batch.set(docRef, {
     product: product.product,
+    ...(product.division && { division: product.division }),
     months: product.months,
     sortOrder,
     updatedAt: serverTimestamp(),

@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { LogIn, AlertCircle, Loader2 } from 'lucide-react';
+import hSRLogo from '@/assets/HUNESION_Huni.png';
+import salesBg from '@/assets/sales_growth_bg.png';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -42,16 +44,22 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 px-4">
-      <div className="w-full max-w-md">
-        <div className="bg-white rounded-2xl shadow-xl p-8">
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 relative overflow-hidden px-4">
+      {/* Background Image with Overlay */}
+      <div className="absolute inset-0 z-0">
+        <img src={salesBg} alt="Background" className="w-full h-full object-cover opacity-80" />
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-50/50 to-slate-100/50" />
+      </div>
+
+      <div className="w-full max-w-md z-10 relative">
+        <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl p-8 border border-white/50">
           {/* 헤더 */}
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-indigo-100 rounded-full mb-4">
-              <LogIn className="w-8 h-8 text-indigo-600" />
+            <div className="flex justify-center mb-4">
+              <img src={hSRLogo} alt="HSR Logo" className="w-16 h-16 object-contain" />
             </div>
-            <h1 className="text-2xl font-bold text-slate-900">로그인</h1>
-            <p className="text-slate-600 mt-2">매출 보고 대시보드에 접속합니다</p>
+            <h1 className="text-xl font-bold text-slate-900 tracking-tight">HSR (Huni Sales Report System)</h1>
+            <p className="text-slate-600 mt-2">휴네시온 솔루션사업본부 매출 보고 시스템</p>
           </div>
 
           {/* 에러 메시지 */}

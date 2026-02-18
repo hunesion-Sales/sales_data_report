@@ -13,7 +13,7 @@ import {
 } from 'recharts';
 import type { ProcessedProduct } from '@/types';
 import { ChartWrapper } from '@/components/charts';
-import { formatMillionWon, formatCurrency } from '@/utils/formatUtils';
+import { formatMillionWon, formatCurrency, formatMillionWonChart } from '@/utils/formatUtils';
 interface ProductChartsProps {
     items: ProcessedProduct[];
     months: string[];
@@ -21,25 +21,23 @@ interface ProductChartsProps {
 }
 
 const COLORS = [
-    '#6366f1', // indigo
-    '#10b981', // emerald
-    '#f59e0b', // amber
-    '#ef4444', // red
-    '#8b5cf6', // violet
-    '#06b6d4', // cyan
-    '#f97316', // orange
-    '#ec4899', // pink
-    '#84cc16', // lime
-    '#14b8a6', // teal
-    '#3b82f6', // blue
-    '#f43f5e', // rose
+    '#3b82f6', // blue-500 (Primary)
+    '#6366f1', // indigo-500 (Secondary)
+    '#10b981', // emerald-500 (Success/Profit)
+    '#f59e0b', // amber-500
+    '#8b5cf6', // violet-500
+    '#ec4899', // pink-500
+    '#06b6d4', // cyan-500
+    '#1d4ed8', // blue-700
+    '#4338ca', // indigo-700
+    '#059669', // emerald-600
+    '#d97706', // amber-600
+    '#7c3aed', // violet-600
 ];
 
 export default function ProductCharts({ items, months, viewMode }: ProductChartsProps) {
-    // 필터링: Cloud 소계 제외 (개별 Cloud 항목들이 있으므로)
-    const validItems = useMemo(() => {
-        return items.filter(item => item.id !== 'cloud_total');
-    }, [items]);
+    // 필터링 제거: props로 전달된 items를 그대로 사용
+    const validItems = items;
 
     // 1. Stacked Bar Chart용 데이터: 월별 제품 매출/이익 스택
     const stackedBarData = useMemo(() => {
@@ -92,9 +90,9 @@ export default function ProductCharts({ items, months, viewMode }: ProductCharts
                 <BarChart data={stackedBarData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
                     <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                    <YAxis tickFormatter={formatMillionWon} tick={{ fontSize: 11 }} />
+                    <YAxis tickFormatter={formatMillionWonChart} tick={{ fontSize: 11 }} />
                     <Tooltip
-                        formatter={(value) => formatCurrency(Number(value))}
+                        formatter={(value) => formatMillionWonChart(Number(value))}
                         labelStyle={{ fontWeight: 'bold' }}
                     />
                     <Legend wrapperStyle={{ fontSize: 11 }} />
@@ -127,7 +125,7 @@ export default function ProductCharts({ items, months, viewMode }: ProductCharts
                             <Cell key={`cell-${idx}`} fill={getItemColor(idx)} />
                         ))}
                     </Pie>
-                    <Tooltip formatter={(value) => formatCurrency(Number(value))} />
+                    <Tooltip formatter={(value) => formatMillionWonChart(Number(value))} />
                 </PieChart>
             </ChartWrapper>
 
@@ -139,16 +137,16 @@ export default function ProductCharts({ items, months, viewMode }: ProductCharts
                     margin={{ top: 5, right: 30, left: 100, bottom: 5 }}
                 >
                     <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                    <XAxis type="number" tickFormatter={formatMillionWon} tick={{ fontSize: 11 }} />
+                    <XAxis type="number" tickFormatter={formatMillionWonChart} tick={{ fontSize: 11 }} />
                     <YAxis type="category" dataKey="name" tick={{ fontSize: 12 }} width={120} />
                     <Tooltip
-                        formatter={(value) => formatCurrency(Number(value))}
+                        formatter={(value) => formatMillionWonChart(Number(value))}
                         cursor={{ fill: 'transparent' }}
                     />
                     <Bar
                         dataKey="value"
                         name={metricLabel}
-                        fill={viewMode === 'sales' ? '#6366f1' : '#10b981'}
+                        fill={viewMode === 'sales' ? '#2563eb' : '#06b6d4'}
                         radius={[0, 4, 4, 0]}
                         barSize={20}
                     />

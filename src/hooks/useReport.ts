@@ -104,6 +104,8 @@ function mergeProducts(
       }
       productMap.set(incomingProduct.product, {
         ...existingProduct,
+        // Update division if available in incoming data
+        ...(incomingProduct.division && { division: incomingProduct.division }),
         months: mergedMonths,
       });
       updatedCount++;

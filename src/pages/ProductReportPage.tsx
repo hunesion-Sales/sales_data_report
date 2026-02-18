@@ -6,6 +6,7 @@ import { Table as TableIcon, Printer, Cloud, CloudOff, Loader2, Package } from '
 import { useAuth } from '@/contexts/AuthContext';
 import { formatMillionWon, formatCurrency as formatCurrencyFull } from '@/utils/formatUtils';
 import ProductCharts from '@/components/reports/ProductCharts';
+import ProductReportTable from '@/components/reports/ProductReportTable';
 
 // --- 초기 데이터 (동적 월 구조) ---
 // --- 초기 데이터 (DB 로딩 전 빈 상태) ---
@@ -46,7 +47,7 @@ export default function ProductReportPage() {
     };
 
     // --- 데이터 가공 및 통계 계산 ---
-    const processedData = useMemo<ProcessedProduct[]>(() => {
+    const { mainData, cloudData } = useMemo(() => {
         // 빈 월 데이터 생성 헬퍼
         const emptyMonths = (): Record<string, { sales: number; cost: number }> => {
             const m: Record<string, { sales: number; cost: number }> = {};
@@ -62,7 +63,7 @@ export default function ProductReportPage() {
         // Groups
         const regularItems: ProductData[] = [];
         const cloudItems: ProductData[] = [];
-        const cloudSubtotal: ProductData = { id: 'cloud_total', product: 'Cloud 소계', months: emptyMonths() };
+        const cloudSubtotal: ProductData = { id: 'cloud_total', product: 'Cloud 서비스', months: emptyMonths() };
 
         data.forEach(item => {
             // 1. Maintenance & Etc/HW Aggregation
@@ -99,16 +100,8 @@ export default function ProductReportPage() {
         regularItems.sort((a, b) => a.product.localeCompare(b.product));
         cloudItems.sort((a, b) => a.product.localeCompare(b.product));
 
-        // Construct Final List: Regular -> Cloud -> Cloud Subtotal -> Maintenance -> Etc
-        const aggregatedList = [
-            ...regularItems,
-            ...cloudItems,
-            cloudSubtotal,
-            aggregatedGroups['유지보수'],
-            aggregatedGroups['기타']
-        ];
-
-        return aggregatedList.map(item => {
+        // Helper to process list
+        const processList = (list: ProductData[]) => list.map(item => {
             const processedMonths: Record<string, { sales: number; cost: number; profit: number }> = {};
             let totalSales = 0;
             let totalCost = 0;
@@ -130,6 +123,22 @@ export default function ProductReportPage() {
                 totalProfit: totalSales - totalCost,
             };
         });
+
+        // Main Report Data: Regular -> Cloud Service -> Maintenance -> Etc
+        const mainRaw = [
+            ...regularItems,
+            cloudSubtotal,
+            aggregatedGroups['유지보수'],
+            aggregatedGroups['기타']
+        ];
+
+        // Cloud Report Data: Individual Cloud Items
+        const cloudRaw = [...cloudItems];
+
+        return {
+            mainData: processList(mainRaw),
+            cloudData: processList(cloudRaw)
+        };
     }, [data, months]);
 
     const totals = useMemo<Totals>(() => {
@@ -139,10 +148,8 @@ export default function ProductReportPage() {
         let totalSales = 0;
         let totalCost = 0;
 
-        processedData.forEach(item => {
-            // Cloud 소계는 개별 항목들의 합이므로 전체 합계 계산 시 제외 (중복 방지)
-            if (item.id === 'cloud_total') return;
-
+        // Use mainData for totals (it includes Cloud Service aggregated, and verified single entries)
+        mainData.forEach(item => {
             months.forEach(mk => {
                 const md = item.months[mk] ?? { sales: 0, cost: 0, profit: 0 };
                 byMonth[mk].sales += md.sales;
@@ -154,7 +161,29 @@ export default function ProductReportPage() {
         });
 
         return { byMonth, totalSales, totalCost, totalProfit: totalSales - totalCost };
-    }, [processedData, months]);
+    }, [mainData, months]);
+
+    // Cloud Totals (for Cloud Report Footer)
+    const cloudTotals = useMemo<Totals>(() => {
+        const byMonth: Record<string, { sales: number; cost: number; profit: number }> = {};
+        months.forEach(mk => { byMonth[mk] = { sales: 0, cost: 0, profit: 0 }; });
+
+        let totalSales = 0;
+        let totalCost = 0;
+
+        cloudData.forEach(item => {
+            months.forEach(mk => {
+                const md = item.months[mk] ?? { sales: 0, cost: 0, profit: 0 };
+                byMonth[mk].sales += md.sales;
+                byMonth[mk].cost += md.cost;
+                byMonth[mk].profit += md.profit;
+            });
+            totalSales += item.totalSales;
+            totalCost += item.totalCost;
+        });
+
+        return { byMonth, totalSales, totalCost, totalProfit: totalSales - totalCost };
+    }, [cloudData, months]);
 
     const [viewMode, setViewMode] = useState<'sales' | 'profit'>('sales');
 
@@ -212,133 +241,100 @@ export default function ProductReportPage() {
             </div>
 
             {/* Summary KPI Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 print-avoid-break">
-                <div className={`bg-white p-6 rounded-xl shadow-sm border transition-all ${viewMode === 'sales' ? 'border-indigo-200 ring-1 ring-indigo-100' : 'border-slate-200'}`} title={formatCurrencyFull(totals.totalSales)}>
-                    <p className="text-sm text-slate-500 mb-1">총 매출액 (백만원)</p>
-                    <p className="text-2xl font-bold text-slate-900">
-                        {formatMillionWon(totals.totalSales)}
-                    </p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 print-avoid-break">
+                {/* Sales Card - Blue/Slate Theme */}
+                <div className={`bg-white p-6 rounded-xl shadow-sm border-t-4 transition-all ${viewMode === 'sales'
+                    ? 'border-indigo-500 shadow-md transform scale-[1.01]'
+                    : 'border-slate-300 border-x border-b'
+                    }`} title={formatCurrencyFull(totals.totalSales)}>
+                    <div className="flex justify-between items-start mb-4">
+                        <h3 className="text-lg font-bold text-slate-700">총 매출액</h3>
+                        <span className={`text-xs font-semibold px-2 py-1 rounded ${viewMode === 'sales' ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600'}`}>
+                            Sales
+                        </span>
+                    </div>
+                    <div className="space-y-2">
+                        <p className="text-3xl font-bold text-slate-800 tracking-tight">
+                            {formatMillionWon(totals.totalSales)}
+                        </p>
+                        <p className="text-sm text-slate-500">전체 제품군 합계 (백만원)</p>
+                    </div>
                 </div>
-                <div className={`bg-white p-6 rounded-xl shadow-sm border transition-all ${viewMode === 'profit' ? 'border-emerald-200 ring-1 ring-emerald-100' : 'border-slate-200'}`} title={formatCurrencyFull(totals.totalProfit)}>
-                    <p className="text-sm text-slate-500 mb-1">총 매출이익 (백만원)</p>
-                    <p className="text-2xl font-bold text-emerald-600">
-                        {formatMillionWon(totals.totalProfit)}
-                    </p>
+
+                {/* Profit Card - Emerald Theme */}
+                <div className={`bg-white p-6 rounded-xl shadow-sm border-t-4 transition-all ${viewMode === 'profit'
+                    ? 'border-emerald-500 shadow-md transform scale-[1.01]'
+                    : 'border-slate-300 border-x border-b'
+                    }`} title={formatCurrencyFull(totals.totalProfit)}>
+                    <div className="flex justify-between items-start mb-4">
+                        <h3 className="text-lg font-bold text-slate-700">총 매출이익</h3>
+                        <span className={`text-xs font-semibold px-2 py-1 rounded ${viewMode === 'profit' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>
+                            Profit
+                        </span>
+                    </div>
+                    <div className="space-y-2">
+                        <p className="text-3xl font-bold text-emerald-600 tracking-tight">
+                            {formatMillionWon(totals.totalProfit)}
+                        </p>
+                        <p className="text-sm text-slate-500">전체 제품군 합계 (백만원)</p>
+                    </div>
                 </div>
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                    <p className="text-sm text-slate-500 mb-1">평균 이익률</p>
-                    <p className="text-2xl font-bold text-indigo-600">
-                        {totals.totalSales > 0
-                            ? `${((totals.totalProfit / totals.totalSales) * 100).toFixed(1)}%`
-                            : '-'}
-                    </p>
+
+                {/* Margin Card - Indigo/Violet Theme */}
+                <div className="bg-white p-6 rounded-xl shadow-sm border-t-4 border-violet-500 border-x border-b">
+                    <div className="flex justify-between items-start mb-4">
+                        <h3 className="text-lg font-bold text-slate-700">평균 이익률</h3>
+                        <span className="bg-violet-100 text-violet-700 text-xs font-semibold px-2 py-1 rounded">Margin</span>
+                    </div>
+                    <div className="space-y-2">
+                        <p className="text-3xl font-bold text-violet-600 tracking-tight">
+                            {totals.totalSales > 0
+                                ? `${((totals.totalProfit / totals.totalSales) * 100).toFixed(1)}%`
+                                : '-'}
+                        </p>
+                        <p className="text-sm text-slate-500">전체 평균 이익률</p>
+                    </div>
                 </div>
             </div>
 
-            {/* Product Charts */}
-            <ProductCharts items={processedData} months={months} viewMode={viewMode} />
+            {/* 1. Main Report Section */}
+            <div className="space-y-6">
+                {/* Product Charts (Main) */}
+                <ProductCharts items={mainData} months={months} viewMode={viewMode} />
 
-            {/* Detailed Report Table */}
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden print-avoid-break">
-                <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                    <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                        <TableIcon className="w-5 h-5 text-slate-500 no-print" />
-                        상세 실적 보고서
-                    </h3>
-                    <div className="flex items-center gap-4">
-                        <span className="text-xs text-slate-500 font-medium">(단위 : 백만원, 부가세별도)</span>
-                        <button
-                            onClick={() => window.print()}
-                            className="flex items-center gap-2 px-3 py-1.5 text-sm bg-white border border-slate-300 rounded hover:bg-slate-50 text-slate-600 transition-colors no-print"
-                        >
-                            <Printer className="w-4 h-4" />
-                            인쇄 / PDF 저장
-                        </button>
+                {/* Detailed Report Table (Main) */}
+                <ProductReportTable
+                    title="상세 실적 보고서"
+                    items={mainData}
+                    months={months}
+                    totals={totals}
+                />
+            </div>
+
+            {/* 2. Cloud Report Section (Separate) */}
+            <div className="mt-12 space-y-6 pt-8 no-print-break-before">
+                <div className="bg-indigo-50 border-l-4 border-indigo-500 p-4 rounded-r-lg mb-6 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-white rounded-lg shadow-sm">
+                            <Cloud className="w-6 h-6 text-indigo-600" />
+                        </div>
+                        <div>
+                            <h2 className="text-xl font-bold text-indigo-900">클라우드 실적 보고</h2>
+                            <p className="text-sm text-indigo-600">Cloud 서비스 및 관련 제품군 상세 분석</p>
+                        </div>
                     </div>
                 </div>
-                <div className="overflow-x-auto">
-                    <table className="w-full text-sm text-right border-collapse">
-                        <thead className="bg-slate-100 text-slate-700 font-semibold">
-                            <tr>
-                                <th rowSpan={2} className="p-3 text-left border-b border-r border-slate-200 min-w-[150px] bg-slate-200 sticky left-0 z-10">제품군</th>
-                                {months.map((mk, idx) => {
-                                    const color = MONTH_COLORS[idx % MONTH_COLORS.length];
-                                    return (
-                                        <th key={mk} colSpan={3} className={`p-2 border-b border-r border-slate-200 text-center ${color.bg}`}>
-                                            {getMonthFullLabel(mk)}
-                                        </th>
-                                    );
-                                })}
-                                <th colSpan={3} className="p-2 border-b border-slate-200 text-center bg-slate-200">전체 합계</th>
-                            </tr>
-                            <tr className="text-xs">
-                                {months.map((mk, idx) => {
-                                    const color = MONTH_COLORS[idx % MONTH_COLORS.length];
-                                    return (
-                                        <React.Fragment key={mk}>
-                                            <th className={`p-2 border-b border-r border-slate-200 min-w-[100px] ${color.bgLight}`}>매출액</th>
-                                            <th className={`p-2 border-b border-r border-slate-200 min-w-[100px] ${color.bgLight}`}>매입액</th>
-                                            <th className={`p-2 border-b border-r border-slate-200 min-w-[100px] ${color.bgLight} ${color.text}`}>이익</th>
-                                        </React.Fragment>
-                                    );
-                                })}
-                                <th className="p-2 border-b border-r border-slate-200 min-w-[100px] bg-slate-100">매출액</th>
-                                <th className="p-2 border-b border-r border-slate-200 min-w-[100px] bg-slate-100">매입액</th>
-                                <th className="p-2 border-b border-slate-200 min-w-[100px] bg-slate-100 text-slate-900">이익</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                            {processedData.map((row) => (
-                                <tr key={row.id} className={`transition-colors hover:bg-blue-50/20 ${row.id === 'cloud_total' ? 'bg-indigo-50/60 font-semibold' :
-                                    row.id === 'maintenance_total' || row.id === 'etc_total' ? 'bg-slate-50/80 font-medium' : ''
-                                    }`}>
-                                    <td className={`p-3 text-left border-r border-slate-100 sticky left-0 ${row.id === 'cloud_total' ? 'bg-indigo-50/60 text-indigo-900' :
-                                        row.id === 'maintenance_total' || row.id === 'etc_total' ? 'bg-slate-50/90 text-slate-800' :
-                                            'bg-white text-slate-700 font-medium'
-                                        }`}>
-                                        {row.product}
-                                    </td>
-                                    {months.map((mk, idx) => {
-                                        const md = row.months[mk] ?? { sales: 0, cost: 0, profit: 0 };
-                                        const color = MONTH_COLORS[idx % MONTH_COLORS.length];
-                                        return (
-                                            <React.Fragment key={mk}>
-                                                <td className="p-3 text-slate-600 border-r border-slate-100" title={formatCurrencyFull(md.sales)}>{formatMillionWon(md.sales)}</td>
-                                                <td className="p-3 text-slate-400 border-r border-slate-100" title={formatCurrencyFull(md.cost)}>{formatMillionWon(md.cost)}</td>
-                                                <td className={`p-3 font-medium border-r border-slate-100 ${md.profit < 0 ? 'text-red-500' : color.text}`} title={formatCurrencyFull(md.profit)}>
-                                                    {formatMillionWon(md.profit)}
-                                                </td>
-                                            </React.Fragment>
-                                        );
-                                    })}
-                                    <td className="p-3 font-semibold text-slate-800 border-r border-slate-100 bg-slate-50/30" title={formatCurrencyFull(row.totalSales)}>{formatMillionWon(row.totalSales)}</td>
-                                    <td className="p-3 text-slate-500 border-r border-slate-100 bg-slate-50/30" title={formatCurrencyFull(row.totalCost)}>{formatMillionWon(row.totalCost)}</td>
-                                    <td className={`p-3 font-bold border-r border-slate-100 bg-slate-50/30 ${row.totalProfit < 0 ? 'text-red-600' : 'text-slate-800'}`} title={formatCurrencyFull(row.totalProfit)}>
-                                        {formatMillionWon(row.totalProfit)}
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                        <tfoot className="bg-slate-800 text-white font-bold sticky bottom-0">
-                            <tr>
-                                <td className="p-3 text-center border-r border-slate-600 sticky left-0 bg-slate-800 z-10">합계</td>
-                                {months.map(mk => {
-                                    const md = totals.byMonth[mk] ?? { sales: 0, cost: 0, profit: 0 };
-                                    return (
-                                        <React.Fragment key={mk}>
-                                            <td className="p-3 text-right border-r border-slate-600" title={formatCurrencyFull(md.sales)}>{formatMillionWon(md.sales)}</td>
-                                            <td className="p-3 text-right border-r border-slate-600 text-slate-300" title={formatCurrencyFull(md.cost)}>{formatMillionWon(md.cost)}</td>
-                                            <td className="p-3 text-right border-r border-slate-600 text-yellow-300" title={formatCurrencyFull(md.profit)}>{formatMillionWon(md.profit)}</td>
-                                        </React.Fragment>
-                                    );
-                                })}
-                                <td className="p-3 text-right border-r border-slate-600 bg-slate-900" title={formatCurrencyFull(totals.totalSales)}>{formatMillionWon(totals.totalSales)}</td>
-                                <td className="p-3 text-right border-r border-slate-600 bg-slate-900 text-slate-300" title={formatCurrencyFull(totals.totalCost)}>{formatMillionWon(totals.totalCost)}</td>
-                                <td className="p-3 text-right border-r border-slate-600 bg-slate-900 text-yellow-400" title={formatCurrencyFull(totals.totalProfit)}>{formatMillionWon(totals.totalProfit)}</td>
-                            </tr>
-                        </tfoot>
-                    </table>
-                </div>
+
+                {/* Product Charts (Cloud) */}
+                <ProductCharts items={cloudData} months={months} viewMode={viewMode} />
+
+                {/* Detailed Report Table (Cloud) */}
+                <ProductReportTable
+                    title="클라우드 상세 실적"
+                    items={cloudData}
+                    months={months}
+                    totals={cloudTotals}
+                />
             </div>
         </div>
     );
