@@ -834,14 +834,18 @@ Firestore Root
 63. [x] **제품 데이터 타입 수정**:
     - `src/types/index.ts`: `ProductData` 인터페이스에 `sortOrder` 속성 추가 (TS 에러 해결)
 
-### Phase 19: 데이터 리셋 및 파싱 로직 전면 수정 -- COMPLETED (2026-02-17)
-64. [x] **데이터 초기화 기능 추가**:
+### Phase 19: 데이터 리셋 및 파싱 로직 전면 수정 -- COMPLETED (2026-02-18)
+64. [x] **데이터 초기화 기능 안정화**:
     - `src/firebase/services/reportService.ts`: `clearReportData(reportId)` 구현 (모든 하위 컬렉션 재귀 삭제)
-    - `src/pages/DataInputPage.tsx`: "데이터 초기화 (전체 삭제)" 버튼 및 이중 경고창 추가
-65. [x] **엑셀 컬럼 매핑 로직 지능화**:
+    - `src/pages/DataInputPage.tsx`:
+      - "데이터 초기화 (전체 삭제)" 버튼 및 이중 경고창 추가
+      - **Critical Fix**: `TypeError: n.indexOf` 수정 (문서 ID 타입 불일치 해결: `2026` -> `'report-2026'`)
+      - **Critical Fix**: `BloomFilterError` 해결 (데이터 대량 삭제 후 `terminate(db)` 및 `clearIndexedDbPersistence(db)` 호출로 로컬 캐시 초기화)
+65. [x] **엑셀 컬럼 매핑 로직 지능화 (Data Overwrite 해결)**:
     - `src/utils/excelParser.ts`:
-      - 월 헤더 하단 행(Sub-header) 스캔 로직 추가
-      - "매출", "매입" 키워드를 직접 찾아 컬럼 인덱스 매핑 (병합 셀로 인한 밀림 현상 완벽 해결)
+      - **Off-by-One Fix**: 컬럼 스캔 범위를 `+3`에서 `+2`로 축소하여 다음 달 데이터(3칸 뒤) 침범 방지
+      - **Duplicate Header Fix**: 병합된 셀이나 반복된 헤더로 인해 동일 월 키가 중복 감지될 경우, **이미 등록된 월은 무시**하도록 로직 강화
+      - 월 헤더 하단 행(Sub-header) 스캔 로직 추가 ("매출", "매입" 키워드 직접 매핑)
       - 상세 디버깅 로그(`[ExcelParser]`) 추가로 파싱 과정 투명화
     - 권한 변경 알림 시스템 적용
 
