@@ -62,6 +62,19 @@ export async function parseExcelFile(buffer: ArrayBuffer): Promise<ParseResult> 
           console.log(`[ExcelParser] Found month header row at ${rowNum}`);
         }
 
+        // 월 헤더 분석
+        const parsed = parseMonthLabel(val);
+
+        // [CRITICAL FIX] 중복 월 헤더 방지
+        // 엑셀 병합된 셀이나 반복된 헤더로 인해 동일한 월(Key)이 또 나오면
+        // 뒤쪽 컬럼에서 처리되면서 매핑이 밀리는 문제(Jan -> Feb Data) 발생.
+        // 이미 등록된 Key라면 무시한다.
+        const isDuplicate = monthColumns.some(m => m.key === parsed.key);
+        if (isDuplicate) {
+          console.log(`[ExcelParser] Skipping duplicate month header '${parsed.key}' at col ${colNumber}`);
+          return; // continue equivalent in eachCell
+        }
+
         // 월 헤더 아래 행에서 매출/매입 컬럼 찾기
         const subHeaderRow = worksheet.getRow(rowNum + 1);
         let salesCol = colNumber;
@@ -96,7 +109,6 @@ export async function parseExcelFile(buffer: ArrayBuffer): Promise<ParseResult> 
           }
         }
 
-        const parsed = parseMonthLabel(val);
         monthColumns.push({
           key: parsed.key,
           display: parsed.display,
