@@ -684,3 +684,12 @@ interface TargetAchievement {
     - Fix: 모든 차트에서 XAxis의 `scale`, `padding` 속성 제거 (Recharts 기본값이 자동 중앙 정렬)
     - Modified: `SolutionBusinessDashboard.tsx` (4개), `AchievementCharts.tsx` (1개), `DualAxisChart.tsx` (1개)
     - Deployed to Firebase Hosting
+
+### Phase 41: Chart Title Cleanup & Table Sort Feature -- COMPLETED (2026-02-19)
+- [x] **부문별 차트 제목에서 '(Top 10)' 제거**: `DivisionCharts.tsx` — 제목 변경 및 `.slice(0,10)` 제거
+- [x] **제품별 순위 차트에서 '상위 15개' 제거**: `ProductCharts.tsx` — 제목 변경 및 `.slice(0,15)` 제거
+- [x] **제품별 보고서 테이블 매출이익/매출액 소팅 기능 추가**: `ProductReportTable.tsx`
+    - 전체 합계의 매출액/매출이익 헤더 클릭 시 정렬 (내림차순→오름차순→원래순서 토글)
+    - 정렬 상태 아이콘 표시 (ArrowUpDown/ArrowDown/ArrowUp)
+    - 정렬 활성 컬럼 파란색 하이라이트
+    - Deployed to Firebase Hosting
