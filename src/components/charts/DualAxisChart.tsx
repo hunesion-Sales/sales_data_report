@@ -37,7 +37,7 @@ export default function DualAxisChart({
             <ResponsiveContainer width="100%" height="100%" minWidth={100}>
                 <ComposedChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }} onClick={onClick}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                    <XAxis dataKey={xAxisKey} scale="point" padding={{ left: 30, right: 30 }} tick={{ fontSize: 12 }} />
+                    <XAxis dataKey={xAxisKey} tick={{ fontSize: 12 }} />
                     <YAxis
                         yAxisId="left"
                         tickFormatter={formatMillionWonChart}

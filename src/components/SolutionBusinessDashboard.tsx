@@ -411,7 +411,7 @@ export default function SolutionBusinessDashboard() {
         <ChartWrapper title="월별 매출/매출이익 및 달성율 추이 (누적)" height={350}>
           <ComposedChart data={monthlyTrendData} margin={{ top: 20, right: 30, left: 30, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} />
-            <XAxis dataKey="name" scale="band" padding={{ left: 20, right: 20 }} tick={{ fontSize: 12 }} />
+            <XAxis dataKey="name" tick={{ fontSize: 12 }} />
             <YAxis yAxisId="left" tickFormatter={formatMillionWonChart} tick={{ fontSize: 11 }} label={{ value: '(백만원)', position: 'top', offset: 10, fontSize: 11, fill: '#64748b' }} />
             <YAxis yAxisId="right" orientation="right" tickFormatter={(val) => `${val.toFixed(0)}%`} tick={{ fontSize: 11 }} domain={[0, 'auto']} label={{ value: '(%)', position: 'top', offset: 10, fontSize: 11, fill: '#64748b' }} />
             <RechartsTooltip formatter={(value: any, name: any) => {
@@ -429,7 +429,7 @@ export default function SolutionBusinessDashboard() {
         <ChartWrapper title="제품별 현황 (클릭 시 상세정보 확인)" height={350}>
           <ComposedChart data={allProducts} margin={{ top: 20, right: 30, left: 30, bottom: 5 }} onClick={handleProductClick}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} />
-            <XAxis dataKey="product" scale="band" padding={{ left: 20, right: 20 }} tick={{ fontSize: 12 }} />
+            <XAxis dataKey="product" tick={{ fontSize: 12 }} />
             <YAxis tickFormatter={formatMillionWonChart} tick={{ fontSize: 11 }} label={{ value: '(백만원)', position: 'top', offset: 10, fontSize: 11, fill: '#64748b' }} />
             <RechartsTooltip formatter={(value: any) => formatMillionWonChart(value)} cursor={{ fill: 'transparent' }} />
             <Legend />
@@ -445,7 +445,7 @@ export default function SolutionBusinessDashboard() {
           <ChartWrapper title="부문별 매출/매출이익 및 달성율" height={350}>
             <ComposedChart data={divisionChartData} margin={{ top: 20, right: 30, left: 30, bottom: 5 }} onClick={handleDivisionClick}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="name" scale="band" padding={{ left: 20, right: 20 }} tick={{ fontSize: 12 }} />
+              <XAxis dataKey="name" tick={{ fontSize: 12 }} />
               <YAxis yAxisId="left" tickFormatter={formatMillionWonChart} tick={{ fontSize: 11 }} label={{ value: '(백만원)', position: 'top', offset: 10, fontSize: 11, fill: '#64748b' }} />
               <YAxis yAxisId="right" orientation="right" tickFormatter={(val) => `${val.toFixed(0)}%`} tick={{ fontSize: 11 }} domain={[0, 'auto']} label={{ value: '(%)', position: 'top', offset: 10, fontSize: 11, fill: '#64748b' }} />
               <RechartsTooltip formatter={(value: any, name: any) => {
@@ -472,7 +472,7 @@ export default function SolutionBusinessDashboard() {
           <ChartWrapper height={300}>
             <BarChart data={getModalChartData()} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="name" scale="band" padding={{ left: 20, right: 20 }} />
+              <XAxis dataKey="name" />
               <YAxis tickFormatter={formatMillionWonChart} width={60} label={{ value: '(백만원)', position: 'top', offset: 10, fontSize: 11, fill: '#64748b' }} />
               <RechartsTooltip formatter={(value: any) => formatMillionWonChart(value)} />
               <Bar

@@ -677,3 +677,10 @@ interface TargetAchievement {
     - Fix: `useAchievement` hook에서 `divisionItems` (Firestore `division_data` 컬렉션의 월별 데이터)를 노출하고, 모달 차트에서 직접 사용하도록 변경
     - Modified Files: `useAchievement.ts`, `SolutionBusinessDashboard.tsx`
     - Deployed to Firebase Hosting
+
+### Phase 40: Bar Chart X-Axis Alignment Fix -- COMPLETED (2026-02-19)
+- [x] **Bug Fix: 막대그래프 X축 레이블 중앙 정렬 문제**:
+    - Root Cause: `scale="band"` + `padding={{ left: 20, right: 20 }}` 설정이 막대를 오른쪽으로 치우치게 함
+    - Fix: 모든 차트에서 XAxis의 `scale`, `padding` 속성 제거 (Recharts 기본값이 자동 중앙 정렬)
+    - Modified: `SolutionBusinessDashboard.tsx` (4개), `AchievementCharts.tsx` (1개), `DualAxisChart.tsx` (1개)
+    - Deployed to Firebase Hosting
