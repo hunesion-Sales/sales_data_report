@@ -7,6 +7,7 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
+  Legend,
   PieChart,
   Pie,
   Cell,
@@ -147,24 +148,69 @@ export default function DivisionCharts({
         </div>
 
         {/* 2. Pie Chart: Market Share */}
-        <ChartWrapper title={`부문별 ${metricLabel} 비중`} height={350}>
+        <ChartWrapper title={`부문별 ${metricLabel} 비중`} height={420}>
           <PieChart>
             <Pie
               data={pieData}
               cx="50%"
-              cy="50%"
-              innerRadius={60}
-              outerRadius={100}
+              cy="45%"
+              innerRadius={55}
+              outerRadius={95}
               paddingAngle={2}
               dataKey="value"
-              label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
-              labelLine={{ strokeWidth: 1 }}
+              label={({ name, percent, cx: cxVal, cy: cyVal, midAngle = 0, outerRadius: oR }) => {
+                if ((percent ?? 0) < 0.03) return null;
+                const RADIAN = Math.PI / 180;
+                const radius = (oR as number) + 25;
+                const x = (cxVal as number) + radius * Math.cos(-midAngle * RADIAN);
+                const y = (cyVal as number) + radius * Math.sin(-midAngle * RADIAN);
+                return (
+                  <text
+                    x={x}
+                    y={y}
+                    fill="#374151"
+                    textAnchor={x > (cxVal as number) ? 'start' : 'end'}
+                    dominantBaseline="central"
+                    fontSize={12}
+                    fontWeight={500}
+                  >
+                    {`${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
+                  </text>
+                );
+              }}
+              labelLine={({ percent, points }) => {
+                if ((percent ?? 0) < 0.03) return <></>;
+                if (!points || points.length < 2) return <></>;
+                return (
+                  <path
+                    d={`M${points[0].x},${points[0].y}L${points[1].x},${points[1].y}`}
+                    stroke="#94a3b8"
+                    strokeWidth={1}
+                    fill="none"
+                  />
+                );
+              }}
             >
               {pieData.map((_, idx) => (
                 <Cell key={`cell-${idx}`} fill={COLORS[idx % COLORS.length]} />
               ))}
             </Pie>
-            <Tooltip formatter={(value) => formatMillionWonChart(Number(value))} />
+            <Tooltip
+              formatter={(value: any, name: any) => [formatMillionWonChart(Number(value)), name]}
+              contentStyle={{ fontSize: 12 }}
+            />
+            <Legend
+              layout="horizontal"
+              verticalAlign="bottom"
+              align="center"
+              wrapperStyle={{ fontSize: 11, paddingTop: 8 }}
+              formatter={(value: string) => {
+                const item = pieData.find(d => d.name === value);
+                const total = pieData.reduce((sum, d) => sum + d.value, 0);
+                const pct = item && total > 0 ? ((item.value / total) * 100).toFixed(0) : '0';
+                return `${value} (${pct}%)`;
+              }}
+            />
           </PieChart>
         </ChartWrapper>
       </div>
