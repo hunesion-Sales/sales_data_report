@@ -16,7 +16,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useAchievement } from '@/hooks/useAchievement';
 import { getCurrentQuarter, getQuarterLabel } from '@/utils/periodUtils';
 import { ChartWrapper } from '@/components/charts';
-import { formatMillionWon, formatCurrency as formatCurrencyFull, formatMillionWonChart } from '@/utils/formatUtils';
+import { formatMillionWon, formatCurrency as formatCurrencyFull, formatMillionWonChart, formatMillionWonTooltip } from '@/utils/formatUtils';
 import ViewToggle from '@/components/ui/ViewToggle';
 import DualAxisChart from '@/components/charts/DualAxisChart';
 import { Modal } from '@/components/ui/Modal';
@@ -416,7 +416,7 @@ export default function SolutionBusinessDashboard() {
             <YAxis yAxisId="right" orientation="right" tickFormatter={(val) => `${val.toFixed(0)}%`} tick={{ fontSize: 11 }} domain={[0, 'auto']} label={{ value: '(%)', position: 'top', offset: 10, fontSize: 11, fill: '#64748b' }} />
             <RechartsTooltip formatter={(value: any, name: any) => {
               if (name === '달성율') return [`${Number(value).toFixed(1)}%`, viewMode === 'sales' ? '매출목표 달성율' : '매출이익 달성율'];
-              return formatMillionWonChart(value);
+              return formatMillionWonTooltip(value);
             }} />
             <Legend />
             <Bar yAxisId="left" dataKey="sales" name="매출액" fill="#3b82f6" barSize={30} radius={[4, 4, 0, 0]} />
@@ -431,7 +431,7 @@ export default function SolutionBusinessDashboard() {
             <CartesianGrid strokeDasharray="3 3" vertical={false} />
             <XAxis dataKey="product" tick={{ fontSize: 12 }} />
             <YAxis tickFormatter={formatMillionWonChart} tick={{ fontSize: 11 }} label={{ value: '(백만원)', position: 'top', offset: 10, fontSize: 11, fill: '#64748b' }} />
-            <RechartsTooltip formatter={(value: any) => formatMillionWonChart(value)} cursor={{ fill: 'transparent' }} />
+            <RechartsTooltip formatter={(value: any) => formatMillionWonTooltip(value)} cursor={{ fill: 'transparent' }} />
             <Legend />
             <Bar dataKey="totalSales" name="매출액" fill="#3b82f6" barSize={20} radius={[4, 4, 0, 0]} />
             <Bar dataKey="totalProfit" name="매출이익" fill="#10b981" barSize={20} radius={[4, 4, 0, 0]} />
@@ -450,7 +450,7 @@ export default function SolutionBusinessDashboard() {
               <YAxis yAxisId="right" orientation="right" tickFormatter={(val) => `${val.toFixed(0)}%`} tick={{ fontSize: 11 }} domain={[0, 'auto']} label={{ value: '(%)', position: 'top', offset: 10, fontSize: 11, fill: '#64748b' }} />
               <RechartsTooltip formatter={(value: any, name: any) => {
                 if (name === '달성율') return [`${Number(value).toFixed(1)}%`, viewMode === 'sales' ? '매출목표 달성율' : '매출이익 달성율'];
-                return formatMillionWonChart(value);
+                return formatMillionWonTooltip(value);
               }} />
               <Legend />
               <Bar yAxisId="left" dataKey="sales" name="매출액" fill="#6366f1" barSize={30} radius={[4, 4, 0, 0]} />
@@ -474,7 +474,7 @@ export default function SolutionBusinessDashboard() {
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
               <XAxis dataKey="name" />
               <YAxis tickFormatter={formatMillionWonChart} width={60} label={{ value: '(백만원)', position: 'top', offset: 10, fontSize: 11, fill: '#64748b' }} />
-              <RechartsTooltip formatter={(value: any) => formatMillionWonChart(value)} />
+              <RechartsTooltip formatter={(value: any) => formatMillionWonTooltip(value)} />
               <Bar
                 dataKey="value"
                 name={viewMode === 'sales' ? '매출액' : '매출이익'}

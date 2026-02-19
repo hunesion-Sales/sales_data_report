@@ -13,7 +13,7 @@ import {
 } from 'recharts';
 import type { TargetAchievement } from '@/types';
 import { ChartWrapper } from '@/components/charts';
-import { formatMillionWonChart } from '@/utils/formatUtils';
+import { formatMillionWonChart, formatMillionWonTooltip } from '@/utils/formatUtils';
 
 interface AchievementChartsProps {
   achievements: TargetAchievement[];
@@ -68,7 +68,7 @@ export default function AchievementCharts({ achievements, viewMode }: Achievemen
             <Tooltip
               formatter={(value: any, name: any) => {
                 if (name === '달성율') return `${Number(value).toFixed(1)}%`;
-                return formatMillionWonChart(value);
+                return formatMillionWonTooltip(value);
               }}
             />
             <Legend wrapperStyle={{ fontSize: 12 }} />

@@ -2,7 +2,7 @@
 import {
     ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from 'recharts';
-import { formatMillionWonChart } from '@/utils/formatUtils';
+import { formatMillionWonChart, formatMillionWonTooltip } from '@/utils/formatUtils';
 import { ChartWrapper } from '@/components/charts';
 
 interface DualAxisChartProps {
@@ -54,7 +54,7 @@ export default function DualAxisChart({
                         formatter={(value: any, name: any) => {
                             if (typeof value !== 'number') return value;
                             if (name === lineName) return `${value.toFixed(1)}%`;
-                            return formatMillionWonChart(value);
+                            return formatMillionWonTooltip(value);
                         }}
                     />
                     <Legend />

@@ -13,7 +13,7 @@ import {
 } from 'recharts';
 import type { ProcessedProduct } from '@/types';
 import { ChartWrapper } from '@/components/charts';
-import { formatMillionWon, formatCurrency, formatMillionWonChart } from '@/utils/formatUtils';
+import { formatMillionWon, formatCurrency, formatMillionWonChart, formatMillionWonTooltip } from '@/utils/formatUtils';
 interface ProductChartsProps {
     items: ProcessedProduct[];
     months: string[];
@@ -92,7 +92,7 @@ export default function ProductCharts({ items, months, viewMode }: ProductCharts
                     <XAxis dataKey="name" tick={{ fontSize: 12 }} />
                     <YAxis tickFormatter={formatMillionWonChart} tick={{ fontSize: 11 }} />
                     <Tooltip
-                        formatter={(value) => formatMillionWonChart(Number(value))}
+                        formatter={(value) => formatMillionWonTooltip(Number(value))}
                         labelStyle={{ fontWeight: 'bold' }}
                     />
                     <Legend wrapperStyle={{ fontSize: 11 }} />
@@ -156,7 +156,7 @@ export default function ProductCharts({ items, months, viewMode }: ProductCharts
                         ))}
                     </Pie>
                     <Tooltip
-                        formatter={(value: any, name: any) => [formatMillionWonChart(Number(value)), name]}
+                        formatter={(value: any, name: any) => [formatMillionWonTooltip(Number(value)), name]}
                         contentStyle={{ fontSize: 12 }}
                     />
                     <Legend
@@ -164,11 +164,21 @@ export default function ProductCharts({ items, months, viewMode }: ProductCharts
                         verticalAlign="bottom"
                         align="center"
                         wrapperStyle={{ fontSize: 11, paddingTop: 8 }}
-                        formatter={(value: string) => {
-                            const item = pieData.find(d => d.name === value);
+                        content={() => {
                             const total = pieData.reduce((sum, d) => sum + d.value, 0);
-                            const pct = item && total > 0 ? ((item.value / total) * 100).toFixed(0) : '0';
-                            return `${value} (${pct}%)`;
+                            return (
+                                <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '8px 16px', fontSize: 11, paddingTop: 8 }}>
+                                    {pieData.map((d, idx) => {
+                                        const pct = total > 0 ? ((d.value / total) * 100).toFixed(0) : '0';
+                                        return (
+                                            <span key={d.name} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                                <span style={{ width: 10, height: 10, backgroundColor: getItemColor(idx), display: 'inline-block', borderRadius: 2 }} />
+                                                {d.name} ({pct}%)
+                                            </span>
+                                        );
+                                    })}
+                                </div>
+                            );
                         }}
                     />
                 </PieChart>
@@ -185,7 +195,7 @@ export default function ProductCharts({ items, months, viewMode }: ProductCharts
                     <XAxis type="number" tickFormatter={formatMillionWonChart} tick={{ fontSize: 11 }} />
                     <YAxis type="category" dataKey="name" tick={{ fontSize: 12 }} width={120} />
                     <Tooltip
-                        formatter={(value) => formatMillionWonChart(Number(value))}
+                        formatter={(value) => formatMillionWonTooltip(Number(value))}
                         cursor={{ fill: 'transparent' }}
                     />
                     <Bar

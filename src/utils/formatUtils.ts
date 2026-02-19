@@ -24,6 +24,18 @@ export const formatMillionWonChart = (value: number | undefined | null): string 
 };
 
 /**
+ * 차트 툴팁용 백만원 단위 포맷팅 (소수점 2자리, 콤마)
+ * 예: 0 -> "0.00", 12345678 -> "12.35", 699000000 -> "699.00"
+ */
+export const formatMillionWonTooltip = (value: number | undefined | null): string => {
+    if (value === undefined || value === null) return '0.00';
+    return (value / 1000000).toLocaleString(undefined, {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    });
+};
+
+/**
  * 전체 금액 포맷팅 (천단위 콤마)
  * 예: 12345678 -> "12,345,678"
  */

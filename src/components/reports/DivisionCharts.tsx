@@ -14,7 +14,7 @@ import {
 } from 'recharts';
 import type { DivisionSummary, PeriodInfo, TargetAchievement } from '@/types';
 import { ChartWrapper } from '@/components/charts';
-import { formatMillionWonChart } from '@/utils/formatUtils'; // Removed unused imports
+import { formatMillionWonChart, formatMillionWonTooltip } from '@/utils/formatUtils'; // Removed unused imports
 import DualAxisChart from '@/components/charts/DualAxisChart';
 import { Modal } from '@/components/ui/Modal';
 import { getMonthShortLabel } from '@/types'; // Import from types or wherever it is defined
@@ -196,7 +196,7 @@ export default function DivisionCharts({
               ))}
             </Pie>
             <Tooltip
-              formatter={(value: any, name: any) => [formatMillionWonChart(Number(value)), name]}
+              formatter={(value: any, name: any) => [formatMillionWonTooltip(Number(value)), name]}
               contentStyle={{ fontSize: 12 }}
             />
             <Legend
@@ -204,11 +204,21 @@ export default function DivisionCharts({
               verticalAlign="bottom"
               align="center"
               wrapperStyle={{ fontSize: 11, paddingTop: 8 }}
-              formatter={(value: string) => {
-                const item = pieData.find(d => d.name === value);
+              content={() => {
                 const total = pieData.reduce((sum, d) => sum + d.value, 0);
-                const pct = item && total > 0 ? ((item.value / total) * 100).toFixed(0) : '0';
-                return `${value} (${pct}%)`;
+                return (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '8px 16px', fontSize: 11, paddingTop: 8 }}>
+                    {pieData.map((d, idx) => {
+                      const pct = total > 0 ? ((d.value / total) * 100).toFixed(0) : '0';
+                      return (
+                        <span key={d.name} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                          <span style={{ width: 10, height: 10, backgroundColor: COLORS[idx % COLORS.length], display: 'inline-block', borderRadius: 2 }} />
+                          {d.name} ({pct}%)
+                        </span>
+                      );
+                    })}
+                  </div>
+                );
               }}
             />
           </PieChart>
@@ -228,7 +238,7 @@ export default function DivisionCharts({
               <CartesianGrid strokeDasharray="3 3" vertical={false} />
               <XAxis dataKey="name" />
               <YAxis tickFormatter={formatMillionWonChart} width={45} />
-              <Tooltip formatter={(value: any) => formatMillionWonChart(value)} />
+              <Tooltip formatter={(value: any) => formatMillionWonTooltip(value)} />
               <Bar
                 dataKey="value"
                 name={metricLabel}
