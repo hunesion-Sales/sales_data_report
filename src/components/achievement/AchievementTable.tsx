@@ -1,3 +1,6 @@
+
+import { useState, useMemo } from 'react';
+import { ArrowDownUp } from 'lucide-react';
 import type { TargetAchievement, AchievementStatus } from '@/types';
 import { formatMillionWon, formatCurrency } from '@/utils/formatUtils';
 
@@ -14,6 +17,40 @@ const STATUS_CONFIG: Record<AchievementStatus, { label: string; bgColor: string;
 };
 
 export default function AchievementTable({ achievements, viewMode }: AchievementTableProps) {
+  const [sortKey, setSortKey] = useState<'actual' | 'target' | 'rate'>('actual');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+
+  const isSales = viewMode === 'sales';
+
+  const handleSort = (key: 'actual' | 'target' | 'rate') => {
+    if (sortKey === key) {
+      setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc');
+    } else {
+      setSortKey(key);
+      setSortOrder('desc');
+    }
+  };
+
+  const sortedAchievements = useMemo(() => {
+    return [...achievements].sort((a, b) => {
+      let valA = 0;
+      let valB = 0;
+
+      if (sortKey === 'actual') {
+        valA = isSales ? a.actualSales : a.actualProfit;
+        valB = isSales ? b.actualSales : b.actualProfit;
+      } else if (sortKey === 'target') {
+        valA = isSales ? a.target.salesTarget : (a.target.profitTarget || 0);
+        valB = isSales ? b.target.salesTarget : (b.target.profitTarget || 0);
+      } else { // rate
+        valA = isSales ? a.salesAchievementRate : (a.profitAchievementRate || 0);
+        valB = isSales ? b.salesAchievementRate : (b.profitAchievementRate || 0);
+      }
+
+      return sortOrder === 'asc' ? valA - valB : valB - valA;
+    });
+  }, [achievements, isSales, sortKey, sortOrder]);
+
   if (achievements.length === 0) {
     return (
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8 text-center text-slate-500">
@@ -22,12 +59,10 @@ export default function AchievementTable({ achievements, viewMode }: Achievement
     );
   }
 
-  const isSales = viewMode === 'sales';
-
   return (
     <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
       <div className="p-4 border-b border-slate-100 bg-slate-50">
-        <h3 className="text-sm font-semibold text-slate-700">부문별 {isSales ? '매출' : '이익'} 달성 현황</h3>
+        <h3 className="text-sm font-semibold text-slate-700">부문별 {isSales ? '매출' : '매출이익'} 달성 현황</h3>
       </div>
 
       <div className="overflow-x-auto">
@@ -35,36 +70,44 @@ export default function AchievementTable({ achievements, viewMode }: Achievement
           <thead className="bg-slate-100 text-slate-600">
             <tr>
               <th className="p-3 text-left font-medium">영업부문</th>
-              {isSales && (
-                <>
-                  <th className="p-3 text-right font-medium">매출 목표 (백만원)</th>
-                  <th className="p-3 text-right font-medium">매출 실적 (백만원)</th>
-                </>
-              )}
-              {!isSales && (
-                <>
-                  <th className="p-3 text-right font-medium">이익 목표 (백만원)</th>
-                  <th className="p-3 text-right font-medium">이익 실적 (백만원)</th>
-                </>
-              )}
-              <th className="p-3 text-center font-medium min-w-[200px]">{isSales ? '매출 달성율' : '이익 달성율'}</th>
+              <th
+                className="p-3 text-right font-medium cursor-pointer hover:bg-slate-200 transition-colors"
+                onClick={() => handleSort('target')}
+              >
+                <div className="flex items-center justify-end gap-1">
+                  {isSales ? '매출' : '매출이익'} 목표 (백만원)
+                  {sortKey === 'target' && <ArrowDownUp className="w-3 h-3" />}
+                </div>
+              </th>
+              <th
+                className="p-3 text-right font-medium cursor-pointer hover:bg-slate-200 transition-colors"
+                onClick={() => handleSort('actual')}
+              >
+                <div className="flex items-center justify-end gap-1">
+                  {isSales ? '매출' : '매출이익'} 실적 (백만원)
+                  {sortKey === 'actual' && <ArrowDownUp className="w-3 h-3" />}
+                </div>
+              </th>
+              <th
+                className="p-3 text-center font-medium min-w-[200px] cursor-pointer hover:bg-slate-200 transition-colors"
+                onClick={() => handleSort('rate')}
+              >
+                <div className="flex items-center justify-center gap-1">
+                  {isSales ? '매출' : '매출이익'} 달성율
+                  {sortKey === 'rate' && <ArrowDownUp className="w-3 h-3" />}
+                </div>
+              </th>
               <th className="p-3 text-center font-medium">상태</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {achievements.map(a => {
-              const status = isSales ? a.status : (
-                (a.profitAchievementRate || 0) >= 100 ? 'exceeded' :
-                  (a.profitAchievementRate || 0) >= 75 ? 'on-track' :
-                    (a.profitAchievementRate || 0) >= 50 ? 'behind' : 'critical'
-              );
-
-              // 상태 설정 재계산 (이익 모드일 때)
-              // NOTE: a.status는 매출 기준이므로, 이익 기준 상태는 별도 로직이 필요할 수 있음.
-              // 일단 위에서 간단히 계산함.
-
-              const config = STATUS_CONFIG[status as AchievementStatus]; // Type assertion safe here
+            {sortedAchievements.map(a => {
               const achievementRate = isSales ? a.salesAchievementRate : (a.profitAchievementRate || 0);
+              const status = achievementRate >= 100 ? 'exceeded' :
+                achievementRate >= 75 ? 'on-track' :
+                  achievementRate >= 50 ? 'behind' : 'critical';
+
+              const config = STATUS_CONFIG[status as AchievementStatus];
               const barWidth = Math.min(achievementRate, 100);
 
               const targetVal = isSales ? a.target.salesTarget : (a.target.profitTarget || 0);

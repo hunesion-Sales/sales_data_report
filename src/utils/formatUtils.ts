@@ -19,11 +19,8 @@ export const formatMillionWon = (value: number | undefined | null): string => {
  * 예: 0 -> "0.00", 12345678 -> "12.35"
  */
 export const formatMillionWonChart = (value: number | undefined | null): string => {
-    if (value === undefined || value === null) return '0.00';
-    return (value / 1000000).toLocaleString(undefined, {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-    });
+    if (value === undefined || value === null) return '0';
+    return Math.round(value / 1000000).toLocaleString();
 };
 
 /**

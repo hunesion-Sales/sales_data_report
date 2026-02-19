@@ -1,17 +1,21 @@
-import { useState } from 'react';
+
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, BarChart3 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDivisionReport } from '@/hooks/useDivisionReport';
+import { useAchievement } from '@/hooks/useAchievement';
 import { FirestoreErrorFallback, LoadingSpinner } from '@/components/error';
 import ReportFilterBar from '@/components/reports/ReportFilterBar';
 import DivisionSummaryTable from '@/components/reports/DivisionSummaryTable';
 import DivisionCharts from '@/components/reports/DivisionCharts';
 import { formatMillionWon, formatCurrency as formatCurrencyFull } from '@/utils/formatUtils';
+import ViewToggle from '@/components/ui/ViewToggle';
 
 export default function DivisionReportPage() {
   const navigate = useNavigate();
   const { user, isAdmin } = useAuth();
+  const [viewMode, setViewMode] = useState<'sales' | 'profit'>('sales');
 
   const {
     divisions,
@@ -25,7 +29,18 @@ export default function DivisionReportPage() {
     refresh,
   } = useDivisionReport(user?.divisionId, isAdmin);
 
-  const [viewMode, setViewMode] = useState<'sales' | 'profit'>('sales');
+  // Achievement Data for Dual Axis Chart (Yearly)
+  const {
+    achievements,
+    setYear: setAchievementYear,
+    setPeriod: setAchievementPeriod
+  } = useAchievement(user?.divisionId, isAdmin);
+
+  // Sync Achievement Year with Report Filter Year
+  useEffect(() => {
+    setAchievementYear(filter.year);
+    setAchievementPeriod('Year'); // Always use Year for the high-level chart
+  }, [filter.year, setAchievementYear, setAchievementPeriod]);
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -46,26 +61,7 @@ export default function DivisionReportPage() {
           </div>
 
           {/* View Mode Toggle */}
-          <div className="flex bg-slate-100 p-1 rounded-lg">
-            <button
-              onClick={() => setViewMode('sales')}
-              className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${viewMode === 'sales'
-                ? 'bg-white text-indigo-600 shadow-sm'
-                : 'text-slate-500 hover:text-slate-700'
-                }`}
-            >
-              매출액 보기
-            </button>
-            <button
-              onClick={() => setViewMode('profit')}
-              className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${viewMode === 'profit'
-                ? 'bg-white text-emerald-600 shadow-sm'
-                : 'text-slate-500 hover:text-slate-700'
-                }`}
-            >
-              매출이익 보기
-            </button>
-          </div>
+          <ViewToggle viewMode={viewMode} onChange={setViewMode} />
         </div>
       </header>
 
@@ -114,7 +110,7 @@ export default function DivisionReportPage() {
                 </p>
               </div>
               <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                <p className="text-sm text-slate-500 mb-1">평균 이익률</p>
+                <p className="text-sm text-slate-500 mb-1">평균 매출이익률</p>
                 <p className="text-2xl font-bold text-indigo-600">
                   {(() => {
                     const totalSales = summaries.reduce((acc, s) => acc + s.totalSales, 0);
@@ -128,7 +124,12 @@ export default function DivisionReportPage() {
             </div>
 
             {/* Charts */}
-            <DivisionCharts summaries={summaries} periodInfoList={periodInfoList} viewMode={viewMode} />
+            <DivisionCharts
+              summaries={summaries}
+              periodInfoList={periodInfoList}
+              viewMode={viewMode}
+              achievements={achievements}
+            />
 
             {/* Summary Table */}
             <DivisionSummaryTable summaries={summaries} periodInfoList={periodInfoList} />

@@ -283,7 +283,7 @@ export default function ProductReportPage() {
                 {/* Margin Card - Indigo/Violet Theme */}
                 <div className="bg-white p-6 rounded-xl shadow-sm border-t-4 border-violet-500 border-x border-b">
                     <div className="flex justify-between items-start mb-4">
-                        <h3 className="text-lg font-bold text-slate-700">평균 이익률</h3>
+                        <h3 className="text-lg font-bold text-slate-700">평균 매출이익률</h3>
                         <span className="bg-violet-100 text-violet-700 text-xs font-semibold px-2 py-1 rounded">Margin</span>
                     </div>
                     <div className="space-y-2">
@@ -292,7 +292,7 @@ export default function ProductReportPage() {
                                 ? `${((totals.totalProfit / totals.totalSales) * 100).toFixed(1)}%`
                                 : '-'}
                         </p>
-                        <p className="text-sm text-slate-500">전체 평균 이익률</p>
+                        <p className="text-sm text-slate-500">전체 평균 매출이익률</p>
                     </div>
                 </div>
             </div>

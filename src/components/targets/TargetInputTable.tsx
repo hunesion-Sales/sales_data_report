@@ -288,7 +288,7 @@ export default function TargetInputTable({
                         />
                       </div>
                       <div className="relative flex-1">
-                        <label className="text-[10px] text-slate-500 absolute -top-1.5 left-2 bg-slate-50 px-1">이익</label>
+                        <label className="text-[10px] text-slate-500 absolute -top-1.5 left-2 bg-slate-50 px-1">매출이익</label>
                         <input
                           type="text"
                           value={currentProfitTotal > 0 ? currentProfitTotal.toLocaleString() : ''}
@@ -311,7 +311,7 @@ export default function TargetInputTable({
             <div className="flex justify-between items-center mb-2">
               <span className="text-sm font-semibold text-slate-700 flex items-center gap-2">
                 <ChevronRight className="w-4 h-4 text-indigo-500" />
-                분기별 배분 비율 (매출/이익 공통)
+                분기별 배분 비율 (매출/매출이익 공통)
               </span>
               <span className={`text-xs font-medium ${ratioTotal === 100 ? 'text-green-600' : 'text-red-500'}`}>
                 합계: {ratioTotal}%
@@ -382,11 +382,11 @@ export default function TargetInputTable({
                 {QUARTERS.map(q => (
                   <React.Fragment key={q}>
                     <th className="p-2 border-b border-r border-slate-200 text-center text-indigo-600">매출</th>
-                    <th className="p-2 border-b border-r border-slate-200 text-center text-emerald-600">이익</th>
+                    <th className="p-2 border-b border-r border-slate-200 text-center text-emerald-600">매출이익</th>
                   </React.Fragment>
                 ))}
                 <th className="p-2 border-b border-r border-slate-200 text-center bg-slate-50 font-bold text-indigo-700">매출 합계</th>
-                <th className="p-2 border-b border-slate-200 text-center bg-slate-50 font-bold text-emerald-700">이익 합계</th>
+                <th className="p-2 border-b border-slate-200 text-center bg-slate-50 font-bold text-emerald-700">매출이익 합계</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">

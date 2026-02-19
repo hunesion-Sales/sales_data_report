@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Target, TrendingUp, DollarSign, BarChart3 } from 'lucide-react';
@@ -8,6 +9,7 @@ import AchievementTable from '@/components/achievement/AchievementTable';
 import AchievementCharts from '@/components/achievement/AchievementCharts';
 import type { AchievementPeriod } from '@/types';
 import { getAchievementPeriodLabel } from '@/utils/periodUtils';
+import ViewToggle from '@/components/ui/ViewToggle';
 
 const CURRENT_YEAR = new Date().getFullYear();
 const YEARS = Array.from({ length: 5 }, (_, i) => CURRENT_YEAR - 2 + i);
@@ -24,7 +26,7 @@ const formatCurrencyWithUnit = (value: number): string => {
 export default function AchievementPage() {
   const navigate = useNavigate();
   const { user, isAdmin } = useAuth();
-  const [viewMode, setViewMode] = useState<'sales' | 'profit'>('sales');
+  const [viewMode, setViewMode] = useState<'sales' | 'profit'>('profit');
 
   const {
     achievements,
@@ -61,6 +63,7 @@ export default function AchievementPage() {
 
   const currentTotalTarget = viewMode === 'sales' ? totalSalesTarget : totalProfitTarget;
   const currentAchievementRate = viewMode === 'sales' ? overallSalesAchievementRate : overallProfitAchievementRate;
+  const currentActual = viewMode === 'sales' ? totalActualSales : totalActualProfit;
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -79,6 +82,9 @@ export default function AchievementPage() {
               <h1 className="text-xl font-bold text-slate-900">목표 달성 현황</h1>
             </div>
           </div>
+
+          {/* View Mode Toggle */}
+          <ViewToggle viewMode={viewMode} onChange={setViewMode} />
         </div>
       </header>
 
@@ -115,29 +121,6 @@ export default function AchievementPage() {
               ))}
             </div>
           </div>
-
-          <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-1">
-            <button
-              onClick={() => setViewMode('sales')}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${viewMode === 'sales'
-                ? 'bg-white text-indigo-700 shadow-sm'
-                : 'text-slate-500 hover:text-slate-700'
-                }`}
-            >
-              <DollarSign className="w-4 h-4" />
-              매출액 보기
-            </button>
-            <button
-              onClick={() => setViewMode('profit')}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${viewMode === 'profit'
-                ? 'bg-white text-emerald-700 shadow-sm'
-                : 'text-slate-500 hover:text-slate-700'
-                }`}
-            >
-              <TrendingUp className="w-4 h-4" />
-              매출이익 보기
-            </button>
-          </div>
         </div>
 
         {/* Loading State */}
@@ -171,29 +154,37 @@ export default function AchievementPage() {
                 <p className="text-xs text-slate-400 mt-1">{year}년 {getAchievementPeriodLabel(period)}</p>
               </div>
 
-              {/* 2. 매출 실적 */}
+              {/* 2. 실적 (매출 or 이익) */}
               <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
                 <div className="flex justify-between items-center mb-2">
-                  <h3 className="text-sm font-medium text-slate-500">매출 실적</h3>
-                  <DollarSign className="w-5 h-5 text-blue-500" />
+                  <h3 className="text-sm font-medium text-slate-500">{viewMode === 'sales' ? '매출 실적' : '매출이익 실적'}</h3>
+                  {viewMode === 'sales' ? <DollarSign className="w-5 h-5 text-blue-500" /> : <TrendingUp className="w-5 h-5 text-emerald-500" />}
                 </div>
-                <div className="text-2xl font-bold text-slate-900">
-                  {formatCurrencyWithUnit(totalActualSales)}
+                <div className={`text-2xl font-bold ${viewMode === 'sales' ? 'text-slate-900' : 'text-emerald-600'}`}>
+                  {formatCurrencyWithUnit(currentActual)}
                 </div>
                 <p className="text-xs text-slate-400 mt-1">{getAchievementPeriodLabel(period)} 누적</p>
               </div>
 
-              {/* 3. 매출 이익 */}
+              {/* 3. 이익률 info (Only show if needed, or always show profit rate?) */}
+              {/* User wants readable charts. KPI cards can be flexible. */}
+              {/* Let's show Profit Rate always in 3rd card? Or switch based on view? */}
+              {/* Dashboard logic reused? */}
+              {/* Original code had Sales Actual and Profit Actual always. */}
+              {/* I'll stick to original layout but update contents based on viewMode if I want to save space, OR keep showing both? */}
+              {/* Original layout: Target, Sales, Profit, Rate. */}
+              {/* Keeping it simple: Target (Dynamic), Sales Actual, Profit Actual, Rate (Dynamic) */}
+
               <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
                 <div className="flex justify-between items-center mb-2">
-                  <h3 className="text-sm font-medium text-slate-500">매출 이익</h3>
+                  <h3 className="text-sm font-medium text-slate-500">매출이익</h3>
                   <TrendingUp className="w-5 h-5 text-emerald-500" />
                 </div>
                 <div className={`text-2xl font-bold ${totalActualProfit < 0 ? 'text-red-600' : 'text-emerald-600'}`}>
                   {formatCurrencyWithUnit(totalActualProfit)}
                 </div>
                 <p className="text-xs text-slate-400 mt-1">
-                  이익률 {totalActualSales > 0 ? ((totalActualProfit / totalActualSales) * 100).toFixed(1) : 0}%
+                  매출이익률 {totalActualSales > 0 ? ((totalActualProfit / totalActualSales) * 100).toFixed(1) : 0}%
                 </p>
               </div>
 
@@ -201,7 +192,7 @@ export default function AchievementPage() {
               <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
                 <div className="flex justify-between items-center mb-2">
                   <h3 className="text-sm font-medium text-slate-500">
-                    {viewMode === 'sales' ? '매출 달성율' : '이익 달성율'}
+                    {viewMode === 'sales' ? '매출 달성율' : '매출이익 달성율'}
                   </h3>
                   <BarChart3 className="w-5 h-5 text-indigo-500" />
                 </div>
@@ -209,7 +200,7 @@ export default function AchievementPage() {
                   {currentAchievementRate !== null ? `${currentAchievementRate.toFixed(1)}%` : '-'}
                 </div>
                 <p className="text-xs text-slate-400 mt-1">
-                  {viewMode === 'sales' ? '매출 목표 대비' : '이익 목표 대비'}
+                  {viewMode === 'sales' ? '매출 목표 대비' : '매출이익 목표 대비'}
                 </p>
               </div>
             </div>

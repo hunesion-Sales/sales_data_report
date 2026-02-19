@@ -1,5 +1,6 @@
-import { useState, Fragment } from 'react';
-import { ChevronDown, ChevronRight, Building2 } from 'lucide-react';
+
+import { useState, Fragment, useMemo } from 'react';
+import { ChevronDown, ChevronRight, Building2, ArrowDownUp } from 'lucide-react';
 import type { DivisionSummary, PeriodInfo } from '@/types';
 import { formatMillionWon, formatCurrency } from '@/utils/formatUtils';
 
@@ -13,6 +14,8 @@ export default function DivisionSummaryTable({
   periodInfoList,
 }: DivisionSummaryTableProps) {
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const [sortKey, setSortKey] = useState<'profit' | 'sales'>('profit');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   const toggleExpand = (divisionId: string) => {
     setExpandedIds((prev) => {
@@ -25,6 +28,24 @@ export default function DivisionSummaryTable({
       return next;
     });
   };
+
+  const handleSort = (key: 'sales' | 'profit') => {
+    if (sortKey === key) {
+      setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc');
+    } else {
+      setSortKey(key);
+      setSortOrder('desc');
+    }
+  };
+
+  const sortedSummaries = useMemo(() => {
+    return [...summaries].sort((a, b) => {
+      const valA = sortKey === 'sales' ? a.totalSales : a.totalProfit;
+      const valB = sortKey === 'sales' ? b.totalSales : b.totalProfit;
+      return sortOrder === 'asc' ? valA - valB : valB - valA;
+    });
+  }, [summaries, sortKey, sortOrder]);
+
 
   // 전체 합계 계산
   const totals = summaries.reduce(
@@ -89,16 +110,32 @@ export default function DivisionSummaryTable({
                 <Fragment key={p.key}>
                   <th className="px-2 py-2 text-right border-l border-slate-200">매출</th>
                   <th className="px-2 py-2 text-right">매입</th>
-                  <th className="px-2 py-2 text-right">이익</th>
+                  <th className="px-2 py-2 text-right">매출이익</th>
                 </Fragment>
               ))}
-              <th className="px-2 py-2 text-right border-l border-slate-300 bg-slate-200">매출</th>
+              <th
+                className="px-2 py-2 text-right border-l border-slate-300 bg-slate-200 cursor-pointer hover:bg-slate-300 transition-colors"
+                onClick={() => handleSort('sales')}
+              >
+                <div className="flex items-center justify-end gap-1">
+                  매출
+                  {sortKey === 'sales' && <ArrowDownUp className="w-3 h-3" />}
+                </div>
+              </th>
               <th className="px-2 py-2 text-right bg-slate-200">매입</th>
-              <th className="px-2 py-2 text-right bg-slate-200">이익</th>
+              <th
+                className="px-2 py-2 text-right bg-slate-200 cursor-pointer hover:bg-slate-300 transition-colors"
+                onClick={() => handleSort('profit')}
+              >
+                <div className="flex items-center justify-end gap-1">
+                  매출이익
+                  {sortKey === 'profit' && <ArrowDownUp className="w-3 h-3" />}
+                </div>
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {summaries.map((summary) => {
+            {sortedSummaries.map((summary) => {
               const isExpanded = expandedIds.has(summary.divisionId);
               const hasProducts = summary.products.length > 0;
 

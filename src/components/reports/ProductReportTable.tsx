@@ -68,13 +68,13 @@ export default function ProductReportTable({ title, items, months, totals, showF
                                     <React.Fragment key={mk}>
                                         <th className={`p-2 border-b border-r border-slate-200 min-w-[100px] ${color.bgLight}`}>매출액</th>
                                         <th className={`p-2 border-b border-r border-slate-200 min-w-[100px] ${color.bgLight}`}>매입액</th>
-                                        <th className={`p-2 border-b border-r border-slate-200 min-w-[100px] ${color.bgLight} ${color.text}`}>이익</th>
+                                        <th className={`p-2 border-b border-r border-slate-200 min-w-[100px] ${color.bgLight} ${color.text}`}>매출이익</th>
                                     </React.Fragment>
                                 );
                             })}
                             <th className="p-2 border-b border-r border-slate-200 min-w-[100px] bg-slate-100">매출액</th>
                             <th className="p-2 border-b border-r border-slate-200 min-w-[100px] bg-slate-100">매입액</th>
-                            <th className="p-2 border-b border-slate-200 min-w-[100px] bg-slate-100 text-slate-900">이익</th>
+                            <th className="p-2 border-b border-slate-200 min-w-[100px] bg-slate-100 text-slate-900">매출이익</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
