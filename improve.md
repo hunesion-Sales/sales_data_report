@@ -1,5 +1,65 @@
 # 대용량 파일 모듈화 및 성능 개선 방안
 
+> **최종 업데이트**: 2026-02-19
+> **현재 상태**: 기능 개발 완료, 모듈화 및 보안 강화 미착수
+
+---
+
+## 0. 현재 프로젝트 현황 요약
+
+### 0.1 프로젝트 개요
+- **프로젝트명**: HSR (Huni Sales Report System) - 휴네시온 솔루션사업본부 매출 보고 시스템
+- **기술 스택**: React 19 + TypeScript 5.9 + Vite 7 + Firebase (Firestore + Auth) + Tailwind CSS 3
+- **배포**: Firebase Hosting (hunesalesreport)
+
+### 0.2 코드베이스 메트릭
+
+| 카테고리 | 파일 수 | 총 라인 수 |
+|----------|---------|-----------|
+| 페이지 (pages/) | 9 | ~2,876 |
+| 컴포넌트 (components/) | 19 | ~2,500 |
+| Firebase 서비스 (firebase/services/) | 11 | ~1,800 |
+| 커스텀 훅 (hooks/) | 4 | ~1,026 |
+| 유틸리티 (utils/) | 8 | ~1,000 |
+| 설정/타입 (config/, types/) | 3 | ~335 |
+| **합계** | **59 파일** | **~11,300 라인** |
+
+### 0.3 최근 변경 이력 (기능 추가/개선)
+
+| 커밋 | 변경 내용 | 상태 |
+|------|----------|------|
+| 5dd53d1 | 차트 축 포맷팅 및 오버플로우 수정 | 완료 |
+| e2cb666 | 환경 변수 변경에 따른 빌드 | 완료 |
+| 10d8753 | 개선 계획 및 디자인 가이드라인 추가 | 완료 |
+| 34ddac9 | 매출액/매출이익 토글 및 보고서 테이블 개선 | 완료 |
+| 397cc18 | 제품 보고서 차트 구현 및 차트 레이아웃 리팩터링 | 완료 |
+
+### 0.4 대용량 파일 현황 (200줄 이상, 최신 기준)
+
+| 순위 | 파일 | 라인 수 | 변화 | 주요 책임 |
+|------|------|---------|------|-----------|
+| 1 | DataInputPage.tsx | 501 | - | 엑셀 업로드, 파일 처리, 데이터 삭제, 충돌 모달 |
+| 2 | SolutionBusinessDashboard.tsx | 489 | 신규 진입 | 대시보드 메인 UI |
+| 3 | TargetInputTable.tsx | 489 | - | 분기별 목표 입력, 직접/퍼센트 모드, 행렬 계산 |
+| 4 | useReport.ts | 480 | +2 | 보고서 데이터 로드, 병합, 스냅샷 관리 |
+| 5 | ProductManagementPage.tsx | 421 | - | 제품 CRUD, 필터링, 유지보수 타입 관리 |
+| 6 | UserManagementPage.tsx | 413 | - | 사용자 관리, 승인/거절, 역할/부문 변경 |
+| 7 | snapshotService.ts | 408 | - | 스냅샷 관리, 해시 분석, 충돌 감지 |
+| 8 | DivisionManagementPage.tsx | 366 | - | 부문 CRUD, 삭제 확인 |
+| 9 | ConflictResolutionModal.tsx | 352 | - | 충돌 해결 UI, 데이터 비교 시각화 |
+| 10 | ProductReportPage.tsx | 341 | -4 | 제품 보고서, 필터, 차트 |
+| 11 | DivisionSummaryTable.tsx | 300 | 신규 진입 | 부문별 요약 테이블 |
+| 12 | types/index.ts | 301 | +3 | 타입 정의 및 헬퍼 함수 |
+| 13 | useAchievement.ts | 291 | 신규 진입 | 달성 현황 데이터 훅 |
+| 14 | productMasterService.ts | 242 | 신규 진입 | 제품 마스터 CRUD |
+| 15 | RegisterPage.tsx | 234 | 신규 진입 | 회원가입 페이지 |
+| 16 | AchievementPage.tsx | 219 | 신규 진입 | 달성 현황 페이지 |
+| 17 | authService.ts | 213 | 신규 진입 | 인증 서비스 |
+| 18 | Sidebar.tsx | 210 | 신규 진입 | 사이드바 네비게이션 |
+| 19 | excelParser.ts | 204 | 신규 진입 | 엑셀 파일 파싱 |
+
+---
+
 ## 1. 개요
 
 ### 1.1 목적
@@ -782,3 +842,507 @@ src/
 2. **일관성 향상**: 모든 보고서 페이지에서 동일한 UI/UX 보장
 3. **유지보수 용이**: 스타일/로직 변경 시 한 곳만 수정
 4. **개발 속도 향상**: 신규 보고서 페이지 추가 시 재사용 가능
+
+---
+
+## 10. 보안 현황 분석 및 강화 방안
+
+> **분석 일자**: 2026-02-19
+> **분석 범위**: 인증/인가, Firestore 보안 규칙, 입력 검증, 호스팅 보안, 코드 보안
+
+### 10.1 현재 보안 아키텍처 개요
+
+```
+┌─────────────────────────────────────────────────────┐
+│                    Client (React)                    │
+│  ┌──────────┐  ┌───────────┐  ┌──────────────────┐  │
+│  │ AuthCtx  │  │ Protected │  │ Error Boundary   │  │
+│  │ (상태관리)│  │ Route     │  │ (런타임 에러)     │  │
+│  └────┬─────┘  └─────┬─────┘  └──────────────────┘  │
+│       │              │                                │
+│  ┌────┴──────────────┴──────────────────────────┐   │
+│  │          Firebase Auth SDK                    │   │
+│  │  - Email/Password 인증                        │   │
+│  │  - onAuthStateChanged 감시                    │   │
+│  └──────────────────┬───────────────────────────┘   │
+└─────────────────────┼───────────────────────────────┘
+                      │ HTTPS
+┌─────────────────────┼───────────────────────────────┐
+│              Firebase Backend                        │
+│  ┌──────────────────┴───────────────────────────┐   │
+│  │          Firestore Security Rules             │   │
+│  │  - isAuthenticated() 인증 확인                │   │
+│  │  - isAdmin() 관리자 권한 확인                  │   │
+│  │  - isApproved() 승인 상태 확인                │   │
+│  │  - belongsToDivision() 부문 소속 확인          │   │
+│  │  - 기본 거부 정책 (Catch-all deny)             │   │
+│  └──────────────────────────────────────────────┘   │
+│  ┌──────────────────────────────────────────────┐   │
+│  │          Firebase Hosting                     │   │
+│  │  - X-Content-Type-Options: nosniff            │   │
+│  │  - X-Frame-Options: DENY                      │   │
+│  │  - X-XSS-Protection: 1; mode=block            │   │
+│  │  - Cache-Control: immutable (assets)           │   │
+│  └──────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────┘
+```
+
+### 10.2 현재 보안 강점 (이미 구현됨)
+
+#### A. Firestore 보안 규칙 (firestore.rules - 157줄)
+
+| 항목 | 상태 | 설명 |
+|------|------|------|
+| 인증 확인 헬퍼 (isAuthenticated) | ✅ 구현됨 | `request.auth != null` 체크 |
+| 관리자 권한 확인 (isAdmin) | ✅ 구현됨 | 문서 존재 확인 후 role 체크 |
+| 승인 상태 확인 (isApproved) | ✅ 구현됨 | status == 'approved' 체크 |
+| 부문 소속 확인 (belongsToDivision) | ✅ 구현됨 | divisionId 매칭 |
+| 기본 거부 정책 (Catch-all) | ✅ 구현됨 | `match /{document=**} { allow: false }` |
+| 순환 참조 방지 | ✅ 구현됨 | userExists() 선행 체크 |
+| 감사 로그 불변성 | ✅ 구현됨 | uploadHistory: update/delete 금지 |
+| 사용자 자기 문서 생성 제한 | ✅ 구현됨 | `request.auth.uid == userId` |
+
+#### B. 인증 시스템 (AuthContext + authService)
+
+| 항목 | 상태 | 설명 |
+|------|------|------|
+| Firebase Auth 기반 인증 | ✅ 구현됨 | Email/Password 방식 |
+| 인증 상태 감시 | ✅ 구현됨 | onAuthStateChanged + cancelled 플래그 |
+| 승인 대기/거절 게이트 | ✅ 구현됨 | ProtectedRoute에서 상태별 UI |
+| 관리자 전용 라우트 | ✅ 구현됨 | adminOnly prop |
+| Firebase 에러 한국어 번역 | ✅ 구현됨 | 7개 에러 코드 번역 |
+| 메모리 누수 방지 | ✅ 구현됨 | useEffect cleanup + cancelled 플래그 |
+
+#### C. 코드 보안
+
+| 항목 | 상태 | 설명 |
+|------|------|------|
+| XSS 방지 | ✅ 안전 | dangerouslySetInnerHTML 미사용, React 자동 이스케이프 |
+| eval/Function 미사용 | ✅ 안전 | 동적 코드 실행 없음 |
+| 환경 변수 관리 | ✅ 안전 | VITE_ 접두사, .gitignore 포함 |
+| SHA-256 해싱 | ✅ 구현됨 | Web Crypto API 사용 (hashUtils.ts) |
+| 입력 검증 (Excel) | ✅ 구현됨 | Regex 기반 헤더 검증, 숫자 폴백 |
+| 에러 상세 정보 숨김 | ✅ 구현됨 | DEV 환경에서만 스택트레이스 표시 |
+| autoComplete 속성 | ✅ 구현됨 | email, current-password, new-password |
+
+#### D. 호스팅 보안 헤더 (firebase.json)
+
+| 헤더 | 값 | 효과 |
+|------|-----|------|
+| X-Content-Type-Options | nosniff | MIME 스니핑 방지 |
+| X-Frame-Options | DENY | 클릭재킹 방지 |
+| X-XSS-Protection | 1; mode=block | 반사형 XSS 방지 |
+| Cache-Control | immutable (assets) | 정적 자원 캐싱 |
+
+### 10.3 보안 취약점 및 개선 필요 사항
+
+#### 등급 기준
+- 🔴 **높음**: 즉시 조치 필요 (데이터 유출/변조 위험)
+- 🟡 **중간**: 가능한 빠른 시일 내 조치 권장
+- 🟢 **낮음**: 추후 개선 권장 (방어 심화)
+
+---
+
+#### 🔴 S-01. Content-Security-Policy (CSP) 헤더 미설정
+
+**현황**: firebase.json에 CSP 헤더가 없음
+**위험**: 인라인 스크립트 주입, 외부 악성 스크립트 로드 가능
+**영향 범위**: 전체 애플리케이션
+
+**개선안**: firebase.json headers에 CSP 추가
+```json
+{
+  "key": "Content-Security-Policy",
+  "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.cloudfunctions.net wss://*.firebaseio.com; font-src 'self'; frame-ancestors 'none'"
+}
+```
+
+**참고**: Vite 빌드 시 인라인 스크립트 사용 여부 확인 후 `'unsafe-inline'` 또는 nonce 기반 설정 필요
+
+---
+
+#### 🔴 S-02. Firestore 필드 레벨 검증 부재
+
+**현황**: Firestore 규칙에서 문서 생성/수정 시 필드 값 유효성 검증 없음
+**위험**: 악의적 클라이언트가 임의 필드 주입 또는 잘못된 타입의 데이터 저장 가능
+**영향 범위**: 모든 컬렉션
+
+**개선안**: 주요 컬렉션에 필드 검증 규칙 추가
+```
+// users 컬렉션 예시
+match /users/{userId} {
+  function isValidUserData() {
+    let data = request.resource.data;
+    return data.keys().hasAll(['email', 'displayName', 'role', 'status'])
+      && data.email is string
+      && data.displayName is string && data.displayName.size() <= 50
+      && data.role in ['admin', 'user']
+      && data.status in ['pending', 'approved', 'rejected']
+      && data.email.matches('^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$');
+  }
+
+  allow create: if isAuthenticated()
+    && request.auth.uid == userId
+    && isValidUserData();
+}
+
+// reports/products 서브컬렉션 예시
+match /reports/{reportId}/products/{productDocId} {
+  function isValidProductData() {
+    let data = request.resource.data;
+    return data.name is string && data.name.size() <= 100
+      && (!('months' in data.keys()) || data.months is map);
+  }
+
+  allow create, update: if (isAdmin() || isApproved()) && isValidProductData();
+}
+```
+
+---
+
+#### 🔴 S-03. 관리자 이메일 하드코딩
+
+**현황**: `authService.ts:20`에 `const ADMIN_EMAIL = 'hclim@hunesion.com'` 하드코딩
+**위험**: 소스 코드 노출 시 관리자 이메일 타겟팅 가능, 관리자 변경 시 코드 수정 필요
+**영향 범위**: 인증 시스템
+
+**개선안**:
+1. **환경 변수로 이동**: `VITE_ADMIN_EMAIL`로 변경
+2. **Firestore 설정 문서 활용**: `settings/admin` 문서에 관리자 이메일 목록 관리
+3. **Firebase Custom Claims 활용** (장기):
+```typescript
+// Firebase Admin SDK (Cloud Functions에서)
+admin.auth().setCustomUserClaims(uid, { admin: true });
+
+// 클라이언트에서 확인
+const token = await user.getIdTokenResult();
+if (token.claims.admin) { /* 관리자 */ }
+```
+
+---
+
+#### 🟡 S-04. 비밀번호 정책 미흡
+
+**현황**: Firebase 기본 정책 (6자 이상)만 적용, RegisterPage에서 길이만 검증
+**위험**: 약한 비밀번호로 인한 무차별 대입 공격 위험
+**영향 범위**: 회원가입
+
+**개선안**: 클라이언트 측 비밀번호 강도 검증 추가
+```typescript
+// src/utils/passwordValidator.ts
+export function validatePassword(password: string): { valid: boolean; message: string } {
+  if (password.length < 8) return { valid: false, message: '8자 이상이어야 합니다' };
+  if (!/[A-Z]/.test(password)) return { valid: false, message: '대문자를 포함해야 합니다' };
+  if (!/[a-z]/.test(password)) return { valid: false, message: '소문자를 포함해야 합니다' };
+  if (!/[0-9]/.test(password)) return { valid: false, message: '숫자를 포함해야 합니다' };
+  if (!/[!@#$%^&*]/.test(password)) return { valid: false, message: '특수문자를 포함해야 합니다' };
+  return { valid: true, message: '' };
+}
+```
+
+---
+
+#### 🟡 S-05. 세션 타임아웃 미설정
+
+**현황**: Firebase Auth 기본 세션 유지 (장기 유지, 새로고침 시에도 로그인 유지)
+**위험**: 공용 PC에서 로그아웃 하지 않을 경우 다른 사용자가 접근 가능
+**영향 범위**: 전체 인증 흐름
+
+**개선안**:
+```typescript
+// AuthContext.tsx에 비활동 타임아웃 추가
+const INACTIVITY_TIMEOUT = 30 * 60 * 1000; // 30분
+
+useEffect(() => {
+  let timeout: NodeJS.Timeout;
+
+  const resetTimer = () => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => {
+      logout();
+      // 세션 만료 알림
+    }, INACTIVITY_TIMEOUT);
+  };
+
+  const events = ['mousedown', 'keydown', 'scroll', 'touchstart'];
+  events.forEach(event => window.addEventListener(event, resetTimer));
+  resetTimer();
+
+  return () => {
+    clearTimeout(timeout);
+    events.forEach(event => window.removeEventListener(event, resetTimer));
+  };
+}, [logout]);
+```
+
+---
+
+#### 🟡 S-06. 엑셀 파일 업로드 검증 강화 필요
+
+**현황**: 파일 확장자만 검증 (.xlsx, .xls), MIME 타입 미확인, 파일 크기 제한 설정은 있으나 미적용
+**위험**: 악의적 파일 업로드 (확장자 위조)
+**영향 범위**: DataInputPage
+
+**개선안**:
+```typescript
+// src/utils/fileValidator.ts
+const ALLOWED_MIME_TYPES = [
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+  'application/vnd.ms-excel', // .xls
+];
+
+export function validateUploadFile(file: File): { valid: boolean; error?: string } {
+  // 1. 파일 크기 검증
+  if (file.size > MAX_FILE_SIZE) {
+    return { valid: false, error: `파일 크기는 ${MAX_FILE_SIZE / 1024 / 1024}MB 이하여야 합니다` };
+  }
+
+  // 2. MIME 타입 검증
+  if (!ALLOWED_MIME_TYPES.includes(file.type)) {
+    return { valid: false, error: '지원하지 않는 파일 형식입니다 (.xlsx, .xls만 가능)' };
+  }
+
+  // 3. 파일 매직 바이트 검증
+  // xlsx: PK (50 4B 03 04), xls: D0 CF 11 E0
+
+  return { valid: true };
+}
+```
+
+---
+
+#### 🟡 S-07. 클라이언트 측 권한 우회 가능성
+
+**현황**: 관리자 기능 버튼이 클라이언트 렌더링으로만 제어됨 (isAdmin 상태)
+**위험**: DevTools로 상태 변조 시 관리자 UI 접근 가능 (실제 동작은 Firestore 규칙이 차단)
+**영향 범위**: 관리자 페이지
+
+**현재 대응**: Firestore 규칙에서 서버 측 권한 검증 → **실질적 데이터 유출 위험은 낮음**
+**개선안**: 추가 방어 레이어로 Firebase Custom Claims 활용
+```typescript
+// ID 토큰에서 직접 권한 확인 (클라이언트 상태보다 신뢰도 높음)
+const tokenResult = await auth.currentUser?.getIdTokenResult();
+const isRealAdmin = tokenResult?.claims.admin === true;
+```
+
+---
+
+#### 🟡 S-08. Referrer-Policy 헤더 미설정
+
+**현황**: firebase.json에 Referrer-Policy 헤더 없음
+**위험**: 외부 링크 클릭 시 페이지 URL이 전달될 수 있음
+**영향 범위**: 호스팅
+
+**개선안**: firebase.json headers에 추가
+```json
+{
+  "key": "Referrer-Policy",
+  "value": "strict-origin-when-cross-origin"
+}
+```
+
+---
+
+#### 🟡 S-09. Permissions-Policy 헤더 미설정
+
+**현황**: 브라우저 기능(카메라, 마이크, 위치 등) 접근 정책 미설정
+**위험**: 악성 스크립트가 브라우저 API에 접근할 가능성
+**영향 범위**: 호스팅
+
+**개선안**: firebase.json headers에 추가
+```json
+{
+  "key": "Permissions-Policy",
+  "value": "camera=(), microphone=(), geolocation=(), interest-cohort=()"
+}
+```
+
+---
+
+#### 🟢 S-10. 로그인 시도 횟수 제한 (클라이언트 측)
+
+**현황**: Firebase Auth 자체 rate limiting은 있으나 (`auth/too-many-requests`), 클라이언트 측 추가 보호 없음
+**위험**: UI에서 반복 로그인 시도 가능
+**영향 범위**: LoginPage
+
+**개선안**:
+```typescript
+// 로그인 실패 횟수 추적
+const [failCount, setFailCount] = useState(0);
+const [lockUntil, setLockUntil] = useState<Date | null>(null);
+
+const handleLogin = async () => {
+  if (lockUntil && new Date() < lockUntil) {
+    setError('너무 많은 시도입니다. 잠시 후 다시 시도해주세요.');
+    return;
+  }
+
+  try {
+    await login(email, password);
+    setFailCount(0);
+  } catch {
+    const newCount = failCount + 1;
+    setFailCount(newCount);
+    if (newCount >= 5) {
+      setLockUntil(new Date(Date.now() + 5 * 60 * 1000)); // 5분 잠금
+    }
+  }
+};
+```
+
+---
+
+#### 🟢 S-11. divisions 컬렉션 공개 읽기
+
+**현황**: `allow read: if true;` (인증 없이 누구나 읽기 가능)
+**사유**: 회원가입 시 부문 목록 조회 필요
+**위험**: 조직 구조 정보 노출 (낮은 위험)
+**영향 범위**: firestore.rules
+
+**개선안** (선택적):
+```
+// 옵션 A: 인증 사용자만 허용 + 회원가입 시 공개 API로 목록 제공
+allow read: if isAuthenticated();
+
+// 옵션 B: 현재 상태 유지 (부문 이름만 노출, 민감 정보 아님)
+// 리스크 수용 가능
+```
+
+---
+
+#### 🟢 S-12. Strict-Transport-Security (HSTS) 확인
+
+**현황**: Firebase Hosting은 기본적으로 HTTPS 강제 + HSTS 적용
+**확인 필요**: 커스텀 도메인 사용 시 HSTS preload 등록 여부
+**영향 범위**: 호스팅
+
+**개선안**: 명시적 HSTS 헤더 추가 (방어적)
+```json
+{
+  "key": "Strict-Transport-Security",
+  "value": "max-age=31536000; includeSubDomains; preload"
+}
+```
+
+---
+
+#### 🟢 S-13. authService 내 중복 주석 정리
+
+**현황**: `authService.ts:42-46`에 불필요한 중복 주석 존재
+```typescript
+// ... (existing imports)
+// ... (existing imports, but getDivision is new)
+// ...
+```
+**영향**: 코드 품질 (보안 직접 영향은 없음)
+**개선안**: 중복 주석 제거
+
+---
+
+### 10.4 보안 강화 우선순위 및 실행 계획
+
+#### Phase S-1: 즉시 조치 (1-2일)
+
+| 항목 | 작업 | 파일 | 난이도 |
+|------|------|------|--------|
+| S-01 | CSP 헤더 추가 | firebase.json | ★★☆ |
+| S-08 | Referrer-Policy 헤더 추가 | firebase.json | ★☆☆ |
+| S-09 | Permissions-Policy 헤더 추가 | firebase.json | ★☆☆ |
+| S-12 | HSTS 헤더 명시적 추가 | firebase.json | ★☆☆ |
+| S-13 | authService 중복 주석 제거 | authService.ts | ★☆☆ |
+
+#### Phase S-2: 단기 조치 (1주)
+
+| 항목 | 작업 | 파일 | 난이도 |
+|------|------|------|--------|
+| S-02 | Firestore 필드 검증 규칙 추가 | firestore.rules | ★★★ |
+| S-03 | 관리자 이메일 환경변수 이동 | authService.ts, .env | ★★☆ |
+| S-04 | 비밀번호 강도 검증 추가 | RegisterPage.tsx, 신규 util | ★★☆ |
+| S-06 | 파일 업로드 검증 강화 | DataInputPage.tsx, 신규 util | ★★☆ |
+
+#### Phase S-3: 중기 조치 (2-4주)
+
+| 항목 | 작업 | 파일 | 난이도 |
+|------|------|------|--------|
+| S-05 | 세션 비활동 타임아웃 | AuthContext.tsx | ★★☆ |
+| S-07 | Firebase Custom Claims 도입 | Cloud Functions (신규) | ★★★ |
+| S-10 | 클라이언트 로그인 시도 제한 | LoginPage.tsx | ★★☆ |
+
+### 10.5 보안 체크리스트 요약
+
+| 카테고리 | 항목 | 현재 상태 |
+|----------|------|----------|
+| **인증** | Firebase Auth Email/Password | ✅ |
+| | 인증 상태 감시 및 cleanup | ✅ |
+| | 승인/거절 게이트 | ✅ |
+| | 비밀번호 강도 정책 | ⚠️ 기본만 |
+| | 세션 타임아웃 | ❌ 미구현 |
+| | 로그인 시도 제한 (클라이언트) | ❌ 미구현 |
+| **인가** | Firestore 역할 기반 접근 제어 | ✅ |
+| | 관리자 전용 라우트 보호 | ✅ |
+| | 기본 거부 정책 | ✅ |
+| | 필드 레벨 검증 | ❌ 미구현 |
+| | Custom Claims (토큰 기반) | ❌ 미구현 |
+| **입력 검증** | Excel 파서 헤더 검증 | ✅ |
+| | 파일 업로드 MIME/크기 검증 | ⚠️ 부분적 |
+| | 비밀번호 확인 (재입력) | ✅ |
+| **코드 보안** | XSS 방지 (React 이스케이프) | ✅ |
+| | eval/innerHTML 미사용 | ✅ |
+| | 환경 변수 분리 | ✅ |
+| | 에러 상세 숨김 (프로덕션) | ✅ |
+| **호스팅** | X-Content-Type-Options | ✅ |
+| | X-Frame-Options | ✅ |
+| | X-XSS-Protection | ✅ |
+| | Content-Security-Policy | ❌ 미구현 |
+| | Referrer-Policy | ❌ 미구현 |
+| | Permissions-Policy | ❌ 미구현 |
+| | HSTS | ⚠️ Firebase 기본 |
+| **데이터 무결성** | SHA-256 해싱 | ✅ |
+| | 감사 로그 불변성 | ✅ |
+| | 서버 타임스탬프 사용 | ✅ |
+
+---
+
+## 11. 전체 개선 로드맵 (통합)
+
+### Phase 1: 보안 긴급 조치 + 인프라 정비 (1주)
+
+| 순서 | 영역 | 작업 | 예상 시간 |
+|------|------|------|-----------|
+| 1 | 보안 | firebase.json 보안 헤더 추가 (CSP, Referrer, Permissions, HSTS) | 2시간 |
+| 2 | 보안 | Firestore 필드 검증 규칙 추가 | 4시간 |
+| 3 | 보안 | 관리자 이메일 환경변수 이동 | 1시간 |
+| 4 | 보안 | 비밀번호 강도 검증 추가 | 2시간 |
+| 5 | 보안 | 파일 업로드 검증 강화 (MIME, 크기) | 2시간 |
+| 6 | 코드 | authService.ts 중복 주석 정리 | 30분 |
+| 7 | 모듈화 | types/index.ts 도메인별 분리 | 4시간 |
+
+### Phase 2: 핵심 모듈화 (1-2주)
+
+| 순서 | 영역 | 작업 | 예상 시간 |
+|------|------|------|-----------|
+| 8 | 모듈화 | useReport.ts 분할 | 8시간 |
+| 9 | 모듈화 | snapshotService.ts 분할 | 6시간 |
+| 10 | 모듈화 | DataInputPage.tsx 분할 | 8시간 |
+| 11 | 보안 | 세션 비활동 타임아웃 추가 | 3시간 |
+| 12 | 보안 | 클라이언트 로그인 시도 제한 | 2시간 |
+
+### Phase 3: 관리자 페이지 + 중복 제거 (1주)
+
+| 순서 | 영역 | 작업 | 예상 시간 |
+|------|------|------|-----------|
+| 13 | 모듈화 | TargetInputTable.tsx 분할 | 6시간 |
+| 14 | 모듈화 | Admin 페이지 분할 (User, Product, Division) | 11시간 |
+| 15 | 중복제거 | colors.ts 상수 중앙화 | 1시간 |
+| 16 | 중복제거 | ViewModeToggle + useViewMode 컴포넌트/훅 | 3시간 |
+| 17 | 중복제거 | KPICardGrid 공통 컴포넌트 | 2시간 |
+
+### Phase 4: 성능 최적화 + 보고서 (1주)
+
+| 순서 | 영역 | 작업 | 예상 시간 |
+|------|------|------|-----------|
+| 18 | 성능 | React.lazy 라우트 기반 코드 분할 | 4시간 |
+| 19 | 성능 | 차트 컴포넌트 lazy loading | 2시간 |
+| 20 | 모듈화 | 보고서 페이지 분할 (Product, Achievement) | 7시간 |
+| 21 | 중복제거 | 차트 viewMode 로직 통합 | 3시간 |
+| 22 | 보안 | Firebase Custom Claims 도입 (Cloud Functions) | 8시간 |

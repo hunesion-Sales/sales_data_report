@@ -640,3 +640,40 @@ interface TargetAchievement {
     - Unit Labels: Added `(백만원)` to Sales/Profit Y-axis
     - Rate Formatting: Added `(%)` unit to Achievement Rate Y-axis
     - Overflow Fix: Changed XAxis scale to `'band'` to fix bar clipping issues
+
+### Phase 36: Deployment -- COMPLETED (2026-02-19)
+- [x] **Firebase Hosting**:
+    - Ran `npm run deploy` successfully
+    - Deployed all changes including chart fixes and responsive layout updates
+    - Hosting URL: https://hunesalesreport.web.app
+
+### Phase 37: Troubleshooting -- ONGOING
+- [ ] **Custom Domain Error (auth/invalid-api-key)**:
+    - Cause: Google Cloud API Key restriction blocks `hsr.hunesion.com`
+    - Solution: Add domain to allowed referrers in Google Cloud Console > APIs & Services > Credentials
+- [ ] **API Key Restrictions (auth/invalid-api-key)**:
+    - Cause: "Identity Toolkit API" (Firebase Auth) might be missing from the 25 allowed APIs in the key configuration
+    - Solution: In Google Cloud Console > API Key restrictions, ensure **Identity Toolkit API** and **Token Service API** are checked
+    - Note: Firebase Authentication requires both APIs for custom domains. If `Token Service API` is not visible, search for it in 'Enabled APIs & Services' and enable it first.
+- [x] **Debug Logging**:
+    - Added console log to `src/firebase/config.ts` to verify API key loading in production
+    - Check browser console for "Firebase Config Loaded" message to confirm API key is not missing/undefined
+
+### Phase 38: Admin Notification Setup (Cloud Functions)
+- [ ] **Configure Gmail SMTP**:
+    - Enable "2-Step Verification" in your Google Account
+    - Generate an "App Password" (Search 'App passwords' in Google Account settings)
+    - You will use this password instead of your real password
+- [ ] **Set Environment Variables**:
+    - Functions v2/v1 supports `.env` file in `functions/` directory
+    - Edit `functions/.env` and set `SMTP_EMAIL` and `SMTP_PASSWORD`
+- [ ] **Deploy Functions**:
+    - Run `firebase deploy --only functions` in terminal
+    - Note: This requires the project to be on the **Blaze (Pay as you go)** plan for external network access (sending email to Gmail)
+
+### Phase 39: Division Modal Data Fix -- COMPLETED (2026-02-19)
+- [x] **Bug Fix: 부문별 월 데이터 모달 0 표시 문제**:
+    - Root Cause: `getModalChartData()`가 `data.filter(p => p.division === divName)`으로 원본 데이터를 필터링했으나, `ProductData.division` 필드가 Firestore에서 채워지지 않아 매칭 실패
+    - Fix: `useAchievement` hook에서 `divisionItems` (Firestore `division_data` 컬렉션의 월별 데이터)를 노출하고, 모달 차트에서 직접 사용하도록 변경
+    - Modified Files: `useAchievement.ts`, `SolutionBusinessDashboard.tsx`
+    - Deployed to Firebase Hosting

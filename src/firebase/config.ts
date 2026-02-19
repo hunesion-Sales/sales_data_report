@@ -13,6 +13,13 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 
+// Debugging: Check if API Key is loaded correctly
+console.log('Firebase Config Loaded:', {
+  apiKey: firebaseConfig.apiKey ? `${firebaseConfig.apiKey.substring(0, 5)}...` : 'MISSING',
+  authDomain: firebaseConfig.authDomain,
+  projectId: firebaseConfig.projectId
+});
+
 // QUIC 프로토콜 오류 방지를 위한 Long Polling 강제 사용
 export const db = initializeFirestore(app, {
   experimentalForceLongPolling: true,

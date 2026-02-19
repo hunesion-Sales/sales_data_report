@@ -41,6 +41,7 @@ export default function SolutionBusinessDashboard() {
   // Achievement Data (Yearly for Dashboard)
   const {
     achievements: divisionAchievements,
+    divisionItems,
     overallSalesAchievementRate,
     overallProfitAchievementRate,
     totalSalesTarget,
@@ -248,26 +249,28 @@ export default function SolutionBusinessDashboard() {
       }));
     }
     else if (modalType === 'division' && selectedDivision) {
-      // Division Trend
+      // Division Trend - use divisionItems (monthly data from Firestore)
       const targetDiv = divisionChartData.find(d => d.divisionId === selectedDivision || d.name === selectedDivision);
       if (!targetDiv) return [];
 
-      const divName = targetDiv.name;
+      // Find the matching DivisionDataItem by divisionId or name
+      const divItem = divisionItems.find(item => {
+        if (item.divisionId === selectedDivision) return true;
+        const normalizedItemName = item.divisionName.replace(/\s+/g, '');
+        const normalizedTargetName = targetDiv.name.replace(/\s+/g, '');
+        return normalizedItemName === normalizedTargetName;
+      });
 
-      // Filter products by division name using 'division' string or check if data matches
-      // Note: 'data' (ProductData) usually has 'division' name string (from Excel).
-      // We need to match 'divName' (e.g., "융합사업부문") or use the division ID logic if data has IDs.
-      const divProducts = data.filter(p => p.division === divName);
+      if (!divItem) return [];
 
       return months.map(mk => {
-        let monthlySum = 0;
-        divProducts.forEach(p => {
-          const md = getMonthData(p, mk);
-          monthlySum += viewMode === 'sales' ? md.sales : (md.sales - md.cost);
-        });
+        const md = divItem.months[mk];
+        const sales = md ? (md.sales || 0) : 0;
+        const cost = md ? (md.cost || 0) : 0;
+        const profit = sales - cost;
         return {
           name: getMonthShortLabel(mk),
-          value: monthlySum
+          value: viewMode === 'sales' ? sales : profit
         };
       });
     }

@@ -16,6 +16,7 @@ import { useAuth } from '@/contexts/AuthContext';
 interface UseAchievementReturn {
   divisions: Division[];
   achievements: TargetAchievement[];
+  divisionItems: DivisionDataItem[];
   overallSalesAchievementRate: number | null;
   overallProfitAchievementRate: number | null;
   year: number;
@@ -274,6 +275,7 @@ export function useAchievement(
   return {
     divisions,
     achievements,
+    divisionItems,
     overallSalesAchievementRate,
     overallProfitAchievementRate,
     year,
