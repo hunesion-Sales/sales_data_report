@@ -72,7 +72,7 @@ export default function ProductCharts({ items, months, viewMode }: ProductCharts
                 value: viewMode === 'sales' ? item.totalSales : item.totalProfit,
             }))
             .sort((a, b) => b.value - a.value)
-            .slice(0, 15); // 상위 15개만 표시 (제품이 많을 수 있으므로)
+            ; // 전체 표시
     }, [validItems, viewMode]);
 
     if (validItems.length === 0) {
@@ -130,7 +130,7 @@ export default function ProductCharts({ items, months, viewMode }: ProductCharts
             </ChartWrapper>
 
             {/* 3. Ranking Bar Chart: 제품별 순위 */}
-            <ChartWrapper title={`제품별 ${metricLabel} 순위 (상위 15개, 단위: 백만원)`} height={350}>
+            <ChartWrapper title={`제품별 ${metricLabel} 순위 (단위: 백만원)`} height={350}>
                 <BarChart
                     data={rankingData}
                     layout="vertical"

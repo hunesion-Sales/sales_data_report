@@ -59,7 +59,7 @@ export default function DivisionCharts({
         divisionId: a.target.divisionId // ID for fallback
       }))
       .sort((a, b) => b.amount - a.amount) // Sort by amount (Top N)
-      .slice(0, 10); // Top 10
+      ; // 전체 표시
   }, [achievements, viewMode]);
 
   // 2. Pie Chart Data (Improved)
@@ -123,7 +123,7 @@ export default function DivisionCharts({
           // Recharts wrapper click hack if needed, or rely on activeLabel
         }}>
           <DualAxisChart
-            title={`부문별 ${metricLabel} 및 달성율 (Top 10)`}
+            title={`부문별 ${metricLabel} 및 달성율`}
             data={chartData}
             xAxisKey="name"
             barKey="amount"
