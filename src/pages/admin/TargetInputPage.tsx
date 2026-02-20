@@ -1,10 +1,10 @@
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Target, Loader2, AlertCircle, X, Save } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTargets } from '@/hooks/useTargets';
+import { useNotification } from '@/hooks/useNotification';
 import TargetInputTable from '@/components/targets/TargetInputTable';
-import type { Notification, QuarterlyTargetInput } from '@/types';
+import type { QuarterlyTargetInput } from '@/types';
 
 const CURRENT_YEAR = new Date().getFullYear();
 const YEARS = Array.from({ length: 5 }, (_, i) => CURRENT_YEAR - 2 + i);
@@ -13,12 +13,7 @@ export default function TargetInputPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { divisions, targets, year, setYear, isLoading, isSaving, error, saveTargets } = useTargets();
-  const [notification, setNotification] = useState<Notification | null>(null);
-
-  const showNotification = (message: string, type: 'success' | 'error' = 'success') => {
-    setNotification({ message, type });
-    setTimeout(() => setNotification(null), 3000);
-  };
+  const { notification, showNotification } = useNotification();
 
   const handleSave = async (inputs: QuarterlyTargetInput[], createdBy: string) => {
     try {

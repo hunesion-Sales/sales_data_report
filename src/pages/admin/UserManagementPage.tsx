@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { getUsers } from '@/firebase/services/userService';
 import { getDivisions } from '@/firebase/services/divisionService';
+import { useNotification } from '@/hooks/useNotification';
 import {
   approveUser,
   rejectUser,
@@ -33,12 +34,7 @@ export default function UserManagementPage() {
   const [divisions, setDivisions] = useState<Division[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
-
-  const showNotification = (message: string, type: 'success' | 'error' = 'success') => {
-    setNotification({ message, type });
-    setTimeout(() => setNotification(null), 3000);
-  };
+  const { notification, showNotification } = useNotification();
 
   // 필터
   const [filterStatus, setFilterStatus] = useState<string>('all');

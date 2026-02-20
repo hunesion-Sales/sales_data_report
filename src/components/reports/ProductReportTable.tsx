@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { Table as TableIcon, Printer, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { ProcessedProduct, Totals, getMonthFullLabel } from '@/types';
 import { formatMillionWon, formatCurrency as formatCurrencyFull } from '@/utils/formatUtils';
+import { MONTH_COLORS } from '@/constants/colors';
 
 interface ProductReportTableProps {
     title: string;
@@ -13,22 +14,6 @@ interface ProductReportTableProps {
 
 type SortField = 'none' | 'sales' | 'profit';
 type SortDirection = 'desc' | 'asc';
-
-// --- 월별 배경색 팔레트 (테이블 헤더용) ---
-const MONTH_COLORS = [
-    { bg: 'bg-blue-50/50', bgLight: 'bg-blue-50/30', text: 'text-blue-700' },
-    { bg: 'bg-indigo-50/50', bgLight: 'bg-indigo-50/30', text: 'text-indigo-700' },
-    { bg: 'bg-violet-50/50', bgLight: 'bg-violet-50/30', text: 'text-violet-700' },
-    { bg: 'bg-purple-50/50', bgLight: 'bg-purple-50/30', text: 'text-purple-700' },
-    { bg: 'bg-fuchsia-50/50', bgLight: 'bg-fuchsia-50/30', text: 'text-fuchsia-700' },
-    { bg: 'bg-pink-50/50', bgLight: 'bg-pink-50/30', text: 'text-pink-700' },
-    { bg: 'bg-rose-50/50', bgLight: 'bg-rose-50/30', text: 'text-rose-700' },
-    { bg: 'bg-orange-50/50', bgLight: 'bg-orange-50/30', text: 'text-orange-700' },
-    { bg: 'bg-amber-50/50', bgLight: 'bg-amber-50/30', text: 'text-amber-700' },
-    { bg: 'bg-cyan-50/50', bgLight: 'bg-cyan-50/30', text: 'text-cyan-700' },
-    { bg: 'bg-teal-50/50', bgLight: 'bg-teal-50/30', text: 'text-teal-700' },
-    { bg: 'bg-emerald-50/50', bgLight: 'bg-emerald-50/30', text: 'text-emerald-700' },
-];
 
 export default function ProductReportTable({ title, items, months, totals, showFooter = true }: ProductReportTableProps) {
     const [sortField, setSortField] = useState<SortField>('none');

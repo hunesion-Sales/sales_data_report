@@ -6,7 +6,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { getDivisions } from '@/firebase/services/divisionService';
 import { saveDivisionData } from '@/firebase/services/divisionDataService';
 import { formatMillionWon, formatCurrency as formatCurrencyFull } from '@/utils/formatUtils';
-import type { ProductData, Notification, Division, UploadAnalysisResult, ConflictResolution } from '@/types';
+import type { ProductData, Division, UploadAnalysisResult, ConflictResolution } from '@/types';
+import { useNotification } from '@/hooks/useNotification';
 import { getMonthShortLabel } from '@/types';
 import { WeekSelector, ConflictResolutionModal } from '@/components/upload';
 import {
@@ -43,7 +44,7 @@ export default function DataInputPage() {
         authReady,
     });
 
-    const [notification, setNotification] = useState<Notification | null>(null);
+    const { notification, showNotification } = useNotification();
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [isUploading, setIsUploading] = useState(false);
     const [uploadType, setUploadType] = useState<'product' | 'division'>('product');
@@ -53,11 +54,6 @@ export default function DataInputPage() {
     const [showConflictModal, setShowConflictModal] = useState(false);
     const [uploadAnalysis, setUploadAnalysis] = useState<UploadAnalysisResult | null>(null);
     const [pendingFileName, setPendingFileName] = useState<string>('');
-
-    const showNotification = (message: string, type: 'success' | 'error' = 'success') => {
-        setNotification({ message, type });
-        setTimeout(() => setNotification(null), 3000);
-    };
 
     // 제품의 특정 월 데이터를 안전하게 가져오기
     const getMonthData = (item: ProductData, monthKey: string) => {

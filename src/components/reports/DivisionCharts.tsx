@@ -18,6 +18,7 @@ import { formatMillionWonChart, formatMillionWonTooltip } from '@/utils/formatUt
 import DualAxisChart from '@/components/charts/DualAxisChart';
 import { Modal } from '@/components/ui/Modal';
 import { getMonthShortLabel } from '@/types'; // Import from types or wherever it is defined
+import { DIVISION_COLORS } from '@/constants/colors';
 
 interface DivisionChartsProps {
   summaries: DivisionSummary[];
@@ -25,19 +26,6 @@ interface DivisionChartsProps {
   viewMode: 'sales' | 'profit';
   achievements: TargetAchievement[]; // New prop
 }
-
-const COLORS = [
-  '#2563eb', // blue-600
-  '#0ea5e9', // sky-500
-  '#6366f1', // indigo-500
-  '#06b6d4', // cyan-500
-  '#1d4ed8', // blue-700
-  '#0284c7', // sky-600
-  '#4f46e5', // indigo-600
-  '#0891b2', // cyan-600
-  '#60a5fa', // blue-400
-  '#818cf8', // indigo-400
-];
 
 export default function DivisionCharts({
   summaries,
@@ -192,7 +180,7 @@ export default function DivisionCharts({
               }}
             >
               {pieData.map((_, idx) => (
-                <Cell key={`cell-${idx}`} fill={COLORS[idx % COLORS.length]} />
+                <Cell key={`cell-${idx}`} fill={DIVISION_COLORS[idx % DIVISION_COLORS.length]} />
               ))}
             </Pie>
             <Tooltip
@@ -212,7 +200,7 @@ export default function DivisionCharts({
                       const pct = total > 0 ? ((d.value / total) * 100).toFixed(0) : '0';
                       return (
                         <span key={d.name} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                          <span style={{ width: 10, height: 10, backgroundColor: COLORS[idx % COLORS.length], display: 'inline-block', borderRadius: 2 }} />
+                          <span style={{ width: 10, height: 10, backgroundColor: DIVISION_COLORS[idx % DIVISION_COLORS.length], display: 'inline-block', borderRadius: 2 }} />
                           {d.name} ({pct}%)
                         </span>
                       );

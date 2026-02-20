@@ -18,6 +18,7 @@ import { getCurrentQuarter, getQuarterLabel } from '@/utils/periodUtils';
 import { ChartWrapper } from '@/components/charts';
 import { formatMillionWon, formatCurrency as formatCurrencyFull, formatMillionWonChart, formatMillionWonTooltip } from '@/utils/formatUtils';
 import ViewToggle from '@/components/ui/ViewToggle';
+import { useViewMode } from '@/hooks/useViewMode';
 import DualAxisChart from '@/components/charts/DualAxisChart';
 import { Modal } from '@/components/ui/Modal';
 import { calculateCumulativeAchievement, isCloudProduct } from '@/utils/achievementUtils';
@@ -32,7 +33,7 @@ export default function SolutionBusinessDashboard() {
   const { user, firebaseUser, authReady, isAdmin } = useAuth();
 
   // View Mode State
-  const [viewMode, setViewMode] = useState<'sales' | 'profit'>('profit');
+  const { viewMode, setViewMode } = useViewMode('profit');
   const [selectedProduct, setSelectedProduct] = useState<string | null>(null);
   const [selectedDivision, setSelectedDivision] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);

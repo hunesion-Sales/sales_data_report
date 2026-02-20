@@ -1,5 +1,4 @@
 
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Target, TrendingUp, DollarSign, BarChart3 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -10,6 +9,7 @@ import AchievementCharts from '@/components/achievement/AchievementCharts';
 import type { AchievementPeriod } from '@/types';
 import { getAchievementPeriodLabel } from '@/utils/periodUtils';
 import ViewToggle from '@/components/ui/ViewToggle';
+import { useViewMode } from '@/hooks/useViewMode';
 
 const CURRENT_YEAR = new Date().getFullYear();
 const YEARS = Array.from({ length: 5 }, (_, i) => CURRENT_YEAR - 2 + i);
@@ -26,7 +26,7 @@ const formatCurrencyWithUnit = (value: number): string => {
 export default function AchievementPage() {
   const navigate = useNavigate();
   const { user, isAdmin } = useAuth();
-  const [viewMode, setViewMode] = useState<'sales' | 'profit'>('profit');
+  const { viewMode, setViewMode } = useViewMode('profit');
 
   const {
     achievements,

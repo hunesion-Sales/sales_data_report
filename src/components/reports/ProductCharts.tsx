@@ -14,26 +14,12 @@ import {
 import type { ProcessedProduct } from '@/types';
 import { ChartWrapper } from '@/components/charts';
 import { formatMillionWon, formatCurrency, formatMillionWonChart, formatMillionWonTooltip } from '@/utils/formatUtils';
+import { CHART_COLORS } from '@/constants/colors';
 interface ProductChartsProps {
     items: ProcessedProduct[];
     months: string[];
     viewMode: 'sales' | 'profit';
 }
-
-const COLORS = [
-    '#3b82f6', // blue-500 (Primary)
-    '#6366f1', // indigo-500 (Secondary)
-    '#10b981', // emerald-500 (Success/Profit)
-    '#f59e0b', // amber-500
-    '#8b5cf6', // violet-500
-    '#ec4899', // pink-500
-    '#06b6d4', // cyan-500
-    '#1d4ed8', // blue-700
-    '#4338ca', // indigo-700
-    '#059669', // emerald-600
-    '#d97706', // amber-600
-    '#7c3aed', // violet-600
-];
 
 export default function ProductCharts({ items, months, viewMode }: ProductChartsProps) {
     // 필터링 제거: props로 전달된 items를 그대로 사용
@@ -80,7 +66,7 @@ export default function ProductCharts({ items, months, viewMode }: ProductCharts
     }
 
     // 색상 할당 로직 (항목이 많으므로 순환)
-    const getItemColor = (index: number) => COLORS[index % COLORS.length];
+    const getItemColor = (index: number) => CHART_COLORS[index % CHART_COLORS.length];
     const metricLabel = viewMode === 'sales' ? '매출액' : '매출이익';
 
     return (

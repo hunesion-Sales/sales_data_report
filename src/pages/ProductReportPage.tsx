@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import type { ProductData, ProcessedProduct, Totals } from '@/types';
 import { getMonthFullLabel } from '@/types';
 import { useReport } from '@/hooks/useReport';
@@ -7,6 +7,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { formatMillionWon, formatCurrency as formatCurrencyFull } from '@/utils/formatUtils';
 import ProductCharts from '@/components/reports/ProductCharts';
 import ProductReportTable from '@/components/reports/ProductReportTable';
+import ViewToggle from '@/components/ui/ViewToggle';
+import { useViewMode } from '@/hooks/useViewMode';
+import KPICardGrid from '@/components/common/KPICardGrid';
 
 // --- 초기 데이터 (동적 월 구조) ---
 // --- 초기 데이터 (DB 로딩 전 빈 상태) ---
@@ -14,21 +17,6 @@ const DEFAULT_MONTHS: string[] = [];
 const DEFAULT_MONTH_LABELS: Record<string, string> = {};
 const INITIAL_DATA: ProductData[] = [];
 
-// --- 월별 배경색 팔레트 (테이블 헤더용) ---
-const MONTH_COLORS = [
-    { bg: 'bg-blue-50/50', bgLight: 'bg-blue-50/30', text: 'text-blue-700' },
-    { bg: 'bg-indigo-50/50', bgLight: 'bg-indigo-50/30', text: 'text-indigo-700' },
-    { bg: 'bg-violet-50/50', bgLight: 'bg-violet-50/30', text: 'text-violet-700' },
-    { bg: 'bg-purple-50/50', bgLight: 'bg-purple-50/30', text: 'text-purple-700' },
-    { bg: 'bg-fuchsia-50/50', bgLight: 'bg-fuchsia-50/30', text: 'text-fuchsia-700' },
-    { bg: 'bg-pink-50/50', bgLight: 'bg-pink-50/30', text: 'text-pink-700' },
-    { bg: 'bg-rose-50/50', bgLight: 'bg-rose-50/30', text: 'text-rose-700' },
-    { bg: 'bg-orange-50/50', bgLight: 'bg-orange-50/30', text: 'text-orange-700' },
-    { bg: 'bg-amber-50/50', bgLight: 'bg-amber-50/30', text: 'text-amber-700' },
-    { bg: 'bg-cyan-50/50', bgLight: 'bg-cyan-50/30', text: 'text-cyan-700' },
-    { bg: 'bg-teal-50/50', bgLight: 'bg-teal-50/30', text: 'text-teal-700' },
-    { bg: 'bg-emerald-50/50', bgLight: 'bg-emerald-50/30', text: 'text-emerald-700' },
-];
 
 export default function ProductReportPage() {
     const { firebaseUser, authReady } = useAuth();
@@ -185,7 +173,7 @@ export default function ProductReportPage() {
         return { byMonth, totalSales, totalCost, totalProfit: totalSales - totalCost };
     }, [cloudData, months]);
 
-    const [viewMode, setViewMode] = useState<'sales' | 'profit'>('sales');
+    const { viewMode, setViewMode } = useViewMode('sales');
 
     return (
         <div className="space-y-6 animate-fade-in p-6">
@@ -197,26 +185,7 @@ export default function ProductReportPage() {
 
                 <div className="flex items-center gap-4">
                     {/* View Mode Toggle */}
-                    <div className="flex bg-slate-100 p-1 rounded-lg">
-                        <button
-                            onClick={() => setViewMode('sales')}
-                            className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${viewMode === 'sales'
-                                ? 'bg-white text-indigo-600 shadow-sm'
-                                : 'text-slate-500 hover:text-slate-700'
-                                }`}
-                        >
-                            매출액 보기
-                        </button>
-                        <button
-                            onClick={() => setViewMode('profit')}
-                            className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${viewMode === 'profit'
-                                ? 'bg-white text-emerald-600 shadow-sm'
-                                : 'text-slate-500 hover:text-slate-700'
-                                }`}
-                        >
-                            매출이익 보기
-                        </button>
-                    </div>
+                    <ViewToggle viewMode={viewMode} onChange={setViewMode} />
 
                     {/* Firestore Data Status */}
                     <div className="flex items-center gap-3">
@@ -241,61 +210,35 @@ export default function ProductReportPage() {
             </div>
 
             {/* Summary KPI Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 print-avoid-break">
-                {/* Sales Card - Blue/Slate Theme */}
-                <div className={`bg-white p-6 rounded-xl shadow-sm border-t-4 transition-all ${viewMode === 'sales'
-                    ? 'border-indigo-500 shadow-md transform scale-[1.01]'
-                    : 'border-slate-300 border-x border-b'
-                    }`} title={formatCurrencyFull(totals.totalSales)}>
-                    <div className="flex justify-between items-start mb-4">
-                        <h3 className="text-lg font-bold text-slate-700">총 매출액</h3>
-                        <span className={`text-xs font-semibold px-2 py-1 rounded ${viewMode === 'sales' ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600'}`}>
-                            Sales
-                        </span>
-                    </div>
-                    <div className="space-y-2">
-                        <p className="text-3xl font-bold text-slate-800 tracking-tight">
-                            {formatMillionWon(totals.totalSales)}
-                        </p>
-                        <p className="text-sm text-slate-500">전체 제품군 합계 (백만원)</p>
-                    </div>
-                </div>
-
-                {/* Profit Card - Emerald Theme */}
-                <div className={`bg-white p-6 rounded-xl shadow-sm border-t-4 transition-all ${viewMode === 'profit'
-                    ? 'border-emerald-500 shadow-md transform scale-[1.01]'
-                    : 'border-slate-300 border-x border-b'
-                    }`} title={formatCurrencyFull(totals.totalProfit)}>
-                    <div className="flex justify-between items-start mb-4">
-                        <h3 className="text-lg font-bold text-slate-700">총 매출이익</h3>
-                        <span className={`text-xs font-semibold px-2 py-1 rounded ${viewMode === 'profit' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>
-                            Profit
-                        </span>
-                    </div>
-                    <div className="space-y-2">
-                        <p className="text-3xl font-bold text-emerald-600 tracking-tight">
-                            {formatMillionWon(totals.totalProfit)}
-                        </p>
-                        <p className="text-sm text-slate-500">전체 제품군 합계 (백만원)</p>
-                    </div>
-                </div>
-
-                {/* Margin Card - Indigo/Violet Theme */}
-                <div className="bg-white p-6 rounded-xl shadow-sm border-t-4 border-violet-500 border-x border-b">
-                    <div className="flex justify-between items-start mb-4">
-                        <h3 className="text-lg font-bold text-slate-700">평균 매출이익률</h3>
-                        <span className="bg-violet-100 text-violet-700 text-xs font-semibold px-2 py-1 rounded">Margin</span>
-                    </div>
-                    <div className="space-y-2">
-                        <p className="text-3xl font-bold text-violet-600 tracking-tight">
-                            {totals.totalSales > 0
-                                ? `${((totals.totalProfit / totals.totalSales) * 100).toFixed(1)}%`
-                                : '-'}
-                        </p>
-                        <p className="text-sm text-slate-500">전체 평균 매출이익률</p>
-                    </div>
-                </div>
-            </div>
+            <KPICardGrid
+                viewMode={viewMode}
+                cards={[
+                    {
+                        label: '총 매출액 (백만원)',
+                        value: formatMillionWon(totals.totalSales),
+                        subtitle: '전체 제품군 합계',
+                        tooltip: formatCurrencyFull(totals.totalSales),
+                        color: 'indigo',
+                        highlightWhen: 'sales',
+                    },
+                    {
+                        label: '총 매출이익 (백만원)',
+                        value: formatMillionWon(totals.totalProfit),
+                        subtitle: '전체 제품군 합계',
+                        tooltip: formatCurrencyFull(totals.totalProfit),
+                        color: 'emerald',
+                        highlightWhen: 'profit',
+                    },
+                    {
+                        label: '평균 매출이익률',
+                        value: totals.totalSales > 0
+                            ? `${((totals.totalProfit / totals.totalSales) * 100).toFixed(1)}%`
+                            : '-',
+                        subtitle: '전체 평균 매출이익률',
+                        color: 'violet',
+                    },
+                ]}
+            />
 
             {/* 1. Main Report Section */}
             <div className="space-y-6">

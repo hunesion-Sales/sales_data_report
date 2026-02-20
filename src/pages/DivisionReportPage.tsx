@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, BarChart3 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -11,11 +11,13 @@ import DivisionSummaryTable from '@/components/reports/DivisionSummaryTable';
 import DivisionCharts from '@/components/reports/DivisionCharts';
 import { formatMillionWon, formatCurrency as formatCurrencyFull } from '@/utils/formatUtils';
 import ViewToggle from '@/components/ui/ViewToggle';
+import { useViewMode } from '@/hooks/useViewMode';
+import KPICardGrid from '@/components/common/KPICardGrid';
 
 export default function DivisionReportPage() {
   const navigate = useNavigate();
   const { user, isAdmin } = useAuth();
-  const [viewMode, setViewMode] = useState<'sales' | 'profit'>('sales');
+  const { viewMode, setViewMode } = useViewMode('sales');
 
   const {
     divisions,
@@ -96,32 +98,34 @@ export default function DivisionReportPage() {
         {!isLoading && !error && (
           <>
             {/* Summary KPI Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 print-avoid-break">
-              <div className={`bg-white p-6 rounded-xl shadow-sm border transition-all ${viewMode === 'sales' ? 'border-indigo-200 ring-1 ring-indigo-100' : 'border-slate-200'}`} title={formatCurrencyFull(summaries.reduce((acc, s) => acc + s.totalSales, 0))}>
-                <p className="text-sm text-slate-500 mb-1">총 매출액 (백만원)</p>
-                <p className="text-2xl font-bold text-slate-900">
-                  {formatMillionWon(summaries.reduce((acc, s) => acc + s.totalSales, 0))}
-                </p>
-              </div>
-              <div className={`bg-white p-6 rounded-xl shadow-sm border transition-all ${viewMode === 'profit' ? 'border-emerald-200 ring-1 ring-emerald-100' : 'border-slate-200'}`} title={formatCurrencyFull(summaries.reduce((acc, s) => acc + s.totalProfit, 0))}>
-                <p className="text-sm text-slate-500 mb-1">총 매출이익 (백만원)</p>
-                <p className="text-2xl font-bold text-emerald-600">
-                  {formatMillionWon(summaries.reduce((acc, s) => acc + s.totalProfit, 0))}
-                </p>
-              </div>
-              <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-                <p className="text-sm text-slate-500 mb-1">평균 매출이익률</p>
-                <p className="text-2xl font-bold text-indigo-600">
-                  {(() => {
-                    const totalSales = summaries.reduce((acc, s) => acc + s.totalSales, 0);
-                    const totalProfit = summaries.reduce((acc, s) => acc + s.totalProfit, 0);
-                    return totalSales > 0
-                      ? `${((totalProfit / totalSales) * 100).toFixed(1)}%`
-                      : '-';
-                  })()}
-                </p>
-              </div>
-            </div>
+            <KPICardGrid
+              viewMode={viewMode}
+              cards={(() => {
+                const totalSales = summaries.reduce((acc, s) => acc + s.totalSales, 0);
+                const totalProfit = summaries.reduce((acc, s) => acc + s.totalProfit, 0);
+                return [
+                  {
+                    label: '총 매출액 (백만원)',
+                    value: formatMillionWon(totalSales),
+                    tooltip: formatCurrencyFull(totalSales),
+                    color: 'indigo' as const,
+                    highlightWhen: 'sales' as const,
+                  },
+                  {
+                    label: '총 매출이익 (백만원)',
+                    value: formatMillionWon(totalProfit),
+                    tooltip: formatCurrencyFull(totalProfit),
+                    color: 'emerald' as const,
+                    highlightWhen: 'profit' as const,
+                  },
+                  {
+                    label: '평균 매출이익률',
+                    value: totalSales > 0 ? `${((totalProfit / totalSales) * 100).toFixed(1)}%` : '-',
+                    color: 'violet' as const,
+                  },
+                ];
+              })()}
+            />
 
             {/* Charts */}
             <DivisionCharts
