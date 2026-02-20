@@ -1,17 +1,33 @@
+import { lazy, Suspense } from 'react';
 import { createBrowserRouter } from 'react-router-dom';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ProtectedRoute from './components/auth/ProtectedRoute';
-import SolutionBusinessDashboard from './components/SolutionBusinessDashboard';
-import DivisionReportPage from './pages/DivisionReportPage';
-import AchievementPage from './pages/AchievementPage';
-import DivisionManagementPage from './pages/admin/DivisionManagementPage';
-import ProductManagementPage from './pages/admin/ProductManagementPage';
-import UserManagementPage from './pages/admin/UserManagementPage';
-import TargetInputPage from './pages/admin/TargetInputPage';
 import MainLayout from './components/layout/MainLayout';
-import DataInputPage from './pages/DataInputPage';
-import ProductReportPage from './pages/ProductReportPage';
+import { LoadingSpinner } from './components/error';
+
+// 항상 로드 (초기 화면)
+import SolutionBusinessDashboard from './components/SolutionBusinessDashboard';
+
+// Lazy load — 일반 사용자 페이지
+const DataInputPage = lazy(() => import('./pages/DataInputPage'));
+const DivisionReportPage = lazy(() => import('./pages/DivisionReportPage'));
+const ProductReportPage = lazy(() => import('./pages/ProductReportPage'));
+const AchievementPage = lazy(() => import('./pages/AchievementPage'));
+
+// Lazy load — 관리자 전용 페이지
+const DivisionManagementPage = lazy(() => import('./pages/admin/DivisionManagementPage'));
+const ProductManagementPage = lazy(() => import('./pages/admin/ProductManagementPage'));
+const UserManagementPage = lazy(() => import('./pages/admin/UserManagementPage'));
+const TargetInputPage = lazy(() => import('./pages/admin/TargetInputPage'));
+
+function SuspenseWrapper({ children }: { children: React.ReactNode }) {
+  return (
+    <Suspense fallback={<LoadingSpinner size="lg" message="페이지를 불러오는 중..." />}>
+      {children}
+    </Suspense>
+  );
+}
 
 export const router = createBrowserRouter([
   {
@@ -35,25 +51,43 @@ export const router = createBrowserRouter([
       },
       {
         path: '/input',
-        element: <DataInputPage />,
+        element: (
+          <SuspenseWrapper>
+            <DataInputPage />
+          </SuspenseWrapper>
+        ),
       },
       {
         path: '/reports',
-        element: <DivisionReportPage />,
+        element: (
+          <SuspenseWrapper>
+            <DivisionReportPage />
+          </SuspenseWrapper>
+        ),
       },
       {
         path: '/product-reports',
-        element: <ProductReportPage />,
+        element: (
+          <SuspenseWrapper>
+            <ProductReportPage />
+          </SuspenseWrapper>
+        ),
       },
       {
         path: '/achievement',
-        element: <AchievementPage />,
+        element: (
+          <SuspenseWrapper>
+            <AchievementPage />
+          </SuspenseWrapper>
+        ),
       },
       {
         path: '/admin/divisions',
         element: (
           <ProtectedRoute adminOnly>
-            <DivisionManagementPage />
+            <SuspenseWrapper>
+              <DivisionManagementPage />
+            </SuspenseWrapper>
           </ProtectedRoute>
         ),
       },
@@ -61,7 +95,9 @@ export const router = createBrowserRouter([
         path: '/admin/products',
         element: (
           <ProtectedRoute adminOnly>
-            <ProductManagementPage />
+            <SuspenseWrapper>
+              <ProductManagementPage />
+            </SuspenseWrapper>
           </ProtectedRoute>
         ),
       },
@@ -69,7 +105,9 @@ export const router = createBrowserRouter([
         path: '/admin/users',
         element: (
           <ProtectedRoute adminOnly>
-            <UserManagementPage />
+            <SuspenseWrapper>
+              <UserManagementPage />
+            </SuspenseWrapper>
           </ProtectedRoute>
         ),
       },
@@ -77,7 +115,9 @@ export const router = createBrowserRouter([
         path: '/admin/targets',
         element: (
           <ProtectedRoute adminOnly>
-            <TargetInputPage />
+            <SuspenseWrapper>
+              <TargetInputPage />
+            </SuspenseWrapper>
           </ProtectedRoute>
         ),
       },

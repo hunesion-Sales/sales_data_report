@@ -8,6 +8,7 @@ import {
   logout as firebaseLogout,
 } from '../firebase/services/authService';
 import { seedDefaultDivisions } from '../firebase/services/divisionService';
+import { logger } from '@/utils/logger';
 import type { UserProfile } from '../types';
 
 interface AuthContextType {
@@ -63,7 +64,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         } catch (err) {
           // 프로필이 없을 수 있음 (아직 생성 전) - 이건 에러가 아님
-          console.warn('Profile not found or error:', err);
+          logger.warn('Profile not found or error:', err);
           if (!cancelled) {
             setUser(null);
           }

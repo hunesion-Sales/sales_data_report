@@ -17,6 +17,7 @@ import {
   saveWithResolutions as saveWithResolutionsService,
 } from '@/firebase/services/snapshotService';
 import { getWeekKey } from '@/utils/weekUtils';
+import { logger } from '@/utils/logger';
 import type { User } from 'firebase/auth';
 
 export type UploadMergeMode = 'overwrite' | 'merge' | 'smart';
@@ -187,10 +188,10 @@ export function useReport(
 
         const { reportId, report } = reportResult;
         reportIdRef.current = reportId;
-        console.log('[useReport] Fetched Report:', report);
+        logger.debug('[useReport] Fetched Report:', report);
 
         const products = await getProducts(reportId);
-        console.log('[useReport] Fetched Products:', products.length);
+        logger.debug('[useReport] Fetched Products:', products.length);
 
         if (cancelled) return;
 
@@ -200,13 +201,13 @@ export function useReport(
 
           // 만약 report.months가 비어있다면 제품 데이터에서 직접 추출 (Fallback)
           if (!report.months || report.months.length === 0) {
-            console.warn('[useReport] Report metadata missing months, extracting from products...');
+            logger.warn('[useReport] Report metadata missing months, extracting from products...');
             const monthSet = new Set<string>();
             products.forEach(p => {
               if (p.months) Object.keys(p.months).forEach(k => monthSet.add(k));
             });
             const extractedMonths = Array.from(monthSet).sort();
-            console.log('[useReport] Extracted months:', extractedMonths);
+            logger.debug('[useReport] Extracted months:', extractedMonths);
 
             setMonths(extractedMonths);
 
@@ -219,12 +220,12 @@ export function useReport(
             });
             setMonthLabels(extractedLabels);
           } else {
-            console.log('[useReport] Using report metadata months:', report.months);
+            logger.debug('[useReport] Using report metadata months:', report.months);
             setMonths(report.months);
             setMonthLabels(report.monthLabels);
           }
         } else {
-          console.log('[useReport] No products found.');
+          logger.debug('[useReport] No products found.');
         }
       } catch (err) {
         if (cancelled) return;

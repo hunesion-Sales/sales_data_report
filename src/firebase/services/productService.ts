@@ -10,6 +10,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../config';
 import type { ProductData, MonthData } from '@/types';
+import { logger } from '@/utils/logger';
 
 /**
  * 보고서의 전체 제품 데이터 조회
@@ -20,7 +21,7 @@ export async function getProducts(reportId: string): Promise<ProductData[]> {
   // const q = query(ref, orderBy('sortOrder', 'asc'));
   const snap = await getDocs(ref);
 
-  console.log(`[getProducts] Fetched ${snap.size} docs from ${reportId}/products`);
+  logger.debug(`[getProducts] Fetched ${snap.size} docs from ${reportId}/products`);
 
   const list = snap.docs.map((d) => {
     const data = d.data();

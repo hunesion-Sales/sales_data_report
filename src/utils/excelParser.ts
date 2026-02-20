@@ -6,6 +6,7 @@
  */
 
 import type { ProductData, ParseResult } from '@/types';
+import { logger } from './logger';
 
 /**
  * "1월 2026" -> "2026-01", "12월 2025" -> "2025-12" 형태로 변환
@@ -47,7 +48,7 @@ export async function parseExcelFile(buffer: ArrayBuffer): Promise<ParseResult> 
   let monthHeaderRow = 0;
   const monthColumns: { key: string; display: string; salesCol: number; costCol: number }[] = [];
 
-  console.log(`[ExcelParser] Start parsing. Total rows: ${worksheet.rowCount}`);
+  logger.debug(`[ExcelParser] Start parsing. Total rows: ${worksheet.rowCount}`);
 
   for (let rowNum = 2; rowNum <= 20; rowNum++) {
     const row = worksheet.getRow(rowNum);
@@ -59,7 +60,7 @@ export async function parseExcelFile(buffer: ArrayBuffer): Promise<ParseResult> 
         if (!found) {
           monthHeaderRow = rowNum;
           found = true;
-          console.log(`[ExcelParser] Found month header row at ${rowNum}`);
+          logger.debug(`[ExcelParser] Found month header row at ${rowNum}`);
         }
 
         // 월 헤더 분석
@@ -71,7 +72,7 @@ export async function parseExcelFile(buffer: ArrayBuffer): Promise<ParseResult> 
         // 이미 등록된 Key라면 무시한다.
         const isDuplicate = monthColumns.some(m => m.key === parsed.key);
         if (isDuplicate) {
-          console.log(`[ExcelParser] Skipping duplicate month header '${parsed.key}' at col ${colNumber}`);
+          logger.debug(`[ExcelParser] Skipping duplicate month header '${parsed.key}' at col ${colNumber}`);
           return; // continue equivalent in eachCell
         }
 
@@ -83,7 +84,7 @@ export async function parseExcelFile(buffer: ArrayBuffer): Promise<ParseResult> 
         // 현재 컬럼(colNumber) 기준 우측 2칸 범위 내에서 "매출", "매입" 키워드 검색
         // (병합된 셀의 경우 colNumber가 첫 번째 셀일수도, 가운데일수도, 마지막일수도 있음)
         // 이전 컬럼(-1) 검색은 "매출코드" 오인식 방지를 위해 제거
-        console.log(`[ExcelParser] Inspecting sub-headers for ${val} around col ${colNumber}`);
+        logger.debug(`[ExcelParser] Inspecting sub-headers for ${val} around col ${colNumber}`);
 
         // 중요: +3을 하면 다음 달의 '매출' 컬럼(3칸 뒤)까지 침범하여 덮어쓰는 문제 발생
         // 따라서 +2까지만 검색해야 함 (Start, Start+1, Start+2 = 총 3칸)
@@ -100,14 +101,14 @@ export async function parseExcelFile(buffer: ArrayBuffer): Promise<ParseResult> 
             // 보통 구조상 [매출][매입][이익] 이므로 가장 왼쪽이 맞음.
             if (salesCol === colNumber) { // 아직 초기값(기본값) 상태라면 업데이트
               salesCol = c;
-              console.log(`  -> Found 'Sales' at col ${c} ("${subVal}")`);
+              logger.debug(`  -> Found 'Sales' at col ${c} ("${subVal}")`);
             } else {
               // 이미 찾았는데 또 나왔다? (범위를 줄였으므로 이 케이스는 드물 것)
-              console.log(`  -> Ignored duplicate 'Sales' at col ${c} (already found at ${salesCol})`);
+              logger.debug(`  -> Ignored duplicate 'Sales' at col ${c} (already found at ${salesCol})`);
             }
           } else if (subVal.includes('매입')) {
             costCol = c;
-            console.log(`  -> Found 'Cost' at col ${c} ("${subVal}")`);
+            logger.debug(`  -> Found 'Cost' at col ${c} ("${subVal}")`);
           }
         }
 
@@ -130,7 +131,7 @@ export async function parseExcelFile(buffer: ArrayBuffer): Promise<ParseResult> 
     headerRow.eachCell({ includeEmpty: false }, (cell, colNumber) => {
       if (String(cell.value ?? '').trim() === '제품군') {
         productCol = colNumber;
-        console.log(`[ExcelParser] Found 'Product Family' column at ${colNumber}`);
+        logger.debug(`[ExcelParser] Found 'Product Family' column at ${colNumber}`);
       }
     });
 
@@ -140,7 +141,7 @@ export async function parseExcelFile(buffer: ArrayBuffer): Promise<ParseResult> 
       const val = String(cell.value ?? '').trim().replace(/\s+/g, ''); // Remove spaces
       if (['영업부문', '부문', '사업부문', 'Division', 'Dept'].includes(val)) {
         divisionCol = colNumber;
-        console.log(`[ExcelParser] Found 'Division' column at ${colNumber} (Header: "${cell.value}")`);
+        logger.debug(`[ExcelParser] Found 'Division' column at ${colNumber} (Header: "${cell.value}")`);
       }
     });
   }
@@ -165,7 +166,7 @@ export async function parseExcelFile(buffer: ArrayBuffer): Promise<ParseResult> 
     return Number(String(cellValue).replace(/,/g, '')) || 0;
   };
 
-  console.log(`[ExcelParser] Parsing data starting from row ${dataStartRow}`);
+  logger.debug(`[ExcelParser] Parsing data starting from row ${dataStartRow}`);
 
   for (let rowNum = dataStartRow; rowNum <= worksheet.rowCount; rowNum++) {
     const row = worksheet.getRow(rowNum);
@@ -184,7 +185,7 @@ export async function parseExcelFile(buffer: ArrayBuffer): Promise<ParseResult> 
     }
 
     if (data.length < 3) { // Log first 3 rows for debugging
-      console.log(`[ExcelParser] Row ${rowNum} (${productName}):`, JSON.stringify(monthData));
+      logger.debug(`[ExcelParser] Row ${rowNum} (${productName}):`, JSON.stringify(monthData));
     }
 
     data.push({
@@ -199,6 +200,6 @@ export async function parseExcelFile(buffer: ArrayBuffer): Promise<ParseResult> 
     throw new Error('유효한 데이터를 찾을 수 없습니다. 엑셀 파일 형식을 확인해주세요.');
   }
 
-  console.log(`[ExcelParser] Parsing complete. Found ${data.length} items.`);
+  logger.debug(`[ExcelParser] Parsing complete. Found ${data.length} items.`);
   return { data, months, monthLabels };
 }

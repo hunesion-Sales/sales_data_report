@@ -13,6 +13,7 @@ import {
   deleteDoc,
 } from 'firebase/firestore';
 import { db } from '../config';
+import { logger } from '@/utils/logger';
 
 export interface ReportDoc {
   year: number;
@@ -151,5 +152,5 @@ export async function clearReportData(reportId: string): Promise<void> {
     updatedAt: serverTimestamp(),
   });
 
-  console.log(`[clearReportData] Report ${reportId} cleared successfully.`);
+  logger.debug(`[clearReportData] Report ${reportId} cleared successfully.`);
 }

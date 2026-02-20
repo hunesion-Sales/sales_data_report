@@ -16,8 +16,9 @@ import {
 import { auth, db } from '../config';
 import type { UserProfile, UserRole, UserStatus } from '../../types';
 import { getDivision } from './divisionService';
+import { logger } from '@/utils/logger';
 
-const ADMIN_EMAIL = 'hclim@hunesion.com';
+const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL || '';
 
 /**
  * Firestore users/{uid} 문서를 UserProfile로 변환
@@ -38,16 +39,6 @@ function docToUserProfile(uid: string, data: Record<string, unknown>): UserProfi
 /**
  * 사용자 프로필 조회
  */
-
-// ... (existing imports)
-
-// ... (existing imports, but getDivision is new)
-
-// ...
-
-/**
- * 사용자 프로필 조회
- */
 export async function getUserProfile(uid: string): Promise<UserProfile | null> {
   const docRef = doc(db, 'users', uid);
   const docSnap = await getDoc(docRef);
@@ -62,7 +53,7 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
         profile.divisionName = division.name;
       }
     } catch (error) {
-      console.warn('Failed to fetch division name:', error);
+      logger.warn('Failed to fetch division name:', error);
     }
   }
 

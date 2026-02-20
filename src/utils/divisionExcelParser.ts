@@ -6,6 +6,7 @@
  */
 
 import { parseMonthLabel } from './excelParser';
+import { logger } from './logger';
 
 export interface DivisionDataRow {
   divisionName: string;
@@ -64,14 +65,14 @@ export async function parseDivisionExcelFile(buffer: ArrayBuffer): Promise<Divis
         // 이미 처리된 월 키라면 무시 (seenMonthKeys 대신 monthColumns 검사로 일원화)
         const isDuplicate = monthColumns.some(m => m.key === parsed.key);
         if (isDuplicate) {
-          console.log(`[DivisionExcelParser] Skipping duplicate month header '${parsed.key}' at col ${colNumber}`);
+          logger.debug(`[DivisionExcelParser] Skipping duplicate month header '${parsed.key}' at col ${colNumber}`);
           return;
         }
 
         if (!found) {
           monthHeaderRow = rowNum;
           found = true;
-          console.log(`[DivisionExcelParser] Found month header row at ${rowNum}`);
+          logger.debug(`[DivisionExcelParser] Found month header row at ${rowNum}`);
         }
 
         // 월 헤더 아래 행에서 매출/매입 컬럼 찾기 (4컬럼 구조: 매출, 매입, 이익, 달성율)
@@ -81,7 +82,7 @@ export async function parseDivisionExcelFile(buffer: ArrayBuffer): Promise<Divis
 
         // 현재 컬럼(colNumber) 기준 우측 3칸 범위 내에서 "매출", "매입" 키워드 검색
         // (4컬럼 구조이므로 +3까지 검색 안전. 이전 컬럼(-1) 검색은 "매출코드" 오인식 방지를 위해 제거)
-        console.log(`[DivisionExcelParser] Inspecting sub-headers for ${val} around col ${colNumber}`);
+        logger.debug(`[DivisionExcelParser] Inspecting sub-headers for ${val} around col ${colNumber}`);
 
         for (let c = colNumber; c <= colNumber + 3; c++) {
           const subVal = String(subHeaderRow.getCell(c).value ?? '').trim();
@@ -91,11 +92,11 @@ export async function parseDivisionExcelFile(buffer: ArrayBuffer): Promise<Divis
           if (subVal.includes('매출') && !subVal.includes('이익') && !subVal.includes('코드')) {
             if (salesCol === colNumber) {
               salesCol = c;
-              console.log(`  -> Found 'Sales' at col ${c} ("${subVal}")`);
+              logger.debug(`  -> Found 'Sales' at col ${c} ("${subVal}")`);
             }
           } else if (subVal.includes('매입')) {
             costCol = c;
-            console.log(`  -> Found 'Cost' at col ${c} ("${subVal}")`);
+            logger.debug(`  -> Found 'Cost' at col ${c} ("${subVal}")`);
           }
         }
 

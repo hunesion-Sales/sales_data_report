@@ -12,6 +12,7 @@ import { getReport, updateReportMonths } from '../services/reportService';
 import { getProducts } from '../services/productService';
 import { seedDefaultDivisions } from '../services/divisionService';
 import { getMonthFullLabel } from '@/types';
+import { logger } from '@/utils/logger';
 
 /**
  * DB 점검 및 복구 결과
@@ -30,12 +31,12 @@ export async function repairReportMetadata(year: number): Promise<RepairResult> 
     try {
         // 1. 제품 데이터 모두 조회
         const reportId = `report-${year}`;
-        console.log(`[Repair] Querying products for reportId: ${reportId}`);
+        logger.debug(`[Repair] Querying products for reportId: ${reportId}`);
         const products = await getProducts(reportId);
-        console.log(`[Repair] Found ${products.length} products`);
+        logger.debug(`[Repair] Found ${products.length} products`);
 
         if (products.length > 0) {
-            console.log('[Repair] Sample product:', JSON.stringify(products[0], null, 2));
+            logger.debug('[Repair] Sample product:', JSON.stringify(products[0], null, 2));
         }
 
         if (products.length === 0) {

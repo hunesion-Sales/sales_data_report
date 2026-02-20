@@ -1,7 +1,7 @@
 # 대용량 파일 모듈화 및 성능 개선 방안
 
-> **최종 업데이트**: 2026-02-19
-> **현재 상태**: 기능 개발 완료, 모듈화 및 보안 강화 미착수
+> **최종 업데이트**: 2026-02-20 (Phase 2 완료)
+> **현재 상태**: Phase 1-2 완료 (보안 헤더 + 코드 품질 + 코드 분할), Phase 3 미착수
 
 ---
 
@@ -9,54 +9,84 @@
 
 ### 0.1 프로젝트 개요
 - **프로젝트명**: HSR (Huni Sales Report System) - 휴네시온 솔루션사업본부 매출 보고 시스템
-- **기술 스택**: React 19 + TypeScript 5.9 + Vite 7 + Firebase (Firestore + Auth) + Tailwind CSS 3
-- **배포**: Firebase Hosting (hunesalesreport)
+- **기술 스택**: React 19.2 + TypeScript 5.9 + Vite 7.2 + Firebase 12.9 (Firestore + Auth + Hosting) + Tailwind CSS 3.4
+- **배포**: Firebase Hosting (`hunesalesreport.web.app`)
+- **빌드 도구**: Vite 7.2.4, `@vitejs/plugin-react`
+- **경로 별칭**: `@/` → `./src/`
 
-### 0.2 코드베이스 메트릭
+### 0.2 코드베이스 메트릭 (2차 분석 기준)
 
 | 카테고리 | 파일 수 | 총 라인 수 |
 |----------|---------|-----------|
-| 페이지 (pages/) | 9 | ~2,876 |
-| 컴포넌트 (components/) | 19 | ~2,500 |
-| Firebase 서비스 (firebase/services/) | 11 | ~1,800 |
-| 커스텀 훅 (hooks/) | 4 | ~1,026 |
-| 유틸리티 (utils/) | 8 | ~1,000 |
-| 설정/타입 (config/, types/) | 3 | ~335 |
-| **합계** | **59 파일** | **~11,300 라인** |
+| 페이지 (pages/) | 10 | ~2,877 |
+| 컴포넌트 (components/) | 30 | ~4,110 |
+| Firebase (firebase/) | 12 | ~1,831 |
+| 커스텀 훅 (hooks/) | 4 | ~1,028 |
+| 유틸리티 (utils/) | 7 | ~1,012 |
+| 설정/타입/컨텍스트 (config/, types/, contexts/) | 4 | ~532 |
+| 엔트리 (App, main, router, css, vite-env.d.ts) | 5 | ~255 |
+| **합계** | **72 파일** | **~11,645 라인** |
 
-### 0.3 최근 변경 이력 (기능 추가/개선)
+### 0.3 빌드 산출물 현황
+
+| 청크 | 파일명 | 크기 (비압축) | 역할 |
+|------|--------|-------------|------|
+| **메인 번들** | `index-69k542gp.js` | **929 KB** | 앱 전체 (라우트 분할 없음) |
+| **차트 벤더** | `vendor-charts-D_q7upV1.js` | 396 KB | Recharts + D3 |
+| **엑셀 벤더** | `vendor-excel-CJTj21kL.js` | 937 KB | ExcelJS (동적 import) |
+| **스타일** | `index-BwqY2z-R.css` | 45 KB | Tailwind CSS |
+| **이미지** | 2개 | 285 KB | 로고 + 배경 |
+| **합계** | - | **~2.6 MB** | - |
+
+> **핵심 문제**: 메인 번들 929KB에 모든 페이지가 정적 import로 포함됨. 라우트 기반 코드 분할 미적용.
+
+### 0.4 최근 커밋 이력
 
 | 커밋 | 변경 내용 | 상태 |
 |------|----------|------|
-| 5dd53d1 | 차트 축 포맷팅 및 오버플로우 수정 | 완료 |
-| e2cb666 | 환경 변수 변경에 따른 빌드 | 완료 |
-| 10d8753 | 개선 계획 및 디자인 가이드라인 추가 | 완료 |
-| 34ddac9 | 매출액/매출이익 토글 및 보고서 테이블 개선 | 완료 |
-| 397cc18 | 제품 보고서 차트 구현 및 차트 레이아웃 리팩터링 | 완료 |
+| 3418618 | pie chart legend sorted, tooltip format | 완료 |
+| fcae7f2 | pie chart readability - hide labels, add legend | 완료 |
+| 6714b37 | remove chart limits (Top10/상위15), profit sorting | 완료 |
+| d3c3711 | center bar charts on X-axis labels | 완료 |
 
-### 0.4 대용량 파일 현황 (200줄 이상, 최신 기준)
+### 0.5 대용량 파일 현황 (150줄 이상, 최신 기준)
 
-| 순위 | 파일 | 라인 수 | 변화 | 주요 책임 |
-|------|------|---------|------|-----------|
-| 1 | DataInputPage.tsx | 501 | - | 엑셀 업로드, 파일 처리, 데이터 삭제, 충돌 모달 |
-| 2 | SolutionBusinessDashboard.tsx | 489 | 신규 진입 | 대시보드 메인 UI |
-| 3 | TargetInputTable.tsx | 489 | - | 분기별 목표 입력, 직접/퍼센트 모드, 행렬 계산 |
-| 4 | useReport.ts | 480 | +2 | 보고서 데이터 로드, 병합, 스냅샷 관리 |
-| 5 | ProductManagementPage.tsx | 421 | - | 제품 CRUD, 필터링, 유지보수 타입 관리 |
-| 6 | UserManagementPage.tsx | 413 | - | 사용자 관리, 승인/거절, 역할/부문 변경 |
-| 7 | snapshotService.ts | 408 | - | 스냅샷 관리, 해시 분석, 충돌 감지 |
-| 8 | DivisionManagementPage.tsx | 366 | - | 부문 CRUD, 삭제 확인 |
-| 9 | ConflictResolutionModal.tsx | 352 | - | 충돌 해결 UI, 데이터 비교 시각화 |
-| 10 | ProductReportPage.tsx | 341 | -4 | 제품 보고서, 필터, 차트 |
-| 11 | DivisionSummaryTable.tsx | 300 | 신규 진입 | 부문별 요약 테이블 |
-| 12 | types/index.ts | 301 | +3 | 타입 정의 및 헬퍼 함수 |
-| 13 | useAchievement.ts | 291 | 신규 진입 | 달성 현황 데이터 훅 |
-| 14 | productMasterService.ts | 242 | 신규 진입 | 제품 마스터 CRUD |
-| 15 | RegisterPage.tsx | 234 | 신규 진입 | 회원가입 페이지 |
-| 16 | AchievementPage.tsx | 219 | 신규 진입 | 달성 현황 페이지 |
-| 17 | authService.ts | 213 | 신규 진입 | 인증 서비스 |
-| 18 | Sidebar.tsx | 210 | 신규 진입 | 사이드바 네비게이션 |
-| 19 | excelParser.ts | 204 | 신규 진입 | 엑셀 파일 파싱 |
+| 순위 | 파일 | 라인 수 | 주요 책임 | 의존 파일 수 |
+|------|------|---------|-----------|-------------|
+| 1 | DataInputPage.tsx | 501 | 엑셀 업로드, 파일 처리, 데이터 삭제, 충돌 모달 | 9 |
+| 2 | SolutionBusinessDashboard.tsx | 492 | 대시보드 메인 UI, KPI, 차트, 모달 | 11 |
+| 3 | TargetInputTable.tsx | 489 | 분기별 목표 입력, 직접/퍼센트 모드, 행렬 계산 | 2 |
+| 4 | useReport.ts | 480 | 보고서 데이터 로드, 병합, 스냅샷 관리 | 6 |
+| 5 | ProductManagementPage.tsx | 421 | 제품 CRUD, 필터링, 유지보수 타입 관리 | 2 |
+| 6 | UserManagementPage.tsx | 413 | 사용자 관리, 승인/거절, 역할/부문 변경 | 4 |
+| 7 | snapshotService.ts | 408 | 스냅샷 관리, 해시 분석, 충돌 감지 | 2 |
+| 8 | DivisionManagementPage.tsx | 366 | 부문 CRUD, 삭제 확인 | 2 |
+| 9 | ConflictResolutionModal.tsx | 352 | 충돌 해결 UI, 데이터 비교 시각화 | 3 |
+| 10 | ProductReportPage.tsx | 341 | 제품 보고서, 필터, 차트 | 6 |
+| 11 | types/index.ts | 301 | 타입 정의 및 헬퍼 함수 | 0 (30+ 파일이 의존) |
+| 12 | DivisionSummaryTable.tsx | 300 | 부문별 요약 테이블 | 3 |
+| 13 | useAchievement.ts | 293 | 달성 현황 데이터 훅 | 7 |
+| 14 | DivisionCharts.tsx | 255 | 부문별 차트 (Stacked bar, Pie, Horizontal) | 4 |
+| 15 | periodUtils.ts | 244 | 기간 유틸 (분기/반기/연간) | 1 |
+| 16 | productMasterService.ts | 242 | 제품 마스터 CRUD | 1 |
+| 17 | RegisterPage.tsx | 234 | 회원가입 페이지 | 4 |
+| 18 | AchievementPage.tsx | 219 | 달성 현황 페이지 | 5 |
+| 19 | authService.ts | 213 | 인증 서비스 | 3 |
+| 20 | ProductCharts.tsx | 212 | 제품별 차트 (Bar, Pie) | 3 |
+| 21 | Sidebar.tsx | 210 | 사이드바 네비게이션 | 2 |
+| 22 | excelParser.ts | 204 | 엑셀 파일 파싱 | 1 |
+| 23 | AuthContext.tsx | 197 | 인증 컨텍스트 프로바이더 | 2 |
+| 24 | AchievementTable.tsx | 196 | 달성 현황 테이블 | 2 |
+| 25 | WeekSelector.tsx | 187 | 주차 선택기 컴포넌트 | 1 |
+| 26 | ProductReportTable.tsx | 183 | 제품 보고서 테이블 | 2 |
+| 27 | divisionExcelParser.ts | 180 | 부문별 엑셀 파싱 | 1 |
+| 28 | divisionService.ts | 177 | 부문 서비스 | 1 |
+| 29 | useDivisionReport.ts | 175 | 부문별 보고 훅 | 5 |
+| 30 | weekUtils.ts | 162 | 주차 유틸리티 | 0 |
+| 31 | reportService.ts | 155 | 보고서 서비스 | 2 |
+| 32 | DivisionReportPage.tsx | 141 | 부문별 보고서 페이지 | 5 |
+| 33 | LoginPage.tsx | 137 | 로그인 페이지 | 2 |
+| 34 | dbRepair.ts | 136 | DB 복구 유틸 | 2 |
 
 ---
 
@@ -64,23 +94,21 @@
 
 ### 1.1 목적
 - 대용량 파일(200라인 이상)을 기능 단위로 분리하여 유지보수성 향상
-- React 코드 분할(lazy loading) 적용으로 초기 로딩 시간 단축
+- React 코드 분할(lazy loading) 적용으로 초기 로딩 시간 단축 (929KB → ~400KB)
 - 커스텀 훅 분리를 통한 로직 재사용성 증가
+- 중복 코드 통합으로 일관성 확보
+- 프로덕션 환경 보안 헤더 및 규칙 강화
 
-### 1.2 대상 파일 (상위 10개)
+### 1.2 핵심 문제 요약
 
-| 순위 | 파일 | 라인 수 | 주요 책임 |
-|------|------|---------|-----------|
-| 1 | DataInputPage.tsx | 501 | 엑셀 업로드, 파일 처리, 데이터 삭제, 충돌 모달 |
-| 2 | TargetInputTable.tsx | 489 | 분기별 목표 입력, 직접/퍼센트 모드, 행렬 계산 |
-| 3 | useReport.ts | 478 | 보고서 데이터 로드, 병합, 스냅샷 관리 |
-| 4 | ProductManagementPage.tsx | 421 | 제품 CRUD, 필터링, 유지보수 타입 관리 |
-| 5 | UserManagementPage.tsx | 413 | 사용자 관리, 승인/거절, 역할/부문 변경 |
-| 6 | snapshotService.ts | 408 | 스냅샷 관리, 해시 분석, 충돌 감지 |
-| 7 | DivisionManagementPage.tsx | 366 | 부문 CRUD, 삭제 확인 |
-| 8 | ConflictResolutionModal.tsx | 352 | 충돌 해결 UI, 데이터 비교 시각화 |
-| 9 | ProductReportPage.tsx | 345 | 제품 보고서, 필터, 차트 |
-| 10 | types/index.ts | 298 | 타입 정의 및 헬퍼 함수 |
+| 영역 | 현재 상태 | 영향 |
+|------|----------|------|
+| **번들 크기** | 메인 929KB (라우트 분할 없음) | 초기 로딩 느림 |
+| **코드 분할** | React.lazy 미사용, React.memo 미사용 | 불필요한 코드/렌더링 |
+| **중복 코드** | viewMode 4곳, COLORS 4곳, showNotification 3곳, MONTH_COLORS 2곳 | 유지보수 부담 |
+| **console.log/warn** | 19개 파일에 디버깅 로그 31건 잔존 | 프로덕션 정보 노출 |
+| **보안 헤더** | CSP, Referrer-Policy, Permissions-Policy 미설정 | 보안 취약 |
+| **커플링** | formatMillionWon 12파일, useAuth 12파일, types/index.ts 30+파일 의존 | 변경 파급 효과 |
 
 ---
 
@@ -88,40 +116,196 @@
 
 ### 2.1 공통 문제점
 1. **단일 책임 원칙 위반**: 한 파일에 여러 관심사가 혼재
-2. **중복 코드**: 알림, 로딩 상태, 에러 처리 로직 반복
+2. **중복 코드**: 알림, 로딩 상태, 에러 처리, viewMode, 색상 팔레트 로직 반복
 3. **긴 컴포넌트**: JSX 렌더링과 비즈니스 로직 혼합
 4. **테스트 어려움**: 컴포넌트 내부에 로직이 밀접하게 결합
+5. **코드 분할 미적용**: 모든 페이지가 단일 번들에 포함
 
-### 2.2 파일별 분석
+### 2.2 높은 커플링 파일 (의존하는 파일이 많은 순)
+
+| 파일 | 의존하는 파일 수 | 역할 |
+|------|----------------|------|
+| `types/index.ts` | 30+ | 모든 타입 정의의 단일 진입점 |
+| `formatUtils.ts` | 12 | 금액 포맷팅 (formatMillionWon 등) |
+| `AuthContext.tsx` | 12 | useAuth() 훅 제공 |
+| `useReport.ts` | 5 | 보고서 데이터 훅 |
+
+### 2.3 파일별 분석 (상위 5개)
 
 ```
 DataInputPage.tsx (501줄)
 ├── 상태 관리: 8개 useState
 ├── 콜백 함수: 4개 (handleFileUpload, handleConflictResolve 등)
 ├── 헬퍼 함수: 3개 (showNotification, getMonthData, matchDivision)
+├── 외부 의존: 9개 프로젝트 모듈
 └── JSX: ~250줄 (업로드 섹션, 데이터 테이블, 모달)
 
+SolutionBusinessDashboard.tsx (492줄)
+├── 상태 관리: 6개 useState
+├── 계산 로직: 3개 useMemo (processedData, totals, monthlyTrend)
+├── 외부 의존: 11개 프로젝트 모듈 (가장 높은 커플링)
+├── 차트: 4개 (월별 추이, 부문별, 제품별, 모달 상세)
+└── JSX: ~300줄 (KPI, 차트 그리드, 모달)
+
 TargetInputTable.tsx (489줄)
-├── 상태 관리: 3개 useState
+├── 상태 관리: 3개 useState (matrix, ratios, mode)
 ├── 계산 로직: distributeTotal, footerTotals 등
 ├── 이벤트 핸들러: 5개
+├── 외부 의존: 2개 프로젝트 모듈 (낮은 커플링)
 └── JSX: ~200줄 (컨트롤, 퍼센트 모드, 테이블)
 
-useReport.ts (478줄)
+useReport.ts (480줄)
 ├── 상태 관리: 8개 useState
 ├── 데이터 로드: useEffect (초기 로드)
-├── 업로드 관련: saveUploadedData, mergeProducts
-├── 스냅샷 관련: loadSnapshot, refreshSnapshots, analyzeUpload
+├── 업로드 관련: saveUploadedData, mergeProducts (useCallback)
+├── 스냅샷 관련: loadSnapshot, refreshSnapshots, analyzeUpload (useCallback)
+├── 외부 의존: 6개 Firebase 서비스
 └── 개별 CRUD: addEntry, removeEntry
+
+ProductManagementPage.tsx (421줄)
+├── 상태 관리: 7개 useState
+├── CRUD 로직: 추가/수정/삭제/필터링
+├── 외부 의존: 2개 프로젝트 모듈 (낮은 커플링)
+└── JSX: ~200줄 (필터바, 추가 폼, 테이블)
 ```
 
 ---
 
-## 3. 모듈화 전략 상세
+## 3. 중복 코드 분석 (2차 정밀 분석)
 
-### 3.1 DataInputPage.tsx (501줄 -> ~150줄)
+### 3.1 viewMode 상태 관리 — 4개 파일에서 동일 패턴
 
-#### 분할 방안
+| 파일 | 라인 | 기본값 |
+|------|------|--------|
+| SolutionBusinessDashboard.tsx | 35 | `'profit'` |
+| ProductReportPage.tsx | 188 | `'sales'` |
+| AchievementPage.tsx | 29 | `'profit'` |
+| DivisionReportPage.tsx | 18 | `'sales'` |
+
+> 기존 분석(3곳)에서 **4곳**으로 확인됨. `SolutionBusinessDashboard.tsx`에도 동일 패턴 존재.
+
+### 3.2 색상 팔레트 중복 — 4개 파일
+
+| 파일 | 상수명 | 색상 수 | 비고 |
+|------|--------|---------|------|
+| ProductCharts.tsx:23-36 | `COLORS` | 12개 | blue-indigo 계열 |
+| DivisionCharts.tsx:29-40 | `COLORS` | 10개 | blue-sky 계열 (다른 세트) |
+| ProductReportPage.tsx:18-31 | `MONTH_COLORS` | 12개 | 월별 배경색 |
+| ProductReportTable.tsx:18-31 | `MONTH_COLORS` | 12개 | **완전 중복** (위와 동일) |
+
+### 3.3 showNotification 패턴 — 3개 파일에서 동일 구현
+
+```typescript
+// 동일 패턴이 3곳에서 반복됨
+const showNotification = (message: string, type: 'success' | 'error' = 'success') => {
+    setNotification({ message, type });
+    setTimeout(() => setNotification(null), 3000);
+};
+```
+
+| 파일 | 위치 |
+|------|------|
+| TargetInputPage.tsx | 상단 |
+| UserManagementPage.tsx | 38-41 |
+| DataInputPage.tsx | 내부 |
+
+### 3.4 KPI 카드 구조 — 2개 페이지에서 동일 마크업
+
+- ProductReportPage.tsx (215-236)
+- DivisionReportPage.tsx (103-128)
+
+### 3.5 차트 viewMode 분기 로직 — 3개 차트 파일
+
+| 파일 | 반복 로직 |
+|------|-----------|
+| ProductCharts.tsx | `viewMode === 'sales' ? md.sales : md.profit` |
+| DivisionCharts.tsx | `viewMode === 'sales' ? pd?.sales : (pd?.sales - pd?.cost)` |
+| AchievementCharts.tsx | `isSalesMode ? a.actualSales : a.actualProfit` |
+
+---
+
+## 4. 성능 최적화 분석
+
+### 4.1 현재 성능 현황
+
+#### useMemo/useCallback — 양호 (18개 파일에서 활용)
+
+| 파일 | 패턴 | 평가 |
+|------|------|------|
+| SolutionBusinessDashboard.tsx:74-211 | useMemo 3개 (processedData, totals, monthlyTrend) | ✅ 적절 |
+| useAchievement.ts:119-273 | useMemo 3개 (divisionActuals, achievements, overall) | ✅ 적절 |
+| useReport.ts:244-451 | useCallback 6개 (save, add, remove, snapshot ops) | ✅ 적절 |
+| AuthContext.tsx:88-137 | useCallback 3개 (login, register, logout) | ✅ 적절 |
+| ProductCharts.tsx:43-76 | useMemo 1개 (차트 데이터 변환) | ✅ 적절 |
+
+#### React.lazy — 미사용 ⚠️
+
+- `src/router.tsx`에서 모든 10개 페이지를 **정적 import**
+- 관리자 페이지 4개 + 보고서 페이지 3개 = **7개 페이지를 lazy load 가능**
+- 예상 메인 번들 감소: 929KB → ~400KB (57% 감소)
+
+#### React.memo — 미사용 ⚠️
+
+- **대상 컴포넌트** (props 기반 렌더링, 부모 리렌더링 시 불필요한 재렌더링 가능):
+  - `ProductCharts`, `DivisionCharts`, `AchievementCharts`
+  - `ProductReportTable`, `DivisionSummaryTable`, `AchievementTable`
+  - `TargetInputTable` 내부의 행 컴포넌트 (분할 시)
+  - `ViewToggle`, `Modal`, `ChartWrapper`
+
+### 4.2 번들 분석
+
+```
+현재 Vite 청크 분할 설정:
+├── vendor-excel: exceljs (937 KB) — 동적 import로 분리됨 ✅
+├── vendor-charts: recharts + d3 (396 KB) — 별도 청크 ✅
+└── index: 나머지 전부 (929 KB) — 분할 필요 ⚠️
+
+문제:
+- 모든 페이지 컴포넌트가 index 청크에 포함
+- 관리자 전용 페이지 (4개, ~1,600줄)도 일반 사용자에게 전송
+- 보고서 페이지 (3개, ~700줄)도 대시보드만 보는 사용자에게 전송
+```
+
+### 4.3 React.lazy 적용 계획
+
+```typescript
+// src/router.tsx — 개선안
+import { lazy, Suspense } from 'react';
+import { LoadingSpinner } from '@/components/error';
+
+// 항상 로드 (초기 화면)
+import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
+import SolutionBusinessDashboard from './components/SolutionBusinessDashboard';
+
+// Lazy load — 일반 사용자 페이지
+const DataInputPage = lazy(() => import('./pages/DataInputPage'));
+const ProductReportPage = lazy(() => import('./pages/ProductReportPage'));
+const DivisionReportPage = lazy(() => import('./pages/DivisionReportPage'));
+const AchievementPage = lazy(() => import('./pages/AchievementPage'));
+
+// Lazy load — 관리자 전용 페이지
+const DivisionManagementPage = lazy(() => import('./pages/admin/DivisionManagementPage'));
+const ProductManagementPage = lazy(() => import('./pages/admin/ProductManagementPage'));
+const UserManagementPage = lazy(() => import('./pages/admin/UserManagementPage'));
+const TargetInputPage = lazy(() => import('./pages/admin/TargetInputPage'));
+```
+
+### 4.4 예상 번들 크기 변화
+
+| 청크 | 현재 | 개선 후 | 로드 시점 |
+|------|------|---------|----------|
+| **메인 (index)** | 929 KB | ~350 KB | 항상 |
+| **일반 페이지 chunk** | - | ~200 KB | 해당 페이지 접근 시 |
+| **관리자 chunk** | - | ~250 KB | 관리자 페이지 접근 시 |
+| **차트 벤더** | 396 KB | 396 KB | 변경 없음 |
+| **엑셀 벤더** | 937 KB | 937 KB | 엑셀 파싱 시 (이미 동적) |
+
+---
+
+## 5. 모듈화 전략 상세
+
+### 5.1 DataInputPage.tsx (501줄 → ~150줄)
 
 ```
 src/pages/DataInputPage.tsx (150줄 - 메인 페이지)
@@ -139,32 +323,24 @@ src/pages/DataInputPage.tsx (150줄 - 메인 페이지)
 │   └── index.ts
 ```
 
-#### 상세 분할 내용
+### 5.2 SolutionBusinessDashboard.tsx (492줄 → ~150줄)
 
-**useDataInput.ts** (신규)
-```typescript
-// 포함될 기능:
-- useState 선언들 (notification, fileInputRef, isUploading, uploadType, mergeMode 등)
-- showNotification 함수
-- handleFileUpload 콜백
-- handleConflictResolve 콜백
-- handleDelete 콜백
+```
+src/components/SolutionBusinessDashboard.tsx (150줄 - 메인 대시보드)
+├── src/features/dashboard/
+│   ├── hooks/
+│   │   └── useDashboardData.ts (80줄)        # processedData, totals, monthlyTrend
+│   ├── components/
+│   │   ├── DashboardKPICards.tsx (80줄)       # KPI 카드 그리드
+│   │   ├── MonthlyTrendChart.tsx (60줄)       # 월별 매출 추이
+│   │   ├── DivisionOverviewChart.tsx (60줄)   # 부문별 개요
+│   │   ├── TopProductsChart.tsx (60줄)        # 제품별 순위
+│   │   ├── DivisionDetailModal.tsx (80줄)     # 부문 상세 모달
+│   │   └── index.ts
+│   └── index.ts
 ```
 
-**FileUploadSection.tsx** (신규)
-```typescript
-// 포함될 기능:
-- 드래그 앤 드롭 영역 UI
-- 업로드 타입 토글 (제품별/부문별)
-- 파일 입력 참조 관리
-- 업로드 진행 표시
-```
-
----
-
-### 3.2 TargetInputTable.tsx (489줄 -> ~120줄)
-
-#### 분할 방안
+### 5.3 TargetInputTable.tsx (489줄 → ~120줄)
 
 ```
 src/components/targets/TargetInputTable.tsx (120줄 - 메인 컴포넌트)
@@ -174,8 +350,7 @@ src/components/targets/TargetInputTable.tsx (120줄 - 메인 컴포넌트)
 │   ├── components/
 │   │   ├── TargetInputControls.tsx (80줄)  # 모드 토글 + 비율 입력
 │   │   ├── AnnualTargetInputs.tsx (70줄)   # 연간 목표 입력 그리드
-│   │   ├── TargetTableHeader.tsx (40줄)    # 테이블 헤더
-│   │   ├── TargetTableRow.tsx (60줄)       # 테이블 행 (입력 셀)
+│   │   ├── TargetTableRow.tsx (60줄)       # 테이블 행 (React.memo 적용)
 │   │   ├── TargetTableFooter.tsx (40줄)    # 합계 행
 │   │   └── index.ts
 │   ├── utils/
@@ -183,37 +358,10 @@ src/components/targets/TargetInputTable.tsx (120줄 - 메인 컴포넌트)
 │   └── constants.ts (10줄)                  # QUARTERS, 기본 비율
 ```
 
-#### 상세 분할 내용
-
-**useTargetMatrix.ts** (신규)
-```typescript
-// 포함될 기능:
-- matrix 상태 관리 (useState<Record<CellKey, CellValue>>)
-- ratios 상태 관리
-- mode 상태 관리
-- handleRatioChange
-- handleTotalChange
-- handleChange
-- hasChanges (useMemo)
-- footerTotals (useMemo)
-```
-
-**targetCalculations.ts** (신규)
-```typescript
-// 포함될 함수:
-export function cellKey(divisionId: string, quarter: Quarter): string
-export function distributeTotal(...)
-export function calculateFooterTotals(...)
-```
-
----
-
-### 3.3 useReport.ts (478줄 -> ~150줄)
-
-#### 분할 방안
+### 5.4 useReport.ts (480줄 → ~150줄)
 
 ```
-src/hooks/useReport.ts (150줄 - 메인 훅)
+src/hooks/useReport.ts (150줄 - 메인 훅, 통합 인터페이스)
 ├── src/hooks/report/
 │   ├── useReportData.ts (80줄)            # 데이터 로드 + 상태
 │   ├── useReportUpload.ts (100줄)         # 업로드 + 저장 로직
@@ -222,81 +370,42 @@ src/hooks/useReport.ts (150줄 - 메인 훅)
 │       └── mergeProducts.ts (50줄)        # 제품 병합 유틸리티
 ```
 
-#### 상세 분할 내용
+### 5.5 Admin 페이지 분할
 
-**useReportData.ts** (신규)
-```typescript
-// 포함될 기능:
-- data, months, monthLabels 상태
-- isLoading, error 상태
-- 초기 로드 useEffect
-- loadLatest 함수
-```
-
-**useReportUpload.ts** (신규)
-```typescript
-// 포함될 기능:
-- saveUploadedData
-- addEntry
-- removeEntry
-- isSaving 상태
-```
-
-**useReportSnapshots.ts** (신규)
-```typescript
-// 포함될 기능:
-- currentWeekKey, availableSnapshots, selectedSnapshot 상태
-- analyzeUpload
-- saveWithConflictResolution
-- loadSnapshot
-- refreshSnapshots
-```
-
----
-
-### 3.4 Admin 페이지 분할
-
-#### ProductManagementPage.tsx (421줄 -> ~100줄)
+#### ProductManagementPage.tsx (421줄 → ~100줄)
 
 ```
-src/pages/admin/ProductManagementPage.tsx (100줄 - 메인 페이지)
+src/pages/admin/ProductManagementPage.tsx (100줄)
 ├── src/features/productManagement/
-│   ├── hooks/
-│   │   └── useProductManagement.ts (100줄)  # CRUD 상태 + 로직
+│   ├── hooks/useProductManagement.ts (100줄)
 │   ├── components/
-│   │   ├── ProductFilterBar.tsx (50줄)      # 필터 + 추가 버튼
-│   │   ├── ProductAddForm.tsx (60줄)        # 추가 폼
-│   │   ├── ProductTable.tsx (80줄)          # 테이블
-│   │   ├── ProductTableRow.tsx (60줄)       # 행 (편집/일반 모드)
-│   │   └── DeleteConfirmModal.tsx (50줄)    # 삭제 확인 모달
+│   │   ├── ProductFilterBar.tsx (50줄)
+│   │   ├── ProductAddForm.tsx (60줄)
+│   │   ├── ProductTable.tsx (80줄)
+│   │   ├── ProductTableRow.tsx (60줄)
+│   │   └── DeleteConfirmModal.tsx (50줄)
 │   └── index.ts
 ```
 
-#### UserManagementPage.tsx (413줄 -> ~100줄)
+#### UserManagementPage.tsx (413줄 → ~100줄)
 
 ```
-src/pages/admin/UserManagementPage.tsx (100줄 - 메인 페이지)
+src/pages/admin/UserManagementPage.tsx (100줄)
 ├── src/features/userManagement/
-│   ├── hooks/
-│   │   └── useUserManagement.ts (100줄)     # 사용자 관리 로직
+│   ├── hooks/useUserManagement.ts (100줄)
 │   ├── components/
-│   │   ├── UserFilterBar.tsx (50줄)         # 상태/부문 필터
-│   │   ├── UserTable.tsx (80줄)             # 테이블
-│   │   ├── UserTableRow.tsx (80줄)          # 행 (승인/역할 버튼)
-│   │   ├── StatusBadge.tsx (30줄)           # 상태 배지 컴포넌트
-│   │   └── RoleBadge.tsx (20줄)             # 역할 배지 컴포넌트
+│   │   ├── UserFilterBar.tsx (50줄)
+│   │   ├── UserTable.tsx (80줄)
+│   │   ├── UserTableRow.tsx (80줄)
+│   │   └── StatusBadge.tsx (30줄)
 │   └── index.ts
 ```
 
----
-
-### 3.5 types/index.ts (298줄 -> 도메인별 분리)
-
-#### 분할 방안
+### 5.6 types/index.ts (301줄 → 도메인별 분리)
 
 ```
 src/types/
-├── index.ts (30줄 - re-export)
+├── index.ts (30줄 - re-export만)
 ├── core.ts (50줄)                    # MonthData, ProductData, ParseResult 등
 ├── user.ts (40줄)                    # UserProfile, UserRole, AuthState 등
 ├── division.ts (30줄)                # Division, DivisionSummary 등
@@ -306,374 +415,64 @@ src/types/
 └── helpers.ts (20줄)                 # getMonthShortLabel, getMonthFullLabel 등
 ```
 
+> **중요**: `index.ts`에서 모든 타입을 re-export하여 기존 `import { ... } from '@/types'` 구문 호환성 유지.
+
 ---
 
-## 4. 성능 최적화 기법
+## 6. 중복 제거 전략
 
-### 4.1 React.lazy를 활용한 라우트 기반 코드 분할
+### 6.1 `colors.ts` 상수 중앙화
 
-**router.tsx 개선안**
 ```typescript
-import { lazy, Suspense } from 'react';
-import { createBrowserRouter } from 'react-router-dom';
-import { LoadingSpinner } from '@/components/error';
+// src/constants/colors.ts
+export const CHART_COLORS = [
+    '#3b82f6', '#6366f1', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899',
+    '#06b6d4', '#1d4ed8', '#4338ca', '#059669', '#d97706', '#7c3aed',
+] as const;
 
-// Lazy load 적용 대상 페이지
-const DataInputPage = lazy(() => import('./pages/DataInputPage'));
-const ProductReportPage = lazy(() => import('./pages/ProductReportPage'));
-const AchievementPage = lazy(() => import('./pages/AchievementPage'));
+export const DIVISION_COLORS = [
+    '#2563eb', '#0ea5e9', '#6366f1', '#06b6d4', '#1d4ed8',
+    '#0284c7', '#4f46e5', '#0891b2', '#60a5fa', '#818cf8',
+] as const;
 
-// 관리자 전용 페이지 (더 늦게 로드)
-const DivisionManagementPage = lazy(() =>
-  import('./pages/admin/DivisionManagementPage')
-);
-const ProductManagementPage = lazy(() =>
-  import('./pages/admin/ProductManagementPage')
-);
-const UserManagementPage = lazy(() =>
-  import('./pages/admin/UserManagementPage')
-);
-const TargetInputPage = lazy(() =>
-  import('./pages/admin/TargetInputPage')
-);
+export const MONTH_BACKGROUND_COLORS = [
+    'bg-red-50', 'bg-orange-50', 'bg-amber-50', 'bg-yellow-50',
+    'bg-lime-50', 'bg-green-50', 'bg-emerald-50', 'bg-teal-50',
+    'bg-cyan-50', 'bg-sky-50', 'bg-blue-50', 'bg-indigo-50',
+] as const;
 
-// Suspense wrapper 컴포넌트
-function LazyRoute({ children }: { children: React.ReactNode }) {
-  return (
-    <Suspense fallback={<LoadingSpinner size="lg" message="페이지 로딩 중..." />}>
-      {children}
-    </Suspense>
-  );
+export const METRIC_COLORS = {
+    sales: { primary: 'indigo-600', border: 'indigo-200', ring: 'indigo-100' },
+    profit: { primary: 'emerald-600', border: 'emerald-200', ring: 'emerald-100' },
+} as const;
+```
+
+**영향**: ProductCharts.tsx, DivisionCharts.tsx, ProductReportPage.tsx, ProductReportTable.tsx (4개 파일)
+
+### 6.2 `useNotification` 커스텀 훅
+
+```typescript
+// src/hooks/useNotification.ts
+interface Notification { message: string; type: 'success' | 'error'; }
+
+export function useNotification(duration = 3000) {
+    const [notification, setNotification] = useState<Notification | null>(null);
+
+    const show = useCallback((message: string, type: 'success' | 'error' = 'success') => {
+        setNotification({ message, type });
+        setTimeout(() => setNotification(null), duration);
+    }, [duration]);
+
+    return { notification, showNotification: show };
 }
 ```
 
-### 4.2 컴포넌트 레벨 lazy loading
+**영향**: TargetInputPage.tsx, UserManagementPage.tsx, DataInputPage.tsx (3개 파일)
 
-```typescript
-// 대용량 차트 컴포넌트 지연 로딩
-const ProductCharts = lazy(() =>
-  import('@/components/reports/ProductCharts')
-);
+### 6.3 `ViewModeToggle` 컴포넌트 + `useViewMode` 훅
 
-// 사용 시
-<Suspense fallback={<ChartSkeleton />}>
-  <ProductCharts items={processedData} months={months} viewMode={viewMode} />
-</Suspense>
-```
-
-### 4.3 useMemo/useCallback 최적화
-
-```typescript
-// 메모이제이션이 필요한 계산들
-const footerTotals = useMemo(() => {
-  const totals = { sales: { Q1: 0, Q2: 0, Q3: 0, Q4: 0, Total: 0 }, ... };
-  // 계산 로직
-  return totals;
-}, [matrix, divisions]);
-
-// 콜백 메모이제이션
-const handleRatioChange = useCallback((index: number, value: string) => {
-  // 로직
-}, [matrix, divisions, ratios]);
-```
-
-### 4.4 React.memo를 활용한 렌더링 최적화
-
-```typescript
-// TargetTableRow.tsx
-import { memo } from 'react';
-
-interface TargetTableRowProps {
-  division: Division;
-  quarters: Quarter[];
-  matrix: Record<CellKey, CellValue>;
-  mode: InputMode;
-  onChange: (key: CellKey, field: string, value: string) => void;
-}
-
-export const TargetTableRow = memo(function TargetTableRow({
-  division,
-  quarters,
-  matrix,
-  mode,
-  onChange,
-}: TargetTableRowProps) {
-  // 렌더링 로직
-});
-```
-
-### 4.5 동적 import를 활용한 라이브러리 분할
-
-```typescript
-// excelParser.ts (이미 적용됨)
-export async function parseExcelFile(buffer: ArrayBuffer): Promise<ParseResult> {
-  const ExcelJS = await import('exceljs'); // 동적 import
-  // ...
-}
-
-// 차트 라이브러리 최적화 (추가 권장)
-export const LazyBarChart = lazy(async () => {
-  const { BarChart } = await import('recharts');
-  return { default: BarChart };
-});
-```
-
----
-
-## 5. 예상 효과
-
-### 5.1 번들 크기 감소
-
-| 항목 | 현재 | 개선 후 | 감소율 |
-|------|------|---------|--------|
-| 초기 로드 JS | ~850KB | ~400KB | 53% |
-| 관리자 페이지 chunk | - | ~200KB | lazy load |
-| 보고서 페이지 chunk | - | ~150KB | lazy load |
-
-### 5.2 로딩 시간 개선
-
-| 항목 | 현재 (예상) | 개선 후 | 개선율 |
-|------|-------------|---------|--------|
-| FCP (First Contentful Paint) | 1.8s | 1.0s | 44% |
-| TTI (Time to Interactive) | 3.2s | 1.8s | 44% |
-| 라우트 전환 | 200ms | 50ms | 75% |
-
-### 5.3 개발 생산성 향상
-
-- **코드 탐색 시간**: 파일당 평균 500줄 -> 100줄 (80% 감소)
-- **테스트 용이성**: 독립된 훅/유틸리티로 단위 테스트 가능
-- **병렬 개발**: 기능별 분리로 충돌 최소화
-- **재사용성**: 공통 컴포넌트/훅의 다른 페이지 활용
-
----
-
-## 6. 우선순위별 리팩토링 순서
-
-### Phase 1: 핵심 인프라 (1-2주)
-
-| 우선순위 | 파일 | 이유 | 예상 시간 |
-|----------|------|------|-----------|
-| 1 | types/index.ts | 다른 모든 파일이 의존, 선행 필수 | 4시간 |
-| 2 | useReport.ts | 핵심 데이터 훅, 많은 페이지에서 사용 | 8시간 |
-| 3 | snapshotService.ts | useReport와 밀접하게 연관 | 6시간 |
-
-### Phase 2: 데이터 입력 기능 (1주)
-
-| 우선순위 | 파일 | 이유 | 예상 시간 |
-|----------|------|------|-----------|
-| 4 | DataInputPage.tsx | 가장 복잡한 페이지, 사용 빈도 높음 | 8시간 |
-| 5 | ConflictResolutionModal.tsx | DataInputPage와 연관 | 4시간 |
-| 6 | excelParser.ts | 업로드 기능의 핵심 | 3시간 |
-
-### Phase 3: 관리자 페이지 (1주)
-
-| 우선순위 | 파일 | 이유 | 예상 시간 |
-|----------|------|------|-----------|
-| 7 | TargetInputTable.tsx | 복잡한 행렬 계산 로직 | 6시간 |
-| 8 | UserManagementPage.tsx | 패턴 유사, 재사용 가능 | 4시간 |
-| 9 | ProductManagementPage.tsx | 패턴 유사 | 4시간 |
-| 10 | DivisionManagementPage.tsx | 가장 단순한 관리 페이지 | 3시간 |
-
-### Phase 4: 보고서 기능 (1주)
-
-| 우선순위 | 파일 | 이유 | 예상 시간 |
-|----------|------|------|-----------|
-| 11 | ProductReportPage.tsx | 차트와 테이블 복합 | 4시간 |
-| 12 | AchievementPage.tsx | 달성 현황 페이지 | 3시간 |
-| 13 | useAchievement.ts | 달성 계산 로직 | 4시간 |
-| 14 | AchievementCharts.tsx | 차트 컴포넌트 | 2시간 |
-
----
-
-## 7. 최종 디렉토리 구조
-
-```
-src/
-├── components/
-│   ├── achievement/
-│   │   ├── AchievementCharts.tsx
-│   │   ├── AchievementTable.tsx
-│   │   └── index.ts
-│   ├── charts/
-│   │   ├── ChartWrapper.tsx
-│   │   ├── LazyCharts.tsx (신규)
-│   │   └── index.ts
-│   ├── targets/
-│   │   ├── TargetInputTable.tsx (축소됨)
-│   │   ├── hooks/
-│   │   │   └── useTargetMatrix.ts (신규)
-│   │   ├── components/
-│   │   │   ├── TargetInputControls.tsx (신규)
-│   │   │   ├── AnnualTargetInputs.tsx (신규)
-│   │   │   ├── TargetTableHeader.tsx (신규)
-│   │   │   ├── TargetTableRow.tsx (신규)
-│   │   │   └── TargetTableFooter.tsx (신규)
-│   │   ├── utils/
-│   │   │   └── targetCalculations.ts (신규)
-│   │   └── index.ts
-│   └── upload/
-│       ├── ConflictResolutionModal.tsx (축소됨)
-│       ├── conflict/
-│       │   ├── ConflictSummary.tsx (신규)
-│       │   ├── ConflictItem.tsx (신규)
-│       │   └── ConflictActions.tsx (신규)
-│       └── index.ts
-├── features/
-│   ├── dataInput/
-│   │   ├── hooks/
-│   │   │   └── useDataInput.ts (신규)
-│   │   ├── components/
-│   │   │   ├── FileUploadSection.tsx (신규)
-│   │   │   ├── MergeModeSelector.tsx (신규)
-│   │   │   ├── DataManagementTools.tsx (신규)
-│   │   │   └── DataListTable.tsx (신규)
-│   │   ├── utils/
-│   │   │   └── divisionMatcher.ts (신규)
-│   │   └── index.ts
-│   ├── productManagement/
-│   │   ├── hooks/
-│   │   │   └── useProductManagement.ts (신규)
-│   │   ├── components/
-│   │   │   ├── ProductFilterBar.tsx (신규)
-│   │   │   ├── ProductAddForm.tsx (신규)
-│   │   │   ├── ProductTable.tsx (신규)
-│   │   │   └── ProductTableRow.tsx (신규)
-│   │   └── index.ts
-│   └── userManagement/
-│       ├── hooks/
-│       │   └── useUserManagement.ts (신규)
-│       ├── components/
-│       │   ├── UserFilterBar.tsx (신규)
-│       │   ├── UserTable.tsx (신규)
-│       │   ├── UserTableRow.tsx (신규)
-│       │   └── StatusBadge.tsx (신규)
-│       └── index.ts
-├── hooks/
-│   ├── report/
-│   │   ├── useReportData.ts (신규)
-│   │   ├── useReportUpload.ts (신규)
-│   │   ├── useReportSnapshots.ts (신규)
-│   │   └── utils/
-│   │       └── mergeProducts.ts (신규)
-│   └── useReport.ts (축소됨)
-├── pages/
-│   ├── admin/
-│   │   ├── DivisionManagementPage.tsx (축소됨)
-│   │   ├── ProductManagementPage.tsx (축소됨)
-│   │   ├── TargetInputPage.tsx
-│   │   └── UserManagementPage.tsx (축소됨)
-│   ├── DataInputPage.tsx (축소됨)
-│   └── ProductReportPage.tsx (축소됨)
-├── types/
-│   ├── index.ts (re-export만)
-│   ├── core.ts (신규)
-│   ├── user.ts (신규)
-│   ├── division.ts (신규)
-│   ├── target.ts (신규)
-│   ├── snapshot.ts (신규)
-│   ├── report.ts (신규)
-│   └── helpers.ts (신규)
-└── utils/
-    ├── excelParser.ts
-    ├── formatUtils.ts
-    └── hashUtils.ts
-```
-
----
-
-## 8. 결론
-
-### 8.1 요약
-
-- **총 10개 대용량 파일** 모듈화 대상
-- **약 50개 신규 파일** 생성 예정
-- **평균 파일 크기**: 500줄 -> 100줄 (80% 감소)
-- **예상 작업 기간**: 4주 (Phase 1-4)
-
-### 8.2 기대 효과
-
-1. **유지보수성**: 단일 책임 원칙 준수, 코드 탐색 용이
-2. **성능**: 초기 로딩 53% 감소, 라우트 전환 75% 개선
-3. **테스트**: 독립된 훅/유틸리티로 단위 테스트 가능
-4. **협업**: 기능별 분리로 병렬 개발 가능
-
----
-
-## 9. 보고서 페이지 간 중복 코드 분석 및 모듈화 방안
-
-### 9.1 개요
-
-제품별 보고서(ProductReportPage), 부문별 보고서(DivisionReportPage), 달성 현황(AchievementPage) 페이지에서 동일한 기능이 개별적으로 구현되어 있어 모듈화가 필요합니다.
-
-### 9.2 발견된 중복 패턴
-
-#### 패턴 1: viewMode 상태 관리 (3개 페이지 동일)
-
-| 파일 | 라인 | 코드 |
-|------|------|------|
-| ProductReportPage.tsx | 159 | `useState<'sales' \| 'profit'>('sales')` |
-| DivisionReportPage.tsx | 28 | `useState<'sales' \| 'profit'>('sales')` |
-| AchievementPage.tsx | 28 | `useState<'sales' \| 'profit'>('sales')` |
-
-#### 패턴 2: 매출액/매출이익 토글 버튼 UI (3개 페이지 거의 동일)
-
-**ProductReportPage.tsx (Line 170-190)**
-```tsx
-<div className="flex bg-slate-100 p-1 rounded-lg">
-    <button onClick={() => setViewMode('sales')}
-        className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${
-            viewMode === 'sales' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-        }`}>
-        매출액 보기
-    </button>
-    <button onClick={() => setViewMode('profit')}
-        className={`px-4 py-1.5 text-sm font-medium rounded-md transition-all ${
-            viewMode === 'profit' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'
-        }`}>
-        매출이익 보기
-    </button>
-</div>
-```
-
-**DivisionReportPage.tsx (Line 48-68)** - 위와 동일한 구조
-
-**AchievementPage.tsx (Line 107-128)** - 아이콘 추가된 약간 다른 버전
-
-#### 패턴 3: KPI 카드 구조 (2개 페이지 동일)
-
-**ProductReportPage.tsx (Line 215-236)**, **DivisionReportPage.tsx (Line 103-128)**
-```tsx
-<div className="grid grid-cols-1 md:grid-cols-3 gap-4 print-avoid-break">
-    <div className={`bg-white p-6 rounded-xl shadow-sm border transition-all ${
-        viewMode === 'sales' ? 'border-indigo-200 ring-1 ring-indigo-100' : 'border-slate-200'
-    }`}>
-        <p className="text-sm text-slate-500 mb-1">총 매출액 (백만원)</p>
-        <p className="text-2xl font-bold text-slate-900">{formatMillionWon(totals.totalSales)}</p>
-    </div>
-    <!-- 매출이익, 이익률 카드 동일 구조 -->
-</div>
-```
-
-#### 패턴 4: 차트 컴포넌트의 viewMode 기반 데이터 변환
-
-| 파일 | 반복 로직 |
-|------|-----------|
-| ProductCharts.tsx | `viewMode === 'sales' ? md.sales : md.profit` |
-| DivisionCharts.tsx | `viewMode === 'sales' ? pd?.sales : (pd?.sales - pd?.cost)` |
-| AchievementCharts.tsx | `isSalesMode ? a.actualSales : a.actualProfit` |
-
-#### 패턴 5: 색상 팔레트 중복 정의 (4개 파일)
-
-| 파일 | 색상 수 | 비고 |
-|------|---------|------|
-| ProductCharts.tsx (Line 23-36) | 12개 | 가장 완전한 버전 |
-| DivisionCharts.tsx (Line 25-36) | 10개 | 일부 누락 |
-| AchievementCharts.tsx (Line 22-25) | 3개 | 다른 색상 세트 |
-| ProductReportPage.tsx (Line 17-30) | 12개 | 월별 배경색 팔레트 |
-
-### 9.3 모듈화 방안
-
-#### 방안 1: `useViewMode` 커스텀 훅 생성
+> 이미 `src/components/ui/ViewToggle.tsx` (35줄)가 존재하나, 4개 페이지 중 일부만 사용.
+> 기존 `ViewToggle`을 확장하고 모든 페이지에서 통일하여 사용.
 
 ```typescript
 // src/hooks/useViewMode.ts
@@ -681,66 +480,14 @@ export type ViewMode = 'sales' | 'profit';
 
 export function useViewMode(defaultMode: ViewMode = 'sales') {
     const [viewMode, setViewMode] = useState<ViewMode>(defaultMode);
-
     const isSalesMode = viewMode === 'sales';
-    const isProfitMode = viewMode === 'profit';
-
-    const getMetricLabel = () => isSalesMode ? '매출액' : '매출이익';
-    const getMetricColor = () => isSalesMode ? 'indigo' : 'emerald';
-
-    return {
-        viewMode,
-        setViewMode,
-        isSalesMode,
-        isProfitMode,
-        getMetricLabel,
-        getMetricColor,
-    };
+    return { viewMode, setViewMode, isSalesMode, isProfitMode: !isSalesMode };
 }
 ```
 
-#### 방안 2: `ViewModeToggle` 공통 컴포넌트 생성
+**영향**: SolutionBusinessDashboard.tsx, ProductReportPage.tsx, AchievementPage.tsx, DivisionReportPage.tsx (4개 파일)
 
-```typescript
-// src/components/common/ViewModeToggle.tsx
-interface ViewModeToggleProps {
-    viewMode: 'sales' | 'profit';
-    onModeChange: (mode: 'sales' | 'profit') => void;
-    showIcons?: boolean;
-    size?: 'sm' | 'md' | 'lg';
-}
-
-export function ViewModeToggle({ viewMode, onModeChange, showIcons = false, size = 'md' }: ViewModeToggleProps) {
-    return (
-        <div className="flex bg-slate-100 p-1 rounded-lg">
-            <button
-                onClick={() => onModeChange('sales')}
-                className={`flex items-center gap-2 px-4 py-1.5 text-sm font-medium rounded-md transition-all ${
-                    viewMode === 'sales'
-                        ? 'bg-white text-indigo-600 shadow-sm'
-                        : 'text-slate-500 hover:text-slate-700'
-                }`}
-            >
-                {showIcons && <DollarSign className="w-4 h-4" />}
-                매출액 보기
-            </button>
-            <button
-                onClick={() => onModeChange('profit')}
-                className={`flex items-center gap-2 px-4 py-1.5 text-sm font-medium rounded-md transition-all ${
-                    viewMode === 'profit'
-                        ? 'bg-white text-emerald-600 shadow-sm'
-                        : 'text-slate-500 hover:text-slate-700'
-                }`}
-            >
-                {showIcons && <TrendingUp className="w-4 h-4" />}
-                매출이익 보기
-            </button>
-        </div>
-    );
-}
-```
-
-#### 방안 3: `KPICardGrid` 공통 컴포넌트 생성
+### 6.4 `KPICardGrid` 공통 컴포넌트
 
 ```typescript
 // src/components/common/KPICardGrid.tsx
@@ -751,106 +498,91 @@ interface KPICardData {
     color?: 'default' | 'indigo' | 'emerald';
 }
 
-interface KPICardGridProps {
-    cards: KPICardData[];
-    columns?: 2 | 3 | 4;
-}
-
-export function KPICardGrid({ cards, columns = 3 }: KPICardGridProps) {
+export function KPICardGrid({ cards, columns = 3 }: { cards: KPICardData[]; columns?: 2 | 3 | 4 }) {
     return (
         <div className={`grid grid-cols-1 md:grid-cols-${columns} gap-4 print-avoid-break`}>
-            {cards.map((card, index) => (
-                <KPICard key={index} {...card} />
-            ))}
+            {cards.map((card, i) => <KPICard key={i} {...card} />)}
         </div>
     );
 }
 ```
 
-#### 방안 4: 색상 상수 중앙화
+**영향**: ProductReportPage.tsx, DivisionReportPage.tsx (2개 파일)
 
-```typescript
-// src/constants/colors.ts
-export const CHART_COLORS = {
-    primary: ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'],
-    extended: ['#f97316', '#ec4899', '#84cc16', '#14b8a6', '#3b82f6', '#f43f5e'],
-} as const;
+### 6.5 중복 제거 요약
 
-export const METRIC_COLORS = {
-    sales: { primary: 'indigo-600', border: 'indigo-200', ring: 'indigo-100' },
-    profit: { primary: 'emerald-600', border: 'emerald-200', ring: 'emerald-100' },
-} as const;
-
-export const MONTH_BACKGROUND_COLORS = [
-    'bg-red-50', 'bg-orange-50', 'bg-amber-50', 'bg-yellow-50',
-    'bg-lime-50', 'bg-green-50', 'bg-emerald-50', 'bg-teal-50',
-    'bg-cyan-50', 'bg-sky-50', 'bg-blue-50', 'bg-indigo-50'
-] as const;
-```
-
-#### 방안 5: `useMetricData` 훅으로 데이터 변환 통합
-
-```typescript
-// src/hooks/useMetricData.ts
-export function useMetricData<T>(
-    data: T[],
-    viewMode: 'sales' | 'profit',
-    getSalesValue: (item: T) => number,
-    getProfitValue: (item: T) => number
-) {
-    return useMemo(() => {
-        return data.map(item => ({
-            ...item,
-            displayValue: viewMode === 'sales' ? getSalesValue(item) : getProfitValue(item)
-        }));
-    }, [data, viewMode]);
-}
-```
-
-### 9.4 우선순위별 적용 순서
-
-| 우선순위 | 작업 | 영향 범위 | 예상 시간 |
-|----------|------|-----------|-----------|
-| 1 | `colors.ts` 상수 파일 생성 | 4개 파일 | 1시간 |
-| 2 | `ViewModeToggle` 컴포넌트 | 3개 페이지 | 2시간 |
-| 3 | `useViewMode` 훅 생성 | 3개 페이지 | 1시간 |
-| 4 | `KPICardGrid` 컴포넌트 | 2개 페이지 | 2시간 |
-| 5 | 차트 컴포넌트 viewMode 로직 통합 | 3개 차트 | 3시간 |
-
-### 9.5 모듈화 후 예상 구조
-
-```
-src/
-├── components/
-│   └── common/
-│       ├── ViewModeToggle.tsx (신규)
-│       ├── KPICard.tsx (신규)
-│       ├── KPICardGrid.tsx (신규)
-│       └── index.ts
-├── constants/
-│   ├── colors.ts (신규)
-│   └── index.ts
-├── hooks/
-│   ├── useViewMode.ts (신규)
-│   ├── useMetricData.ts (신규)
-│   └── index.ts
-```
-
-### 9.6 기대 효과
-
-1. **코드 중복 제거**: 약 300줄의 중복 코드 제거
-2. **일관성 향상**: 모든 보고서 페이지에서 동일한 UI/UX 보장
-3. **유지보수 용이**: 스타일/로직 변경 시 한 곳만 수정
-4. **개발 속도 향상**: 신규 보고서 페이지 추가 시 재사용 가능
+| 항목 | 영향 파일 수 | 제거 라인 (추정) | 신규 파일 |
+|------|-------------|-----------------|----------|
+| colors.ts 상수 중앙화 | 4 | ~60줄 | 1 |
+| useNotification 훅 | 3 | ~30줄 | 1 |
+| useViewMode 훅 | 4 | ~40줄 | 1 |
+| KPICardGrid 컴포넌트 | 2 | ~60줄 | 1 |
+| MONTH_COLORS 통합 | 2 | ~15줄 | 0 (colors.ts에 포함) |
+| **합계** | - | **~205줄** | 4 |
 
 ---
 
-## 10. 보안 현황 분석 및 강화 방안
+## 7. 프로덕션 코드 품질
 
-> **분석 일자**: 2026-02-19
+### 7.1 console.log/warn 잔존 현황 (19개 파일)
+
+#### 제거 대상 (디버깅용 — 프로덕션에서 불필요, 31건)
+
+| 파일 | console 사용 수 | 유형 |
+|------|----------------|------|
+| excelParser.ts | 12 | console.log (파서 디버깅) |
+| divisionExcelParser.ts | 5 | console.log (파서 디버깅) |
+| useReport.ts | 6 | console.log ×5 + console.warn ×1 (Firestore 작업) |
+| dbRepair.ts | 3 | console.log (복구 작업) |
+| AuthContext.tsx | 1 | console.warn (프로필 조회 실패) |
+| authService.ts | 1 | console.warn (부문명 조회 실패) |
+| productService.ts | 1 | console.log (Firestore 조회) |
+| reportService.ts | 1 | console.log (데이터 클리어) |
+| firebase/config.ts | 1 | console.log (Config 확인) |
+
+#### 유지 가능 (에러 핸들링용 — console.error, 13개 파일 36건)
+
+| 파일 | 유형 |
+|------|------|
+| useReport.ts | console.error (8곳) |
+| DivisionManagementPage.tsx | console.error (6곳) |
+| UserManagementPage.tsx | console.error (5곳) |
+| ProductManagementPage.tsx | console.error (4곳) |
+| DataInputPage.tsx | console.error (3곳) |
+| useAchievement.ts | console.error (2곳) |
+| useTargets.ts | console.error (2곳) |
+| useDivisionReport.ts | console.error |
+| RegisterPage.tsx | console.error |
+| dbRepair.ts | console.error |
+| AuthContext.tsx | console.error |
+| ErrorBoundary.tsx | console.error |
+| Sidebar.tsx | console.error |
+
+### 7.2 개선안: 환경 기반 로깅 유틸리티
+
+```typescript
+// src/utils/logger.ts
+const isDev = import.meta.env.DEV;
+
+export const logger = {
+    debug: (...args: unknown[]) => isDev && console.log('[DEBUG]', ...args),
+    info: (...args: unknown[]) => isDev && console.info('[INFO]', ...args),
+    warn: (...args: unknown[]) => console.warn('[WARN]', ...args),
+    error: (...args: unknown[]) => console.error('[ERROR]', ...args),
+};
+```
+
+- 디버깅 로그 31건 → `logger.debug()`/`logger.warn()`로 교체 (프로덕션에서 자동 제거)
+- 에러 로그 → `logger.error()`로 교체 (프로덕션에서도 유지)
+
+---
+
+## 8. 보안 현황 분석 및 강화 방안
+
+> **분석 일자**: 2026-02-19 (2차 정밀 분석)
 > **분석 범위**: 인증/인가, Firestore 보안 규칙, 입력 검증, 호스팅 보안, 코드 보안
 
-### 10.1 현재 보안 아키텍처 개요
+### 8.1 현재 보안 아키텍처 개요
 
 ```
 ┌─────────────────────────────────────────────────────┐
@@ -883,58 +615,51 @@ src/
 │  │  - X-Frame-Options: DENY                      │   │
 │  │  - X-XSS-Protection: 1; mode=block            │   │
 │  │  - Cache-Control: immutable (assets)           │   │
+│  │  ✗ CSP, Referrer-Policy, Permissions-Policy   │   │
+│  │  ✗ HSTS (명시적)                               │   │
 │  └──────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────┘
 ```
 
-### 10.2 현재 보안 강점 (이미 구현됨)
+### 8.2 현재 보안 강점 (이미 구현됨)
 
-#### A. Firestore 보안 규칙 (firestore.rules - 157줄)
-
-| 항목 | 상태 | 설명 |
-|------|------|------|
-| 인증 확인 헬퍼 (isAuthenticated) | ✅ 구현됨 | `request.auth != null` 체크 |
-| 관리자 권한 확인 (isAdmin) | ✅ 구현됨 | 문서 존재 확인 후 role 체크 |
-| 승인 상태 확인 (isApproved) | ✅ 구현됨 | status == 'approved' 체크 |
-| 부문 소속 확인 (belongsToDivision) | ✅ 구현됨 | divisionId 매칭 |
-| 기본 거부 정책 (Catch-all) | ✅ 구현됨 | `match /{document=**} { allow: false }` |
-| 순환 참조 방지 | ✅ 구현됨 | userExists() 선행 체크 |
-| 감사 로그 불변성 | ✅ 구현됨 | uploadHistory: update/delete 금지 |
-| 사용자 자기 문서 생성 제한 | ✅ 구현됨 | `request.auth.uid == userId` |
-
-#### B. 인증 시스템 (AuthContext + authService)
+#### A. Firestore 보안 규칙
 
 | 항목 | 상태 | 설명 |
 |------|------|------|
-| Firebase Auth 기반 인증 | ✅ 구현됨 | Email/Password 방식 |
-| 인증 상태 감시 | ✅ 구현됨 | onAuthStateChanged + cancelled 플래그 |
-| 승인 대기/거절 게이트 | ✅ 구현됨 | ProtectedRoute에서 상태별 UI |
-| 관리자 전용 라우트 | ✅ 구현됨 | adminOnly prop |
-| Firebase 에러 한국어 번역 | ✅ 구현됨 | 7개 에러 코드 번역 |
-| 메모리 누수 방지 | ✅ 구현됨 | useEffect cleanup + cancelled 플래그 |
+| 인증 확인 헬퍼 (isAuthenticated) | ✅ | `request.auth != null` 체크 |
+| 관리자 권한 확인 (isAdmin) | ✅ | 문서 존재 확인 후 role 체크 |
+| 승인 상태 확인 (isApproved) | ✅ | status == 'approved' 체크 |
+| 부문 소속 확인 (belongsToDivision) | ✅ | divisionId 매칭 |
+| 기본 거부 정책 (Catch-all) | ✅ | `match /{document=**} { allow: false }` |
+| 순환 참조 방지 | ✅ | userExists() 선행 체크 |
+| 감사 로그 불변성 | ✅ | uploadHistory: update/delete 금지 |
+| 사용자 자기 문서 생성 제한 | ✅ | `request.auth.uid == userId` |
+
+#### B. 인증 시스템
+
+| 항목 | 상태 | 설명 |
+|------|------|------|
+| Firebase Auth 기반 인증 | ✅ | Email/Password 방식 |
+| 인증 상태 감시 | ✅ | onAuthStateChanged + cancelled 플래그 |
+| 승인 대기/거절 게이트 | ✅ | ProtectedRoute에서 상태별 UI |
+| 관리자 전용 라우트 | ✅ | adminOnly prop |
+| Firebase 에러 한국어 번역 | ✅ | 7개 에러 코드 번역 |
+| 메모리 누수 방지 | ✅ | useEffect cleanup + cancelled 플래그 |
 
 #### C. 코드 보안
 
 | 항목 | 상태 | 설명 |
 |------|------|------|
-| XSS 방지 | ✅ 안전 | dangerouslySetInnerHTML 미사용, React 자동 이스케이프 |
-| eval/Function 미사용 | ✅ 안전 | 동적 코드 실행 없음 |
-| 환경 변수 관리 | ✅ 안전 | VITE_ 접두사, .gitignore 포함 |
-| SHA-256 해싱 | ✅ 구현됨 | Web Crypto API 사용 (hashUtils.ts) |
-| 입력 검증 (Excel) | ✅ 구현됨 | Regex 기반 헤더 검증, 숫자 폴백 |
-| 에러 상세 정보 숨김 | ✅ 구현됨 | DEV 환경에서만 스택트레이스 표시 |
-| autoComplete 속성 | ✅ 구현됨 | email, current-password, new-password |
+| XSS 방지 | ✅ | dangerouslySetInnerHTML 미사용 확인 (2차 검증) |
+| eval/Function 미사용 | ✅ | 동적 코드 실행 없음 확인 (2차 검증) |
+| 환경 변수 관리 | ✅ | VITE_ 접두사, .gitignore 포함 |
+| SHA-256 해싱 | ✅ | Web Crypto API (hashUtils.ts) |
+| 입력 검증 (Excel) | ✅ | Regex 기반 헤더 검증, 숫자 폴백 |
+| 에러 상세 정보 숨김 | ✅ | DEV 환경에서만 스택트레이스 표시 |
+| autoComplete 속성 | ✅ | email, current-password, new-password |
 
-#### D. 호스팅 보안 헤더 (firebase.json)
-
-| 헤더 | 값 | 효과 |
-|------|-----|------|
-| X-Content-Type-Options | nosniff | MIME 스니핑 방지 |
-| X-Frame-Options | DENY | 클릭재킹 방지 |
-| X-XSS-Protection | 1; mode=block | 반사형 XSS 방지 |
-| Cache-Control | immutable (assets) | 정적 자원 캐싱 |
-
-### 10.3 보안 취약점 및 개선 필요 사항
+### 8.3 보안 취약점 및 개선 필요 사항
 
 #### 등급 기준
 - 🔴 **높음**: 즉시 조치 필요 (데이터 유출/변조 위험)
@@ -985,39 +710,30 @@ match /users/{userId} {
     && request.auth.uid == userId
     && isValidUserData();
 }
-
-// reports/products 서브컬렉션 예시
-match /reports/{reportId}/products/{productDocId} {
-  function isValidProductData() {
-    let data = request.resource.data;
-    return data.name is string && data.name.size() <= 100
-      && (!('months' in data.keys()) || data.months is map);
-  }
-
-  allow create, update: if (isAdmin() || isApproved()) && isValidProductData();
-}
 ```
 
 ---
 
 #### 🔴 S-03. 관리자 이메일 하드코딩
 
-**현황**: `authService.ts:20`에 `const ADMIN_EMAIL = 'hclim@hunesion.com'` 하드코딩
-**위험**: 소스 코드 노출 시 관리자 이메일 타겟팅 가능, 관리자 변경 시 코드 수정 필요
+**현황**: `authService.ts`에 관리자 이메일 하드코딩
+**위험**: 소스 코드 노출 시 관리자 이메일 타겟팅 가능
 **영향 범위**: 인증 시스템
 
 **개선안**:
 1. **환경 변수로 이동**: `VITE_ADMIN_EMAIL`로 변경
 2. **Firestore 설정 문서 활용**: `settings/admin` 문서에 관리자 이메일 목록 관리
-3. **Firebase Custom Claims 활용** (장기):
-```typescript
-// Firebase Admin SDK (Cloud Functions에서)
-admin.auth().setCustomUserClaims(uid, { admin: true });
+3. **Firebase Custom Claims 활용** (장기)
 
-// 클라이언트에서 확인
-const token = await user.getIdTokenResult();
-if (token.claims.admin) { /* 관리자 */ }
-```
+---
+
+#### 🔴 S-14. (신규) 프로덕션 console.log 정보 노출
+
+**현황**: 19개 파일에 console.log/warn/error 잔존, 디버깅 로그 31건 포함 (console.log 28건 + console.warn 3건)
+**위험**: Firestore 작업 정보, 인증 상태, 파싱 구조 등이 브라우저 콘솔에 노출
+**영향 범위**: 전체 애플리케이션
+
+**개선안**: `logger.ts` 유틸리티 도입 (상세 내용 7.2 참조)
 
 ---
 
@@ -1025,7 +741,6 @@ if (token.claims.admin) { /* 관리자 */ }
 
 **현황**: Firebase 기본 정책 (6자 이상)만 적용, RegisterPage에서 길이만 검증
 **위험**: 약한 비밀번호로 인한 무차별 대입 공격 위험
-**영향 범위**: 회원가입
 
 **개선안**: 클라이언트 측 비밀번호 강도 검증 추가
 ```typescript
@@ -1035,7 +750,6 @@ export function validatePassword(password: string): { valid: boolean; message: s
   if (!/[A-Z]/.test(password)) return { valid: false, message: '대문자를 포함해야 합니다' };
   if (!/[a-z]/.test(password)) return { valid: false, message: '소문자를 포함해야 합니다' };
   if (!/[0-9]/.test(password)) return { valid: false, message: '숫자를 포함해야 합니다' };
-  if (!/[!@#$%^&*]/.test(password)) return { valid: false, message: '특수문자를 포함해야 합니다' };
   return { valid: true, message: '' };
 }
 ```
@@ -1046,149 +760,44 @@ export function validatePassword(password: string): { valid: boolean; message: s
 
 **현황**: Firebase Auth 기본 세션 유지 (장기 유지, 새로고침 시에도 로그인 유지)
 **위험**: 공용 PC에서 로그아웃 하지 않을 경우 다른 사용자가 접근 가능
-**영향 범위**: 전체 인증 흐름
 
-**개선안**:
-```typescript
-// AuthContext.tsx에 비활동 타임아웃 추가
-const INACTIVITY_TIMEOUT = 30 * 60 * 1000; // 30분
-
-useEffect(() => {
-  let timeout: NodeJS.Timeout;
-
-  const resetTimer = () => {
-    clearTimeout(timeout);
-    timeout = setTimeout(() => {
-      logout();
-      // 세션 만료 알림
-    }, INACTIVITY_TIMEOUT);
-  };
-
-  const events = ['mousedown', 'keydown', 'scroll', 'touchstart'];
-  events.forEach(event => window.addEventListener(event, resetTimer));
-  resetTimer();
-
-  return () => {
-    clearTimeout(timeout);
-    events.forEach(event => window.removeEventListener(event, resetTimer));
-  };
-}, [logout]);
-```
+**개선안**: AuthContext.tsx에 비활동 타임아웃 추가 (30분)
 
 ---
 
 #### 🟡 S-06. 엑셀 파일 업로드 검증 강화 필요
 
-**현황**: 파일 확장자만 검증 (.xlsx, .xls), MIME 타입 미확인, 파일 크기 제한 설정은 있으나 미적용
+**현황**: 파일 확장자만 검증 (.xlsx, .xls), MIME 타입 미확인, 파일 크기 제한 미적용
 **위험**: 악의적 파일 업로드 (확장자 위조)
-**영향 범위**: DataInputPage
 
-**개선안**:
-```typescript
-// src/utils/fileValidator.ts
-const ALLOWED_MIME_TYPES = [
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
-  'application/vnd.ms-excel', // .xls
-];
-
-export function validateUploadFile(file: File): { valid: boolean; error?: string } {
-  // 1. 파일 크기 검증
-  if (file.size > MAX_FILE_SIZE) {
-    return { valid: false, error: `파일 크기는 ${MAX_FILE_SIZE / 1024 / 1024}MB 이하여야 합니다` };
-  }
-
-  // 2. MIME 타입 검증
-  if (!ALLOWED_MIME_TYPES.includes(file.type)) {
-    return { valid: false, error: '지원하지 않는 파일 형식입니다 (.xlsx, .xls만 가능)' };
-  }
-
-  // 3. 파일 매직 바이트 검증
-  // xlsx: PK (50 4B 03 04), xls: D0 CF 11 E0
-
-  return { valid: true };
-}
-```
+**개선안**: `src/utils/fileValidator.ts` — MIME 타입 + 매직 바이트 + 크기 검증
 
 ---
 
 #### 🟡 S-07. 클라이언트 측 권한 우회 가능성
 
-**현황**: 관리자 기능 버튼이 클라이언트 렌더링으로만 제어됨 (isAdmin 상태)
-**위험**: DevTools로 상태 변조 시 관리자 UI 접근 가능 (실제 동작은 Firestore 규칙이 차단)
-**영향 범위**: 관리자 페이지
-
-**현재 대응**: Firestore 규칙에서 서버 측 권한 검증 → **실질적 데이터 유출 위험은 낮음**
-**개선안**: 추가 방어 레이어로 Firebase Custom Claims 활용
-```typescript
-// ID 토큰에서 직접 권한 확인 (클라이언트 상태보다 신뢰도 높음)
-const tokenResult = await auth.currentUser?.getIdTokenResult();
-const isRealAdmin = tokenResult?.claims.admin === true;
-```
+**현황**: 관리자 기능 버튼이 클라이언트 렌더링으로만 제어됨
+**현재 대응**: Firestore 규칙에서 서버 측 권한 검증 → 실질적 데이터 유출 위험은 낮음
+**개선안**: Firebase Custom Claims 활용
 
 ---
 
 #### 🟡 S-08. Referrer-Policy 헤더 미설정
 
-**현황**: firebase.json에 Referrer-Policy 헤더 없음
-**위험**: 외부 링크 클릭 시 페이지 URL이 전달될 수 있음
-**영향 범위**: 호스팅
-
-**개선안**: firebase.json headers에 추가
-```json
-{
-  "key": "Referrer-Policy",
-  "value": "strict-origin-when-cross-origin"
-}
-```
+**개선안**: firebase.json에 `"Referrer-Policy": "strict-origin-when-cross-origin"` 추가
 
 ---
 
 #### 🟡 S-09. Permissions-Policy 헤더 미설정
 
-**현황**: 브라우저 기능(카메라, 마이크, 위치 등) 접근 정책 미설정
-**위험**: 악성 스크립트가 브라우저 API에 접근할 가능성
-**영향 범위**: 호스팅
-
-**개선안**: firebase.json headers에 추가
-```json
-{
-  "key": "Permissions-Policy",
-  "value": "camera=(), microphone=(), geolocation=(), interest-cohort=()"
-}
-```
+**개선안**: firebase.json에 `"Permissions-Policy": "camera=(), microphone=(), geolocation=(), interest-cohort=()"` 추가
 
 ---
 
 #### 🟢 S-10. 로그인 시도 횟수 제한 (클라이언트 측)
 
-**현황**: Firebase Auth 자체 rate limiting은 있으나 (`auth/too-many-requests`), 클라이언트 측 추가 보호 없음
-**위험**: UI에서 반복 로그인 시도 가능
-**영향 범위**: LoginPage
-
-**개선안**:
-```typescript
-// 로그인 실패 횟수 추적
-const [failCount, setFailCount] = useState(0);
-const [lockUntil, setLockUntil] = useState<Date | null>(null);
-
-const handleLogin = async () => {
-  if (lockUntil && new Date() < lockUntil) {
-    setError('너무 많은 시도입니다. 잠시 후 다시 시도해주세요.');
-    return;
-  }
-
-  try {
-    await login(email, password);
-    setFailCount(0);
-  } catch {
-    const newCount = failCount + 1;
-    setFailCount(newCount);
-    if (newCount >= 5) {
-      setLockUntil(new Date(Date.now() + 5 * 60 * 1000)); // 5분 잠금
-    }
-  }
-};
-```
+**현황**: Firebase Auth 자체 rate limiting은 있으나 클라이언트 측 추가 보호 없음
+**개선안**: 5회 실패 시 5분 잠금
 
 ---
 
@@ -1196,79 +805,24 @@ const handleLogin = async () => {
 
 **현황**: `allow read: if true;` (인증 없이 누구나 읽기 가능)
 **사유**: 회원가입 시 부문 목록 조회 필요
-**위험**: 조직 구조 정보 노출 (낮은 위험)
-**영향 범위**: firestore.rules
-
-**개선안** (선택적):
-```
-// 옵션 A: 인증 사용자만 허용 + 회원가입 시 공개 API로 목록 제공
-allow read: if isAuthenticated();
-
-// 옵션 B: 현재 상태 유지 (부문 이름만 노출, 민감 정보 아님)
-// 리스크 수용 가능
-```
+**판단**: 리스크 수용 가능 (부문 이름만 노출, 민감 정보 아님)
 
 ---
 
-#### 🟢 S-12. Strict-Transport-Security (HSTS) 확인
+#### 🟢 S-12. Strict-Transport-Security (HSTS)
 
-**현황**: Firebase Hosting은 기본적으로 HTTPS 강제 + HSTS 적용
-**확인 필요**: 커스텀 도메인 사용 시 HSTS preload 등록 여부
-**영향 범위**: 호스팅
-
-**개선안**: 명시적 HSTS 헤더 추가 (방어적)
-```json
-{
-  "key": "Strict-Transport-Security",
-  "value": "max-age=31536000; includeSubDomains; preload"
-}
-```
+**현황**: Firebase Hosting 기본 HSTS 적용
+**개선안**: 명시적 HSTS 헤더 추가 (커스텀 도메인 대응)
 
 ---
 
-#### 🟢 S-13. authService 내 중복 주석 정리
+#### 🟢 S-13. authService 내 불필요한 주석
 
-**현황**: `authService.ts:42-46`에 불필요한 중복 주석 존재
-```typescript
-// ... (existing imports)
-// ... (existing imports, but getDivision is new)
-// ...
-```
-**영향**: 코드 품질 (보안 직접 영향은 없음)
 **개선안**: 중복 주석 제거
 
 ---
 
-### 10.4 보안 강화 우선순위 및 실행 계획
-
-#### Phase S-1: 즉시 조치 (1-2일)
-
-| 항목 | 작업 | 파일 | 난이도 |
-|------|------|------|--------|
-| S-01 | CSP 헤더 추가 | firebase.json | ★★☆ |
-| S-08 | Referrer-Policy 헤더 추가 | firebase.json | ★☆☆ |
-| S-09 | Permissions-Policy 헤더 추가 | firebase.json | ★☆☆ |
-| S-12 | HSTS 헤더 명시적 추가 | firebase.json | ★☆☆ |
-| S-13 | authService 중복 주석 제거 | authService.ts | ★☆☆ |
-
-#### Phase S-2: 단기 조치 (1주)
-
-| 항목 | 작업 | 파일 | 난이도 |
-|------|------|------|--------|
-| S-02 | Firestore 필드 검증 규칙 추가 | firestore.rules | ★★★ |
-| S-03 | 관리자 이메일 환경변수 이동 | authService.ts, .env | ★★☆ |
-| S-04 | 비밀번호 강도 검증 추가 | RegisterPage.tsx, 신규 util | ★★☆ |
-| S-06 | 파일 업로드 검증 강화 | DataInputPage.tsx, 신규 util | ★★☆ |
-
-#### Phase S-3: 중기 조치 (2-4주)
-
-| 항목 | 작업 | 파일 | 난이도 |
-|------|------|------|--------|
-| S-05 | 세션 비활동 타임아웃 | AuthContext.tsx | ★★☆ |
-| S-07 | Firebase Custom Claims 도입 | Cloud Functions (신규) | ★★★ |
-| S-10 | 클라이언트 로그인 시도 제한 | LoginPage.tsx | ★★☆ |
-
-### 10.5 보안 체크리스트 요약
+### 8.4 보안 체크리스트 요약
 
 | 카테고리 | 항목 | 현재 상태 |
 |----------|------|----------|
@@ -1290,6 +844,7 @@ allow read: if isAuthenticated();
 | | eval/innerHTML 미사용 | ✅ |
 | | 환경 변수 분리 | ✅ |
 | | 에러 상세 숨김 (프로덕션) | ✅ |
+| | console.log/warn 프로덕션 제거 | ❌ 미구현 (19파일 31건 잔존) |
 | **호스팅** | X-Content-Type-Options | ✅ |
 | | X-Frame-Options | ✅ |
 | | X-XSS-Protection | ✅ |
@@ -1303,46 +858,290 @@ allow read: if isAuthenticated();
 
 ---
 
-## 11. 전체 개선 로드맵 (통합)
+## 9. 예상 효과
 
-### Phase 1: 보안 긴급 조치 + 인프라 정비 (1주)
+### 9.1 번들 크기 변화
 
-| 순서 | 영역 | 작업 | 예상 시간 |
-|------|------|------|-----------|
-| 1 | 보안 | firebase.json 보안 헤더 추가 (CSP, Referrer, Permissions, HSTS) | 2시간 |
-| 2 | 보안 | Firestore 필드 검증 규칙 추가 | 4시간 |
-| 3 | 보안 | 관리자 이메일 환경변수 이동 | 1시간 |
-| 4 | 보안 | 비밀번호 강도 검증 추가 | 2시간 |
-| 5 | 보안 | 파일 업로드 검증 강화 (MIME, 크기) | 2시간 |
-| 6 | 코드 | authService.ts 중복 주석 정리 | 30분 |
-| 7 | 모듈화 | types/index.ts 도메인별 분리 | 4시간 |
+| 항목 | 현재 | 개선 후 | 감소율 |
+|------|------|---------|--------|
+| 메인 번들 (index.js) | 929 KB | ~350 KB | 62% |
+| 관리자 페이지 chunk | 포함됨 | ~250 KB (lazy) | 분리 |
+| 일반 페이지 chunk | 포함됨 | ~200 KB (lazy) | 분리 |
+| 차트 벤더 | 396 KB | 396 KB | - |
+| 엑셀 벤더 | 937 KB | 937 KB | - (이미 동적) |
 
-### Phase 2: 핵심 모듈화 (1-2주)
+### 9.2 개발 생산성 향상
 
-| 순서 | 영역 | 작업 | 예상 시간 |
-|------|------|------|-----------|
-| 8 | 모듈화 | useReport.ts 분할 | 8시간 |
-| 9 | 모듈화 | snapshotService.ts 분할 | 6시간 |
-| 10 | 모듈화 | DataInputPage.tsx 분할 | 8시간 |
-| 11 | 보안 | 세션 비활동 타임아웃 추가 | 3시간 |
-| 12 | 보안 | 클라이언트 로그인 시도 제한 | 2시간 |
+| 지표 | 현재 | 개선 후 |
+|------|------|---------|
+| 평균 파일 크기 (상위 10개) | 436줄 | ~130줄 |
+| 대용량 파일 (200줄+) | 23개 | ~10개 |
+| 중복 코드 | ~205줄 | 0줄 |
+| 색상 상수 정의 위치 | 4곳 | 1곳 |
+| 알림 패턴 구현 | 3곳 | 1곳 |
+| console.log/warn (프로덕션) | 31건 | 0건 |
 
-### Phase 3: 관리자 페이지 + 중복 제거 (1주)
+---
 
-| 순서 | 영역 | 작업 | 예상 시간 |
-|------|------|------|-----------|
-| 13 | 모듈화 | TargetInputTable.tsx 분할 | 6시간 |
-| 14 | 모듈화 | Admin 페이지 분할 (User, Product, Division) | 11시간 |
-| 15 | 중복제거 | colors.ts 상수 중앙화 | 1시간 |
-| 16 | 중복제거 | ViewModeToggle + useViewMode 컴포넌트/훅 | 3시간 |
-| 17 | 중복제거 | KPICardGrid 공통 컴포넌트 | 2시간 |
+## 10. 전체 개선 로드맵 (통합)
 
-### Phase 4: 성능 최적화 + 보고서 (1주)
+### Phase 1: 보안 긴급 조치 + 코드 품질 (1-2일) — ✅ 완료 (2026-02-20)
 
-| 순서 | 영역 | 작업 | 예상 시간 |
-|------|------|------|-----------|
-| 18 | 성능 | React.lazy 라우트 기반 코드 분할 | 4시간 |
-| 19 | 성능 | 차트 컴포넌트 lazy loading | 2시간 |
-| 20 | 모듈화 | 보고서 페이지 분할 (Product, Achievement) | 7시간 |
-| 21 | 중복제거 | 차트 viewMode 로직 통합 | 3시간 |
-| 22 | 보안 | Firebase Custom Claims 도입 (Cloud Functions) | 8시간 |
+| 순서 | 영역 | 작업 | 파일 | 상태 |
+|------|------|------|------|------|
+| 1 | 보안 | firebase.json 보안 헤더 추가 (CSP, Referrer, Permissions, HSTS) | firebase.json | ✅ 완료 |
+| 2 | 보안 | 관리자 이메일 환경변수 이동 | authService.ts, .env | ✅ 완료 |
+| 3 | 품질 | logger.ts 유틸리티 생성 + console.log/warn 31건 교체 | 8개 파일 | ✅ 완료 |
+| 4 | 품질 | authService.ts 중복 주석 제거 | authService.ts | ✅ 완료 |
+
+**Phase 1 변경 요약:**
+- `firebase.json`: CSP, Referrer-Policy, Permissions-Policy, HSTS 4개 보안 헤더 추가
+- `authService.ts`: 하드코딩된 관리자 이메일 → `VITE_ADMIN_EMAIL` 환경변수로 이동, 중복 주석 제거
+- `src/utils/logger.ts`: 환경 기반 로깅 유틸리티 신규 생성 (DEV 환경에서만 debug/info 출력)
+- console.log/warn 31건 → logger.debug/logger.warn으로 교체 (8개 파일)
+  - `excelParser.ts` (12건), `divisionExcelParser.ts` (5건), `useReport.ts` (6건)
+  - `dbRepair.ts` (3건), `config.ts` (1건 삭제), `authService.ts` (1건)
+  - `productService.ts` (1건), `reportService.ts` (1건), `AuthContext.tsx` (1건)
+- 빌드 검증: ✅ 성공 (928KB 메인 번들, 기존과 동일)
+
+### Phase 2: 성능 최적화 — 코드 분할 (1일) — ✅ 완료 (2026-02-20)
+
+| 순서 | 영역 | 작업 | 파일 | 상태 |
+|------|------|------|------|------|
+| 5 | 성능 | React.lazy 라우트 기반 코드 분할 (7개 페이지) | router.tsx | ✅ 완료 |
+| 6 | 성능 | Suspense fallback + LoadingSpinner 통합 | router.tsx | ✅ 완료 |
+
+**Phase 2 변경 요약:**
+- `router.tsx`: 7개 페이지에 React.lazy + Suspense 적용 (DataInput, DivisionReport, ProductReport, Achievement, DivisionManagement, ProductManagement, UserManagement, TargetInput)
+- SuspenseWrapper 컴포넌트 생성 (LoadingSpinner size="lg" + "페이지를 불러오는 중..." 메시지)
+- 항상 로드: LoginPage, RegisterPage, SolutionBusinessDashboard (초기 화면)
+- 빌드 결과: 메인 번들 929KB → 803KB (-14%), 7개 lazy 청크 ~124KB 분리
+- 공통 훅/서비스가 메인 번들에 남아 있어 추가 분리는 Phase 5-6 모듈화 시 가능
+
+### Phase 3: 중복 제거 + 공통화 (2-3일)
+
+| 순서 | 영역 | 작업 | 영향 파일 | 난이도 |
+|------|------|------|----------|--------|
+| 7 | 중복 | colors.ts 상수 중앙화 | 4개 파일 | ★☆☆ |
+| 8 | 중복 | useNotification 훅 생성 | 3개 파일 | ★☆☆ |
+| 9 | 중복 | useViewMode 훅 + ViewToggle 통합 | 4개 파일 | ★★☆ |
+| 10 | 중복 | KPICardGrid 공통 컴포넌트 | 2개 파일 | ★★☆ |
+
+### Phase 4: 보안 강화 (3-5일)
+
+| 순서 | 영역 | 작업 | 파일 | 난이도 |
+|------|------|------|------|--------|
+| 11 | 보안 | Firestore 필드 검증 규칙 추가 | firestore.rules | ★★★ |
+| 12 | 보안 | 비밀번호 강도 검증 추가 | RegisterPage.tsx, 신규 util | ★★☆ |
+| 13 | 보안 | 파일 업로드 검증 강화 (MIME, 크기, 매직 바이트) | DataInputPage.tsx, 신규 util | ★★☆ |
+| 14 | 보안 | 세션 비활동 타임아웃 (30분) | AuthContext.tsx | ★★☆ |
+| 15 | 보안 | 클라이언트 로그인 시도 제한 | LoginPage.tsx | ★★☆ |
+
+### Phase 5: 핵심 모듈화 (1-2주)
+
+| 순서 | 영역 | 작업 | 현재 → 목표 | 난이도 |
+|------|------|------|-----------|--------|
+| 16 | 모듈화 | types/index.ts 도메인별 분리 | 301줄 → 7파일 | ★★☆ |
+| 17 | 모듈화 | useReport.ts 분할 | 480줄 → 150줄 + 3파일 | ★★★ |
+| 18 | 모듈화 | snapshotService.ts 분할 | 408줄 → 200줄 + 2파일 | ★★☆ |
+| 19 | 모듈화 | DataInputPage.tsx 분할 | 501줄 → 150줄 + 5파일 | ★★★ |
+| 20 | 모듈화 | SolutionBusinessDashboard.tsx 분할 | 492줄 → 150줄 + 5파일 | ★★★ |
+
+### Phase 6: 관리자 페이지 + 보고서 모듈화 (1주)
+
+| 순서 | 영역 | 작업 | 현재 → 목표 | 난이도 |
+|------|------|------|-----------|--------|
+| 21 | 모듈화 | TargetInputTable.tsx 분할 | 489줄 → 120줄 + 5파일 | ★★★ |
+| 22 | 모듈화 | ProductManagementPage.tsx 분할 | 421줄 → 100줄 + 5파일 | ★★☆ |
+| 23 | 모듈화 | UserManagementPage.tsx 분할 | 413줄 → 100줄 + 5파일 | ★★☆ |
+| 24 | 모듈화 | DivisionManagementPage.tsx 분할 | 366줄 → 100줄 + 4파일 | ★★☆ |
+| 25 | 성능 | React.memo 적용 (차트/테이블 컴포넌트) | 6개 컴포넌트 | ★☆☆ |
+
+### Phase 7: 장기 보안 (선택적)
+
+| 순서 | 영역 | 작업 | 파일 | 난이도 |
+|------|------|------|------|--------|
+| 26 | 보안 | Firebase Custom Claims 도입 | Cloud Functions (신규) | ★★★ |
+
+---
+
+## 11. 최종 디렉토리 구조 (모듈화 완료 후)
+
+```
+src/
+├── App.tsx
+├── main.tsx
+├── router.tsx (lazy imports)
+├── index.css
+│
+├── components/
+│   ├── common/
+│   │   ├── KPICard.tsx (신규)
+│   │   ├── KPICardGrid.tsx (신규)
+│   │   └── index.ts
+│   ├── ui/
+│   │   ├── Badge.tsx, Button.tsx, Card.tsx, Input.tsx
+│   │   ├── Modal.tsx, Toast.tsx, ViewToggle.tsx (확장)
+│   │   └── index.ts
+│   ├── charts/
+│   │   ├── ChartWrapper.tsx
+│   │   ├── DualAxisChart.tsx
+│   │   └── index.ts
+│   ├── achievement/
+│   │   ├── AchievementCharts.tsx (React.memo 적용)
+│   │   ├── AchievementTable.tsx (React.memo 적용)
+│   │   └── index.ts
+│   ├── reports/
+│   │   ├── DivisionCharts.tsx (React.memo, colors.ts 참조)
+│   │   ├── DivisionSummaryTable.tsx (React.memo)
+│   │   ├── ProductCharts.tsx (React.memo, colors.ts 참조)
+│   │   ├── ProductReportTable.tsx (React.memo, colors.ts 참조)
+│   │   ├── ReportFilterBar.tsx
+│   │   └── index.ts
+│   ├── targets/
+│   │   ├── TargetInputTable.tsx (축소됨)
+│   │   ├── hooks/useTargetMatrix.ts (신규)
+│   │   ├── components/
+│   │   │   ├── TargetInputControls.tsx (신규)
+│   │   │   ├── AnnualTargetInputs.tsx (신규)
+│   │   │   ├── TargetTableRow.tsx (신규, React.memo)
+│   │   │   └── TargetTableFooter.tsx (신규)
+│   │   ├── utils/targetCalculations.ts (신규)
+│   │   └── index.ts
+│   ├── upload/
+│   │   ├── ConflictResolutionModal.tsx
+│   │   ├── WeekSelector.tsx
+│   │   └── index.ts
+│   ├── layout/
+│   │   ├── MainLayout.tsx
+│   │   └── Sidebar.tsx
+│   ├── auth/
+│   │   └── ProtectedRoute.tsx
+│   └── error/
+│       ├── ErrorBoundary.tsx
+│       ├── FirestoreErrorFallback.tsx
+│       ├── LoadingSpinner.tsx
+│       └── index.ts
+│
+├── features/
+│   ├── dashboard/
+│   │   ├── hooks/useDashboardData.ts (신규)
+│   │   ├── components/
+│   │   │   ├── DashboardKPICards.tsx (신규)
+│   │   │   ├── MonthlyTrendChart.tsx (신규)
+│   │   │   ├── DivisionOverviewChart.tsx (신규)
+│   │   │   ├── TopProductsChart.tsx (신규)
+│   │   │   └── DivisionDetailModal.tsx (신규)
+│   │   └── index.ts
+│   ├── dataInput/
+│   │   ├── hooks/useDataInput.ts (신규)
+│   │   ├── components/
+│   │   │   ├── FileUploadSection.tsx (신규)
+│   │   │   ├── MergeModeSelector.tsx (신규)
+│   │   │   ├── DataManagementTools.tsx (신규)
+│   │   │   └── DataListTable.tsx (신규)
+│   │   ├── utils/divisionMatcher.ts (신규)
+│   │   └── index.ts
+│   ├── productManagement/
+│   │   ├── hooks/useProductManagement.ts (신규)
+│   │   ├── components/
+│   │   │   ├── ProductFilterBar.tsx, ProductAddForm.tsx
+│   │   │   ├── ProductTable.tsx, ProductTableRow.tsx
+│   │   │   └── DeleteConfirmModal.tsx
+│   │   └── index.ts
+│   └── userManagement/
+│       ├── hooks/useUserManagement.ts (신규)
+│       ├── components/
+│       │   ├── UserFilterBar.tsx, UserTable.tsx
+│       │   ├── UserTableRow.tsx, StatusBadge.tsx
+│       └── index.ts
+│
+├── hooks/
+│   ├── useReport.ts (축소됨)
+│   ├── report/
+│   │   ├── useReportData.ts (신규)
+│   │   ├── useReportUpload.ts (신규)
+│   │   ├── useReportSnapshots.ts (신규)
+│   │   └── utils/mergeProducts.ts (신규)
+│   ├── useAchievement.ts
+│   ├── useDivisionReport.ts
+│   ├── useTargets.ts
+│   ├── useViewMode.ts (신규)
+│   └── useNotification.ts (신규)
+│
+├── pages/
+│   ├── LoginPage.tsx
+│   ├── RegisterPage.tsx
+│   ├── DataInputPage.tsx (축소됨)
+│   ├── ProductReportPage.tsx
+│   ├── DivisionReportPage.tsx
+│   ├── AchievementPage.tsx
+│   └── admin/
+│       ├── DivisionManagementPage.tsx (축소됨)
+│       ├── ProductManagementPage.tsx (축소됨)
+│       ├── UserManagementPage.tsx (축소됨)
+│       └── TargetInputPage.tsx
+│
+├── constants/
+│   ├── colors.ts (신규)
+│   └── index.ts
+│
+├── types/
+│   ├── index.ts (re-export)
+│   ├── core.ts, user.ts, division.ts (신규)
+│   ├── target.ts, snapshot.ts, report.ts (신규)
+│   └── helpers.ts (신규)
+│
+├── utils/
+│   ├── formatUtils.ts
+│   ├── excelParser.ts
+│   ├── divisionExcelParser.ts
+│   ├── weekUtils.ts
+│   ├── periodUtils.ts
+│   ├── achievementUtils.ts
+│   ├── hashUtils.ts
+│   ├── logger.ts (신규)
+│   ├── passwordValidator.ts (신규)
+│   └── fileValidator.ts (신규)
+│
+├── firebase/
+│   ├── config.ts
+│   ├── utils/dbRepair.ts
+│   └── services/
+│       ├── authService.ts
+│       ├── productService.ts, divisionService.ts
+│       ├── divisionDataService.ts, targetService.ts
+│       ├── reportService.ts, snapshotService.ts
+│       ├── productMasterService.ts
+│       ├── uploadHistoryService.ts, userService.ts
+│
+├── contexts/
+│   └── AuthContext.tsx
+│
+└── config/
+    ├── appConfig.ts
+    └── index.ts
+```
+
+---
+
+## 12. 결론
+
+### 12.1 요약
+
+| 항목 | 수치 |
+|------|------|
+| 모듈화 대상 파일 | 10개 (200줄+ 주요 파일) |
+| 신규 생성 파일 | ~40개 |
+| 제거 중복 코드 | ~205줄 |
+| console.log/warn 정리 | 31건 → 0건 (프로덕션) |
+| 메인 번들 감소 | 929KB → ~350KB (62%) |
+| 보안 헤더 추가 | 4개 (CSP, Referrer, Permissions, HSTS) |
+| 총 Phase | 7단계 |
+
+### 12.2 우선순위 핵심 요약
+
+1. **즉시 실행** (Phase 1-2): 보안 헤더 + console.log 정리 + React.lazy 코드 분할
+2. **단기** (Phase 3-4): 중복 제거 + 보안 강화 (Firestore 규칙, 비밀번호, 파일 검증)
+3. **중기** (Phase 5-6): 대규모 파일 모듈화 + React.memo 적용
+4. **장기** (Phase 7): Firebase Custom Claims
