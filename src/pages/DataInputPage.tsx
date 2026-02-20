@@ -1,6 +1,7 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { parseExcelFile } from '@/utils/excelParser';
 import { parseDivisionExcelFile } from '@/utils/divisionExcelParser';
+import { validateExcelFile } from '@/utils/fileValidator';
 import { useReport, type UploadMergeMode } from '@/hooks/useReport';
 import { useAuth } from '@/contexts/AuthContext';
 import { getDivisions } from '@/firebase/services/divisionService';
@@ -82,10 +83,10 @@ export default function DataInputPage() {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        const isExcel = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
-
-        if (!isExcel) {
-            showNotification('지원하지 않는 파일 형식입니다. .xlsx 파일을 업로드해주세요.', 'error');
+        // 종합 파일 검증 (확장자 + MIME + 크기 + 매직 바이트)
+        const validation = await validateExcelFile(file);
+        if (!validation.valid) {
+            showNotification(validation.error!, 'error');
             e.target.value = '';
             return;
         }

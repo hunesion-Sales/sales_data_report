@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { getDivisions } from '../firebase/services/divisionService';
-import { UserPlus, AlertCircle, Loader2, CheckCircle } from 'lucide-react';
+import { validatePassword, getPasswordStrength } from '../utils/passwordValidator';
+import { UserPlus, AlertCircle, Loader2, CheckCircle, Check, X as XIcon } from 'lucide-react';
 import type { Division } from '../types';
 
 export default function RegisterPage() {
@@ -18,6 +19,9 @@ export default function RegisterPage() {
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
+
+  // 비밀번호 강도 분석
+  const passwordStrength = useMemo(() => getPasswordStrength(password), [password]);
 
   // 영업부문 목록 로드
   useEffect(() => {
@@ -36,14 +40,16 @@ export default function RegisterPage() {
     clearError();
     setLocalError(null);
 
-    // 비밀번호 확인
-    if (password !== passwordConfirm) {
-      setLocalError('비밀번호가 일치하지 않습니다');
+    // 비밀번호 강도 검증
+    const pwValidation = validatePassword(password);
+    if (!pwValidation.valid) {
+      setLocalError(`비밀번호: ${pwValidation.message}`);
       return;
     }
 
-    if (password.length < 6) {
-      setLocalError('비밀번호는 6자 이상이어야 합니다');
+    // 비밀번호 확인
+    if (password !== passwordConfirm) {
+      setLocalError('비밀번호가 일치하지 않습니다');
       return;
     }
 
@@ -181,8 +187,34 @@ export default function RegisterPage() {
                 required
                 autoComplete="new-password"
                 className="w-full px-4 py-2.5 rounded-xl border-2 border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 outline-none transition-all"
-                placeholder="6자 이상"
+                placeholder="8자 이상 (대/소문자, 숫자 포함)"
               />
+              {/* 비밀번호 강도 표시 */}
+              {password.length > 0 && (
+                <div className="mt-2 space-y-2">
+                  <div className="flex gap-1">
+                    {[1, 2, 3, 4].map(level => (
+                      <div
+                        key={level}
+                        className={`h-1.5 flex-1 rounded-full transition-colors ${
+                          level <= passwordStrength.score ? passwordStrength.color : 'bg-slate-200'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-slate-500">{passwordStrength.label}</span>
+                  </div>
+                  <div className="flex flex-wrap gap-x-3 gap-y-1">
+                    {passwordStrength.checks.map(check => (
+                      <span key={check.label} className={`flex items-center gap-1 text-xs ${check.passed ? 'text-emerald-600' : 'text-slate-400'}`}>
+                        {check.passed ? <Check className="w-3 h-3" /> : <XIcon className="w-3 h-3" />}
+                        {check.label}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div>

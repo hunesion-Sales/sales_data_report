@@ -11,6 +11,9 @@ import { seedDefaultDivisions } from '../firebase/services/divisionService';
 import { logger } from '@/utils/logger';
 import type { UserProfile } from '../types';
 
+// 비활동 타임아웃: 30분 (밀리초)
+const INACTIVITY_TIMEOUT = 30 * 60 * 1000;
+
 interface AuthContextType {
   user: UserProfile | null;
   firebaseUser: User | null;
@@ -136,6 +139,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const clearError = useCallback(() => {
     setError(null);
   }, []);
+
+  // 비활동 타임아웃: 30분 동안 마우스/키보드/터치 없으면 자동 로그아웃
+  useEffect(() => {
+    if (!firebaseUser) return;
+
+    let timeoutId: ReturnType<typeof setTimeout>;
+
+    const resetTimer = () => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(async () => {
+        logger.warn('세션 타임아웃: 30분 비활동으로 자동 로그아웃');
+        await firebaseLogout();
+        setUser(null);
+        setFirebaseUser(null);
+      }, INACTIVITY_TIMEOUT);
+    };
+
+    const events = ['mousedown', 'keydown', 'touchstart', 'scroll'] as const;
+    events.forEach(event => window.addEventListener(event, resetTimer));
+    resetTimer();
+
+    return () => {
+      clearTimeout(timeoutId);
+      events.forEach(event => window.removeEventListener(event, resetTimer));
+    };
+  }, [firebaseUser]);
 
   const isAdmin = user?.role === 'admin';
   const isApproved = user?.status === 'approved';

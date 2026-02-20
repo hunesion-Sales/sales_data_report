@@ -1,7 +1,7 @@
 # 대용량 파일 모듈화 및 성능 개선 방안
 
-> **최종 업데이트**: 2026-02-20 (Phase 3 완료)
-> **현재 상태**: Phase 1-3 완료 (보안 헤더 + 코드 품질 + 코드 분할 + 중복 제거), Phase 4 미착수
+> **최종 업데이트**: 2026-02-20 (Phase 4 완료)
+> **현재 상태**: Phase 1-4 완료 (보안 헤더 + 코드 품질 + 코드 분할 + 중복 제거 + 보안 강화), Phase 5 미착수
 
 ---
 
@@ -940,15 +940,31 @@ export function validatePassword(password: string): { valid: boolean; message: s
   - `DivisionReportPage.tsx`, `ProductReportPage.tsx`: 수동 KPI 마크업 → KPICardGrid 사용
 - 빌드 검증: ✅ tsc 에러 0건, vite build 성공 (4.03s, 메인 번들 803KB 유지)
 
-### Phase 4: 보안 강화 (3-5일)
+### Phase 4: 보안 강화 (3-5일) — ✅ 완료 (2026-02-20)
 
-| 순서 | 영역 | 작업 | 파일 | 난이도 |
-|------|------|------|------|--------|
-| 11 | 보안 | Firestore 필드 검증 규칙 추가 | firestore.rules | ★★★ |
-| 12 | 보안 | 비밀번호 강도 검증 추가 | RegisterPage.tsx, 신규 util | ★★☆ |
-| 13 | 보안 | 파일 업로드 검증 강화 (MIME, 크기, 매직 바이트) | DataInputPage.tsx, 신규 util | ★★☆ |
-| 14 | 보안 | 세션 비활동 타임아웃 (30분) | AuthContext.tsx | ★★☆ |
-| 15 | 보안 | 클라이언트 로그인 시도 제한 | LoginPage.tsx | ★★☆ |
+| 순서 | 영역 | 작업 | 파일 | 상태 |
+|------|------|------|------|------|
+| 11 | 보안 | Firestore 필드 검증 규칙 추가 | firestore.rules | ✅ 완료 |
+| 12 | 보안 | 비밀번호 강도 검증 추가 | RegisterPage.tsx, passwordValidator.ts | ✅ 완료 |
+| 13 | 보안 | 파일 업로드 검증 강화 (MIME, 크기, 매직 바이트) | DataInputPage.tsx, fileValidator.ts | ✅ 완료 |
+| 14 | 보안 | 세션 비활동 타임아웃 (30분) | AuthContext.tsx | ✅ 완료 |
+| 15 | 보안 | 클라이언트 로그인 시도 제한 | LoginPage.tsx | ✅ 완료 |
+
+**Phase 4 변경 요약:**
+- `firestore.rules`: 주요 컬렉션에 필드 검증 함수 추가 (users, divisions, products_master, reports, targets, uploadHistory)
+  - 필수 필드 존재 확인 (`hasAll`), 타입 검증 (`is string`, `is number`, `is map`)
+  - 문자열 길이 제한, 열거형 값 검증 (`role in ['admin', 'user']`), 숫자 범위 검증
+  - 공통 헬퍼: `isNonEmptyString()`, `isStringMaxLen()`, `isNonNegativeNumber()`
+- `src/utils/passwordValidator.ts`: 비밀번호 유효성 검증 + 강도 분석 유틸리티 신규 생성
+  - `validatePassword()`: 8자+, 대/소문자, 숫자 필수 검증
+  - `getPasswordStrength()`: 0-4 점수, 실시간 체크리스트 (UI용)
+- `RegisterPage.tsx`: 비밀번호 강도 프로그레스 바 + 체크리스트 UI 추가, 기존 6자 검증 → 8자+강도 검증으로 강화
+- `src/utils/fileValidator.ts`: 엑셀 파일 종합 검증 유틸리티 신규 생성
+  - 확장자 + MIME 타입 + 파일 크기(10MB 제한) + 매직 바이트(ZIP/OLE2 헤더) 4단계 검증
+- `DataInputPage.tsx`: 기존 확장자만 체크 → `validateExcelFile()` 종합 검증으로 교체
+- `AuthContext.tsx`: 30분 비활동 타임아웃 추가 (mousedown/keydown/touchstart/scroll 이벤트 기반)
+- `LoginPage.tsx`: 5회 실패 시 5분 잠금 (localStorage 기반 시도 횟수 관리, 카운트다운 UI)
+- 빌드 검증: ✅ tsc 에러 0건, vite build 성공 (4.13s, 메인 번들 807KB)
 
 ### Phase 5: 핵심 모듈화 (1-2주)
 
