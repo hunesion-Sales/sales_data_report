@@ -1,5 +1,5 @@
 
-import { useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { ArrowDownUp } from 'lucide-react';
 import type { TargetAchievement, AchievementStatus } from '@/types';
 import { formatMillionWon, formatCurrency } from '@/utils/formatUtils';
@@ -16,7 +16,7 @@ const STATUS_CONFIG: Record<AchievementStatus, { label: string; bgColor: string;
   critical: { label: '위험', bgColor: 'bg-red-100', textColor: 'text-red-700', barColor: 'bg-red-500' },
 };
 
-export default function AchievementTable({ achievements, viewMode }: AchievementTableProps) {
+function AchievementTable({ achievements, viewMode }: AchievementTableProps) {
   const [sortKey, setSortKey] = useState<'actual' | 'target' | 'rate'>('actual');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
@@ -194,3 +194,5 @@ export default function AchievementTable({ achievements, viewMode }: Achievement
     </div>
   );
 }
+
+export default React.memo(AchievementTable);

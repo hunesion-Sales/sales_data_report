@@ -1,5 +1,5 @@
 
-import { useMemo } from 'react';
+import React, { useMemo } from 'react';
 import {
   ComposedChart,
   Bar,
@@ -22,7 +22,7 @@ interface AchievementChartsProps {
 
 
 
-export default function AchievementCharts({ achievements, viewMode }: AchievementChartsProps) {
+function AchievementCharts({ achievements, viewMode }: AchievementChartsProps) {
   const isSalesMode = viewMode === 'sales';
 
   // 1. Dual Axis Chart Data: Target vs Actual (Bars) + Achievement Rate (Line)
@@ -81,3 +81,5 @@ export default function AchievementCharts({ achievements, viewMode }: Achievemen
     </div>
   );
 }
+
+export default React.memo(AchievementCharts);

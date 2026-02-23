@@ -15,7 +15,7 @@ interface ProductReportTableProps {
 type SortField = 'none' | 'sales' | 'profit';
 type SortDirection = 'desc' | 'asc';
 
-export default function ProductReportTable({ title, items, months, totals, showFooter = true }: ProductReportTableProps) {
+function ProductReportTable({ title, items, months, totals, showFooter = true }: ProductReportTableProps) {
     const [sortField, setSortField] = useState<SortField>('none');
     const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
 
@@ -166,3 +166,5 @@ export default function ProductReportTable({ title, items, months, totals, showF
         </div>
     );
 }
+
+export default React.memo(ProductReportTable);

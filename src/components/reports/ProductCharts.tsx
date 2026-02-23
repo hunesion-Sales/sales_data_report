@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import React, { useMemo } from 'react';
 import {
     BarChart,
     Bar,
@@ -21,7 +21,7 @@ interface ProductChartsProps {
     viewMode: 'sales' | 'profit';
 }
 
-export default function ProductCharts({ items, months, viewMode }: ProductChartsProps) {
+function ProductCharts({ items, months, viewMode }: ProductChartsProps) {
     // 필터링 제거: props로 전달된 items를 그대로 사용
     const validItems = items;
 
@@ -196,3 +196,5 @@ export default function ProductCharts({ items, months, viewMode }: ProductCharts
         </div>
     );
 }
+
+export default React.memo(ProductCharts);

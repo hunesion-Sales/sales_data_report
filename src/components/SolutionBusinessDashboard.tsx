@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { ProductData } from '@/types';
 import { useReport } from '@/hooks/useReport';
@@ -77,7 +77,7 @@ export default function SolutionBusinessDashboard() {
     totalProfitTarget,
   });
 
-  const handleProductClick = (data: any) => {
+  const handleProductClick = useCallback((data: any) => {
     if (data && data.activeLabel) {
       setSelectedProduct(data.activeLabel);
       setModalType('product');
@@ -87,9 +87,9 @@ export default function SolutionBusinessDashboard() {
       setModalType('product');
       setIsModalOpen(true);
     }
-  };
+  }, []);
 
-  const handleDivisionClick = (data: any) => {
+  const handleDivisionClick = useCallback((data: any) => {
     if (data && data.activeLabel) {
       const divName = data.activeLabel;
       const div = divisionChartData.find(d => d.name === divName);
@@ -97,7 +97,23 @@ export default function SolutionBusinessDashboard() {
       setModalType('division');
       setIsModalOpen(true);
     }
-  };
+  }, [divisionChartData]);
+
+  const handleSalesClick = useCallback(() => {
+    setSelectedProduct('Total');
+    setViewMode('sales');
+    setModalType('product');
+    setIsModalOpen(true);
+  }, [setViewMode]);
+
+  const handleProfitClick = useCallback(() => {
+    setSelectedProduct('Total');
+    setViewMode('profit');
+    setModalType('product');
+    setIsModalOpen(true);
+  }, [setViewMode]);
+
+  const handleAchievementClick = useCallback(() => navigate('/achievement'), [navigate]);
 
   return (
     <div className="space-y-6 animate-fade-in pb-10">
@@ -138,9 +154,9 @@ export default function SolutionBusinessDashboard() {
         monthRangeText={monthRangeText}
         overallSalesAchievementRate={overallSalesAchievementRate}
         overallProfitAchievementRate={overallProfitAchievementRate}
-        onSalesClick={() => { setSelectedProduct('Total'); setViewMode('sales'); setModalType('product'); setIsModalOpen(true); }}
-        onProfitClick={() => { setSelectedProduct('Total'); setViewMode('profit'); setModalType('product'); setIsModalOpen(true); }}
-        onAchievementClick={() => navigate('/achievement')}
+        onSalesClick={handleSalesClick}
+        onProfitClick={handleProfitClick}
+        onAchievementClick={handleAchievementClick}
       />
 
       {/* Charts Section */}

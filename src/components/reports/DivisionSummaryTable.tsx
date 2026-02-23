@@ -1,5 +1,5 @@
 
-import { useState, Fragment, useMemo } from 'react';
+import React, { useState, Fragment, useMemo } from 'react';
 import { ChevronDown, ChevronRight, Building2, ArrowDownUp } from 'lucide-react';
 import type { DivisionSummary, PeriodInfo } from '@/types';
 import { formatMillionWon, formatCurrency } from '@/utils/formatUtils';
@@ -9,7 +9,7 @@ interface DivisionSummaryTableProps {
   periodInfoList: PeriodInfo[];
 }
 
-export default function DivisionSummaryTable({
+function DivisionSummaryTable({
   summaries,
   periodInfoList,
 }: DivisionSummaryTableProps) {
@@ -298,3 +298,5 @@ export default function DivisionSummaryTable({
     </div>
   );
 }
+
+export default React.memo(DivisionSummaryTable);

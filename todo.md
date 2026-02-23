@@ -693,3 +693,8 @@ interface TargetAchievement {
     - 정렬 상태 아이콘 표시 (ArrowUpDown/ArrowDown/ArrowUp)
     - 정렬 활성 컬럼 파란색 하이라이트
     - Deployed to Firebase Hosting
+
+### Phase 42: 보안 에러 및 대시보드 로딩 안정화 가이드 제공 -- COMPLETED
+- [x] **Firebase API Key 및 환경 변수 가이드**: `.env` 파일 로드 표준 코드 추가 및 실수 방지 팁 작성
+- [x] **CSP(Content Security Policy) 수정 가이드**: `firebase.json`의 Google Fonts 허용 정책 제공
+- [x] **안전한 대시보드 구조 제안**: Auth 로딩 상태(`authReady`) 기반의 안전한 렌더링 패턴 제안

@@ -20,7 +20,7 @@ interface DivisionOverviewChartProps {
   onDivisionClick: (data: any) => void;
 }
 
-export default function DivisionOverviewChart({ data, viewMode, onDivisionClick }: DivisionOverviewChartProps) {
+function DivisionOverviewChart({ data, viewMode, onDivisionClick }: DivisionOverviewChartProps) {
   return (
     <ChartWrapper title="부문별 매출/매출이익 및 달성율" height={350}>
       <ComposedChart data={data} margin={{ top: 20, right: 30, left: 30, bottom: 5 }} onClick={onDivisionClick}>
@@ -40,3 +40,5 @@ export default function DivisionOverviewChart({ data, viewMode, onDivisionClick 
     </ChartWrapper>
   );
 }
+
+export default React.memo(DivisionOverviewChart);

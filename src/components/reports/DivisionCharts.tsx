@@ -1,5 +1,5 @@
 
-import { useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   BarChart,
   Bar,
@@ -27,7 +27,7 @@ interface DivisionChartsProps {
   achievements: TargetAchievement[]; // New prop
 }
 
-export default function DivisionCharts({
+function DivisionCharts({
   summaries,
   periodInfoList, // Used for monthly keys if needed?
   viewMode,
@@ -241,3 +241,5 @@ export default function DivisionCharts({
     </>
   );
 }
+
+export default React.memo(DivisionCharts);

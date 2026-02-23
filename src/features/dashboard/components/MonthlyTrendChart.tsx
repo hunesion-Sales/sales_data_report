@@ -11,7 +11,7 @@ interface MonthlyTrendChartProps {
   viewMode: 'sales' | 'profit';
 }
 
-export default function MonthlyTrendChart({ data, viewMode }: MonthlyTrendChartProps) {
+function MonthlyTrendChart({ data, viewMode }: MonthlyTrendChartProps) {
   return (
     <ChartWrapper title="월별 매출/매출이익 및 달성율 추이 (누적)" height={350}>
       <ComposedChart data={data} margin={{ top: 20, right: 30, left: 30, bottom: 5 }}>
@@ -31,3 +31,5 @@ export default function MonthlyTrendChart({ data, viewMode }: MonthlyTrendChartP
     </ChartWrapper>
   );
 }
+
+export default React.memo(MonthlyTrendChart);

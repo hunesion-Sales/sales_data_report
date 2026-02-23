@@ -22,3 +22,25 @@ describe('useDashboardData module', () => {
     expect(typeof mod.useDashboardData).toBe('function');
   });
 });
+
+describe('dashboard components React.memo', () => {
+  it('DashboardKPICards is wrapped with React.memo', async () => {
+    const mod = await import('@/features/dashboard/components/DashboardKPICards');
+    expect(mod.default.$$typeof).toBe(Symbol.for('react.memo'));
+  });
+
+  it('MonthlyTrendChart is wrapped with React.memo', async () => {
+    const mod = await import('@/features/dashboard/components/MonthlyTrendChart');
+    expect(mod.default.$$typeof).toBe(Symbol.for('react.memo'));
+  });
+
+  it('DivisionOverviewChart is wrapped with React.memo', async () => {
+    const mod = await import('@/features/dashboard/components/DivisionOverviewChart');
+    expect(mod.default.$$typeof).toBe(Symbol.for('react.memo'));
+  });
+
+  it('TopProductsChart is wrapped with React.memo', async () => {
+    const mod = await import('@/features/dashboard/components/TopProductsChart');
+    expect(mod.default.$$typeof).toBe(Symbol.for('react.memo'));
+  });
+});

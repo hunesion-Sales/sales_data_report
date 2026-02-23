@@ -12,7 +12,7 @@ interface TopProductsChartProps {
   onProductClick: (data: any) => void;
 }
 
-export default function TopProductsChart({ data, onProductClick }: TopProductsChartProps) {
+function TopProductsChart({ data, onProductClick }: TopProductsChartProps) {
   return (
     <ChartWrapper title="제품별 현황 (클릭 시 상세정보 확인)" height={350}>
       <ComposedChart data={data} margin={{ top: 20, right: 30, left: 30, bottom: 5 }} onClick={onProductClick}>
@@ -27,3 +27,5 @@ export default function TopProductsChart({ data, onProductClick }: TopProductsCh
     </ChartWrapper>
   );
 }
+
+export default React.memo(TopProductsChart);

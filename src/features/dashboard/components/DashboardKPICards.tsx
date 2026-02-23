@@ -13,7 +13,7 @@ interface DashboardKPICardsProps {
   onAchievementClick: () => void;
 }
 
-export default function DashboardKPICards({
+function DashboardKPICards({
   totals,
   monthRangeText,
   overallSalesAchievementRate,
@@ -82,3 +82,5 @@ export default function DashboardKPICards({
     </div>
   );
 }
+
+export default React.memo(DashboardKPICards);
