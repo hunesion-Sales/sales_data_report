@@ -1,7 +1,7 @@
 # 대용량 파일 모듈화 및 성능 개선 방안
 
-> **최종 업데이트**: 2026-02-20 (Phase 4 완료)
-> **현재 상태**: Phase 1-4 완료 (보안 헤더 + 코드 품질 + 코드 분할 + 중복 제거 + 보안 강화), Phase 5 미착수
+> **최종 업데이트**: 2026-02-23 (Phase 5 완료)
+> **현재 상태**: Phase 1-5 완료 (보안 헤더 + 코드 품질 + 코드 분할 + 중복 제거 + 보안 강화 + 핵심 모듈화), Phase 6 미착수
 
 ---
 
@@ -966,31 +966,89 @@ export function validatePassword(password: string): { valid: boolean; message: s
 - `LoginPage.tsx`: 5회 실패 시 5분 잠금 (localStorage 기반 시도 횟수 관리, 카운트다운 UI)
 - 빌드 검증: ✅ tsc 에러 0건, vite build 성공 (4.13s, 메인 번들 807KB)
 
-### Phase 5: 핵심 모듈화 (1-2주)
+### Phase 5: 핵심 모듈화 + 단위 테스트 — ✅ 완료 (2026-02-23)
 
-| 순서 | 영역 | 작업 | 현재 → 목표 | 난이도 |
-|------|------|------|-----------|--------|
-| 16 | 모듈화 | types/index.ts 도메인별 분리 | 301줄 → 7파일 | ★★☆ |
-| 17 | 모듈화 | useReport.ts 분할 | 480줄 → 150줄 + 3파일 | ★★★ |
-| 18 | 모듈화 | snapshotService.ts 분할 | 408줄 → 200줄 + 2파일 | ★★☆ |
-| 19 | 모듈화 | DataInputPage.tsx 분할 | 501줄 → 150줄 + 5파일 | ★★★ |
-| 20 | 모듈화 | SolutionBusinessDashboard.tsx 분할 | 492줄 → 150줄 + 5파일 | ★★★ |
+| 순서 | 영역 | 작업 | 현재 → 목표 | 상태 |
+|------|------|------|-----------|------|
+| 16 | 모듈화 | types/index.ts 도메인별 분리 | 302줄 → 7파일 + barrel | ✅ 완료 |
+| 17 | 모듈화 | snapshotService.ts 분할 | 408줄 → 3파일 (query, write, orchestration) | ✅ 완료 |
+| 18 | 모듈화 | useReport.ts 분할 | 482줄 → 4파일 (data, snapshots, upload, composite) | ✅ 완료 |
+| 19 | 모듈화 | DataInputPage.tsx 분할 | 499줄 → 6파일 (hook + 4 components + barrel) | ✅ 완료 |
+| 20 | 모듈화 | SolutionBusinessDashboard.tsx 분할 | 494줄 → 7파일 (hook + 5 components + barrel) | ✅ 완료 |
+| 21 | 테스트 | vitest 도입 + Phase 5 단위 테스트 | 신규 7 테스트 파일, 48 테스트 | ✅ 완료 |
+
+**Phase 5 변경 요약:**
+
+**5.1 types/index.ts 도메인별 분리 (302줄 → 7파일 + barrel)**
+- `src/types/core.ts`: MonthData, ProductData, ProcessedProduct, Totals 등 핵심 데이터 타입
+- `src/types/parse.ts`: Notification, ParseResult, getMonthShortLabel(), getMonthFullLabel()
+- `src/types/user.ts`: UserRole, UserStatus, UserProfile, Division, AuthState
+- `src/types/product.ts`: ProductMaster, ProductMasterInput, ProductDataExtended
+- `src/types/report.ts`: PeriodType, Quarter, DivisionSummary, PeriodInfo 등
+- `src/types/target.ts`: AchievementStatus, QuarterlyTarget, TargetAchievement 등
+- `src/types/snapshot.ts`: WeekKey, WeeklySnapshot, MonthConflict, UploadAnalysisResult 등
+- `src/types/index.ts` → barrel re-export (7줄), 기존 `from '@/types'` import 41개 파일 하위 호환성 100% 유지
+
+**5.2 snapshotService.ts 분할 (408줄 → 3파일)**
+- `src/firebase/services/snapshotQueryService.ts` (~100줄): getSnapshot, getSnapshots, getSnapshotProducts, getLatestMonthHashes
+- `src/firebase/services/snapshotWriteService.ts` (~90줄): saveWeeklySnapshot, saveSnapshotOnly (dynamic import 패턴 유지)
+- `src/firebase/services/snapshotService.ts` (~200줄): analyzeUpload, saveWithResolutions + re-export
+
+**5.3 useReport.ts 분할 (482줄 → 4파일)**
+- `src/hooks/useReportData.ts` (~200줄): 핵심 상태, 초기 로드, mergeProducts, saveUploadedData, addEntry, removeEntry, ReportDataInternals 인터페이스
+- `src/hooks/useReportSnapshots.ts` (~80줄): 스냅샷 상태, refreshSnapshots, loadSnapshot, loadLatest
+- `src/hooks/useReportUpload.ts` (~80줄): analyzeUpload, saveWithConflictResolution
+- `src/hooks/useReport.ts` (~80줄): 3개 서브훅 조합 composite hook, UploadMergeMode re-export
+
+**5.4 DataInputPage.tsx 분할 (499줄 → 6파일)**
+- `src/features/dataInput/hooks/useDataInput.ts` (~150줄): 로컬 상태, handleFileUpload, handleConflictResolve, matchDivision
+- `src/features/dataInput/components/UploadTypeSelector.tsx` (~30줄)
+- `src/features/dataInput/components/MergeModeSelector.tsx` (~60줄)
+- `src/features/dataInput/components/DataManagementTools.tsx` (~60줄)
+- `src/features/dataInput/components/DataListTable.tsx` (~50줄)
+- `src/features/dataInput/index.ts`: barrel export
+- `src/pages/DataInputPage.tsx` (~150줄): 위 컴포넌트들 조합
+
+**5.5 SolutionBusinessDashboard.tsx 분할 (494줄 → 7파일)**
+- `src/features/dashboard/hooks/useDashboardData.ts` (~140줄): processedData, totals, monthlyTrendData, allProducts, divisionChartData, monthRangeText
+- `src/features/dashboard/components/DashboardKPICards.tsx` (~80줄)
+- `src/features/dashboard/components/MonthlyTrendChart.tsx` (~30줄)
+- `src/features/dashboard/components/TopProductsChart.tsx` (~30줄)
+- `src/features/dashboard/components/DivisionOverviewChart.tsx` (~30줄)
+- `src/features/dashboard/components/DashboardDetailModal.tsx` (~100줄)
+- `src/features/dashboard/index.ts`: barrel export
+- `src/components/SolutionBusinessDashboard.tsx` (~120줄): 위 컴포넌트들 조합
+
+**5.6 vitest 테스트 인프라 도입 + Phase 5 단위 테스트**
+- vitest v4, @testing-library/react, @testing-library/jest-dom, jsdom 설치
+- `vite.config.ts`: test 설정 추가 (globals, jsdom, setupFiles)
+- `package.json`: `test`, `test:watch` 스크립트 추가
+- 테스트 파일 7개 (48 테스트):
+  - `types/__tests__/types.test.ts` (11): barrel re-export, getMonthShortLabel, getMonthFullLabel
+  - `types/__tests__/domain-files.test.ts` (7): 7개 도메인 파일 직접 import, 타입 간 의존관계
+  - `firebase/services/__tests__/snapshotService.test.ts` (5): query/write/orchestration re-export
+  - `hooks/__tests__/useReport.test.ts` (6): composite hook + 3개 서브훅 모듈 해석
+  - `features/dataInput/__tests__/dataInput.test.ts` (7): matchDivision 로직 + barrel export
+  - `features/dashboard/__tests__/dashboard.test.ts` (3): barrel export (hook + 5 components)
+  - `features/dashboard/__tests__/useDashboardData.test.ts` (9): processedData, totals, 정렬, 집계, 월 범위 텍스트
+
+- 검증: ✅ tsc 에러 0건, vite build 성공 (3.83s, 메인 번들 808KB), vitest 48/48 통과 (1.56s)
 
 ### Phase 6: 관리자 페이지 + 보고서 모듈화 (1주)
 
 | 순서 | 영역 | 작업 | 현재 → 목표 | 난이도 |
 |------|------|------|-----------|--------|
-| 21 | 모듈화 | TargetInputTable.tsx 분할 | 489줄 → 120줄 + 5파일 | ★★★ |
-| 22 | 모듈화 | ProductManagementPage.tsx 분할 | 421줄 → 100줄 + 5파일 | ★★☆ |
-| 23 | 모듈화 | UserManagementPage.tsx 분할 | 413줄 → 100줄 + 5파일 | ★★☆ |
-| 24 | 모듈화 | DivisionManagementPage.tsx 분할 | 366줄 → 100줄 + 4파일 | ★★☆ |
-| 25 | 성능 | React.memo 적용 (차트/테이블 컴포넌트) | 6개 컴포넌트 | ★☆☆ |
+| 22 | 모듈화 | TargetInputTable.tsx 분할 | 489줄 → 120줄 + 5파일 | ★★★ |
+| 23 | 모듈화 | ProductManagementPage.tsx 분할 | 421줄 → 100줄 + 5파일 | ★★☆ |
+| 24 | 모듈화 | UserManagementPage.tsx 분할 | 413줄 → 100줄 + 5파일 | ★★☆ |
+| 25 | 모듈화 | DivisionManagementPage.tsx 분할 | 366줄 → 100줄 + 4파일 | ★★☆ |
+| 26 | 성능 | React.memo 적용 (차트/테이블 컴포넌트) | 6개 컴포넌트 | ★☆☆ |
 
 ### Phase 7: 장기 보안 (선택적)
 
 | 순서 | 영역 | 작업 | 파일 | 난이도 |
 |------|------|------|------|--------|
-| 26 | 보안 | Firebase Custom Claims 도입 | Cloud Functions (신규) | ★★★ |
+| 27 | 보안 | Firebase Custom Claims 도입 | Cloud Functions (신규) | ★★★ |
 
 ---
 
