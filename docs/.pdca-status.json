@@ -15,9 +15,9 @@
   "primaryFeature": "productManagement",
   "features": {
     "productManagement": {
-      "phase": "do",
-      "phaseNumber": 3,
-      "matchRate": null,
+      "phase": "report",
+      "phaseNumber": 4,
+      "matchRate": 95,
       "iterationCount": 0,
       "requirements": [],
       "documents": {},
@@ -28,9 +28,9 @@
       "lastFile": "/Volumes/hclim_SSD/sales_data_weekly/src/features/productManagement/__tests__/productManagement.test.ts"
     },
     "admin": {
-      "phase": "do",
+      "phase": "act",
       "phaseNumber": 3,
-      "matchRate": null,
+      "matchRate": 95,
       "iterationCount": 0,
       "requirements": [],
       "documents": {},
@@ -41,9 +41,9 @@
       "lastFile": "/Volumes/hclim_SSD/sales_data_weekly/src/pages/admin/DivisionManagementPage.tsx"
     },
     "userManagement": {
-      "phase": "do",
+      "phase": "act",
       "phaseNumber": 3,
-      "matchRate": null,
+      "matchRate": 95,
       "iterationCount": 0,
       "requirements": [],
       "documents": {},
@@ -54,9 +54,9 @@
       "lastFile": "/Volumes/hclim_SSD/sales_data_weekly/src/features/userManagement/__tests__/userManagement.test.ts"
     },
     "divisionManagement": {
-      "phase": "do",
+      "phase": "act",
       "phaseNumber": 3,
-      "matchRate": null,
+      "matchRate": 95,
       "iterationCount": 0,
       "requirements": [],
       "documents": {},
@@ -67,9 +67,9 @@
       "lastFile": "/Volumes/hclim_SSD/sales_data_weekly/src/features/divisionManagement/__tests__/divisionManagement.test.ts"
     },
     "reports": {
-      "phase": "do",
+      "phase": "act",
       "phaseNumber": 3,
-      "matchRate": null,
+      "matchRate": 95,
       "iterationCount": 0,
       "requirements": [],
       "documents": {},
@@ -80,9 +80,9 @@
       "lastFile": "/Volumes/hclim_SSD/sales_data_weekly/src/components/reports/DivisionSummaryTable.tsx"
     },
     "achievement": {
-      "phase": "do",
+      "phase": "act",
       "phaseNumber": 3,
-      "matchRate": null,
+      "matchRate": 95,
       "iterationCount": 0,
       "requirements": [],
       "documents": {},
@@ -93,9 +93,9 @@
       "lastFile": "/Volumes/hclim_SSD/sales_data_weekly/src/components/achievement/AchievementTable.tsx"
     },
     "dashboard": {
-      "phase": "do",
+      "phase": "act",
       "phaseNumber": 3,
-      "matchRate": null,
+      "matchRate": 95,
       "iterationCount": 0,
       "requirements": [],
       "documents": {},
@@ -106,9 +106,9 @@
       "lastFile": "/Volumes/hclim_SSD/sales_data_weekly/src/features/dashboard/__tests__/dashboard.test.ts"
     },
     "sales_data_weekly": {
-      "phase": "do",
+      "phase": "act",
       "phaseNumber": 3,
-      "matchRate": null,
+      "matchRate": 95,
       "iterationCount": 0,
       "requirements": [],
       "documents": {},
@@ -119,9 +119,9 @@
       "lastFile": "/Volumes/hclim_SSD/sales_data_weekly/src/components/SolutionBusinessDashboard.tsx"
     },
     "__tests__": {
-      "phase": "do",
+      "phase": "act",
       "phaseNumber": 3,
-      "matchRate": null,
+      "matchRate": 95,
       "iterationCount": 0,
       "requirements": [],
       "documents": {},
@@ -146,313 +146,313 @@
     {
       "timestamp": "2026-02-23T06:23:43.991Z",
       "feature": "productManagement",
-      "phase": "do",
+      "phase": "act",
       "action": "updated"
     },
     {
       "timestamp": "2026-02-23T06:23:54.811Z",
       "feature": "productManagement",
-      "phase": "do",
+      "phase": "act",
       "action": "updated"
     },
     {
       "timestamp": "2026-02-23T06:24:12.933Z",
       "feature": "productManagement",
-      "phase": "do",
+      "phase": "act",
       "action": "updated"
     },
     {
       "timestamp": "2026-02-23T06:24:21.867Z",
       "feature": "productManagement",
-      "phase": "do",
+      "phase": "act",
       "action": "updated"
     },
     {
       "timestamp": "2026-02-23T06:24:25.790Z",
       "feature": "productManagement",
-      "phase": "do",
+      "phase": "act",
       "action": "updated"
     },
     {
       "timestamp": "2026-02-23T06:24:43.970Z",
       "feature": "admin",
-      "phase": "do",
+      "phase": "act",
       "action": "updated"
     },
     {
       "timestamp": "2026-02-23T06:25:12.838Z",
       "feature": "userManagement",
-      "phase": "do",
+      "phase": "act",
       "action": "updated"
     },
     {
       "timestamp": "2026-02-23T06:25:19.248Z",
       "feature": "userManagement",
-      "phase": "do",
+      "phase": "act",
       "action": "updated"
     },
     {
       "timestamp": "2026-02-23T06:25:40.486Z",
       "feature": "userManagement",
-      "phase": "do",
+      "phase": "act",
       "action": "updated"
     },
     {
       "timestamp": "2026-02-23T06:25:43.979Z",
       "feature": "userManagement",
-      "phase": "do",
+      "phase": "act",
       "action": "updated"
     },
     {
       "timestamp": "2026-02-23T06:26:04.226Z",
       "feature": "admin",
-      "phase": "do",
+      "phase": "act",
       "action": "updated"
     },
     {
       "timestamp": "2026-02-23T06:26:34.765Z",
       "feature": "divisionManagement",
-      "phase": "do",
+      "phase": "act",
       "action": "updated"
     },
     {
       "timestamp": "2026-02-23T06:26:47.538Z",
       "feature": "divisionManagement",
-      "phase": "do",
+      "phase": "act",
       "action": "updated"
     },
     {
       "timestamp": "2026-02-23T06:26:55.787Z",
       "feature": "divisionManagement",
-      "phase": "do",
+      "phase": "act",
       "action": "updated"
     },
     {
       "timestamp": "2026-02-23T06:26:59.982Z",
       "feature": "divisionManagement",
-      "phase": "do",
+      "phase": "act",
       "action": "updated"
     },
     {
       "timestamp": "2026-02-23T06:27:21.641Z",
       "feature": "admin",
-      "phase": "do",
+      "phase": "act",
       "action": "updated"
     },
     {
       "timestamp": "2026-02-23T06:29:23.365Z",
       "feature": "productManagement",
-      "phase": "do",
+      "phase": "act",
       "action": "updated"
     },
     {
       "timestamp": "2026-02-23T06:29:29.096Z",
       "feature": "userManagement",
-      "phase": "do",
+      "phase": "act",
       "action": "updated"
     },
     {
       "timestamp": "2026-02-23T06:29:35.997Z",
       "feature": "divisionManagement",
-      "phase": "do",
+      "phase": "act",
       "action": "updated"
     },
     {
       "timestamp": "2026-02-23T06:43:29.398Z",
       "feature": "reports",
-      "phase": "do",
+      "phase": "act",
       "action": "updated"
     },
     {
       "timestamp": "2026-02-23T06:43:30.791Z",
       "feature": "reports",
-      "phase": "do",
+      "phase": "act",
       "action": "updated"
     },
     {
       "timestamp": "2026-02-23T06:43:31.765Z",
       "feature": "reports",
-      "phase": "do",
+      "phase": "act",
       "action": "updated"
     },
     {
       "timestamp": "2026-02-23T06:43:32.718Z",
       "feature": "reports",
-      "phase": "do",
+      "phase": "act",
       "action": "updated"
     },
     {
       "timestamp": "2026-02-23T06:43:34.259Z",
       "feature": "reports",
-      "phase": "do",
+      "phase": "act",
       "action": "updated"
     },
     {
       "timestamp": "2026-02-23T06:43:35.459Z",
       "feature": "reports",
-      "phase": "do",
+      "phase": "act",
       "action": "updated"
     },
     {
       "timestamp": "2026-02-23T06:43:36.355Z",
       "feature": "reports",
-      "phase": "do",
+      "phase": "act",
       "action": "updated"
     },
     {
       "timestamp": "2026-02-23T06:43:37.302Z",
       "feature": "achievement",
-      "phase": "do",
+      "phase": "act",
       "action": "updated"
     },
     {
       "timestamp": "2026-02-23T06:43:38.449Z",
       "feature": "achievement",
-      "phase": "do",
+      "phase": "act",
       "action": "updated"
     },
     {
       "timestamp": "2026-02-23T06:43:39.398Z",
       "feature": "achievement",
-      "phase": "do",
+      "phase": "act",
       "action": "updated"
     },
     {
       "timestamp": "2026-02-23T06:43:40.414Z",
       "feature": "achievement",
-      "phase": "do",
+      "phase": "act",
       "action": "updated"
     },
     {
       "timestamp": "2026-02-23T06:43:41.477Z",
       "feature": "dashboard",
-      "phase": "do",
+      "phase": "act",
       "action": "updated"
     },
     {
       "timestamp": "2026-02-23T06:43:42.590Z",
       "feature": "dashboard",
-      "phase": "do",
+      "phase": "act",
       "action": "updated"
     },
     {
       "timestamp": "2026-02-23T06:43:44.726Z",
       "feature": "dashboard",
-      "phase": "do",
+      "phase": "act",
       "action": "updated"
     },
     {
       "timestamp": "2026-02-23T06:43:45.025Z",
       "feature": "dashboard",
-      "phase": "do",
+      "phase": "act",
       "action": "updated"
     },
     {
       "timestamp": "2026-02-23T06:44:21.246Z",
       "feature": "reports",
-      "phase": "do",
+      "phase": "act",
       "action": "updated"
     },
     {
       "timestamp": "2026-02-23T06:44:22.365Z",
       "feature": "reports",
-      "phase": "do",
+      "phase": "act",
       "action": "updated"
     },
     {
       "timestamp": "2026-02-23T06:44:23.268Z",
       "feature": "reports",
-      "phase": "do",
+      "phase": "act",
       "action": "updated"
     },
     {
       "timestamp": "2026-02-23T06:44:24.381Z",
       "feature": "reports",
-      "phase": "do",
+      "phase": "act",
       "action": "updated"
     },
     {
       "timestamp": "2026-02-23T06:44:25.421Z",
       "feature": "achievement",
-      "phase": "do",
+      "phase": "act",
       "action": "updated"
     },
     {
       "timestamp": "2026-02-23T06:44:26.943Z",
       "feature": "achievement",
-      "phase": "do",
+      "phase": "act",
       "action": "updated"
     },
     {
       "timestamp": "2026-02-23T06:44:27.592Z",
       "feature": "dashboard",
-      "phase": "do",
+      "phase": "act",
       "action": "updated"
     },
     {
       "timestamp": "2026-02-23T06:44:28.540Z",
       "feature": "dashboard",
-      "phase": "do",
+      "phase": "act",
       "action": "updated"
     },
     {
       "timestamp": "2026-02-23T06:44:29.557Z",
       "feature": "dashboard",
-      "phase": "do",
+      "phase": "act",
       "action": "updated"
     },
     {
       "timestamp": "2026-02-23T06:44:30.551Z",
       "feature": "dashboard",
-      "phase": "do",
+      "phase": "act",
       "action": "updated"
     },
     {
       "timestamp": "2026-02-23T06:44:31.787Z",
       "feature": "sales_data_weekly",
-      "phase": "do",
+      "phase": "act",
       "action": "updated"
     },
     {
       "timestamp": "2026-02-23T06:44:34.445Z",
       "feature": "sales_data_weekly",
-      "phase": "do",
+      "phase": "act",
       "action": "updated"
     },
     {
       "timestamp": "2026-02-23T06:44:36.063Z",
       "feature": "sales_data_weekly",
-      "phase": "do",
+      "phase": "act",
       "action": "updated"
     },
     {
       "timestamp": "2026-02-23T06:44:37.717Z",
       "feature": "sales_data_weekly",
-      "phase": "do",
+      "phase": "act",
       "action": "updated"
     },
     {
       "timestamp": "2026-02-23T06:44:43.832Z",
       "feature": "sales_data_weekly",
-      "phase": "do",
+      "phase": "act",
       "action": "updated"
     },
     {
       "timestamp": "2026-02-23T06:44:52.920Z",
       "feature": "dashboard",
-      "phase": "do",
+      "phase": "act",
       "action": "updated"
     },
     {
       "timestamp": "2026-02-23T06:44:56.107Z",
       "feature": "__tests__",
-      "phase": "do",
+      "phase": "act",
       "action": "updated"
     },
     {
       "timestamp": "2026-02-23T06:44:57.380Z",
       "feature": "__tests__",
-      "phase": "do",
+      "phase": "act",
       "action": "updated"
     }
   ]
