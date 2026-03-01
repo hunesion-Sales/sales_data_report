@@ -5,25 +5,25 @@ import {
   updateProductMaster,
   deleteProductMaster,
 } from '@/firebase/services/productMasterService';
-import type { ProductMaster } from '@/types';
+import type { ProductMaster, ProductType } from '@/types';
 
 export function useProductManagement() {
   const [products, setProducts] = useState<ProductMaster[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [filterMaintenance, setFilterMaintenance] = useState<string>('all');
+  const [filterType, setFilterType] = useState<string>('all');
 
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editData, setEditData] = useState<{ name: string; isMaintenanceType: boolean }>({
+  const [editData, setEditData] = useState<{ name: string; type: ProductType }>({
     name: '',
-    isMaintenanceType: false,
+    type: 'General',
   });
 
   const [isAdding, setIsAdding] = useState(false);
-  const [newData, setNewData] = useState<{ name: string; isMaintenanceType: boolean }>({
+  const [newData, setNewData] = useState<{ name: string; type: ProductType }>({
     name: '',
-    isMaintenanceType: false,
+    type: 'General',
   });
 
   const [isSaving, setIsSaving] = useState(false);
@@ -51,11 +51,10 @@ export function useProductManagement() {
 
   const filteredProducts = useMemo(() => {
     return products.filter((p) => {
-      if (filterMaintenance === 'maintenance' && !p.isMaintenanceType) return false;
-      if (filterMaintenance === 'regular' && p.isMaintenanceType) return false;
+      if (filterType !== 'all' && p.type !== filterType) return false;
       return true;
     });
-  }, [products, filterMaintenance]);
+  }, [products, filterType]);
 
   const handleAdd = async () => {
     if (!newData.name.trim()) return;
@@ -63,9 +62,9 @@ export function useProductManagement() {
       setIsSaving(true);
       await createProductMaster({
         name: newData.name.trim(),
-        isMaintenanceType: newData.isMaintenanceType,
+        type: newData.type,
       });
-      setNewData({ name: '', isMaintenanceType: false });
+      setNewData({ name: '', type: 'General' });
       setIsAdding(false);
       await loadData();
     } catch (err) {
@@ -78,7 +77,7 @@ export function useProductManagement() {
 
   const handleEdit = (product: ProductMaster) => {
     setEditingId(product.id);
-    setEditData({ name: product.name, isMaintenanceType: product.isMaintenanceType });
+    setEditData({ name: product.name, type: product.type });
   };
 
   const handleSaveEdit = async () => {
@@ -87,7 +86,7 @@ export function useProductManagement() {
       setIsSaving(true);
       await updateProductMaster(editingId, {
         name: editData.name.trim(),
-        isMaintenanceType: editData.isMaintenanceType,
+        type: editData.type,
       });
       setEditingId(null);
       await loadData();
@@ -101,7 +100,7 @@ export function useProductManagement() {
 
   const handleCancelEdit = () => {
     setEditingId(null);
-    setEditData({ name: '', isMaintenanceType: false });
+    setEditData({ name: '', type: 'General' });
   };
 
   const handleConfirmDelete = async () => {
@@ -121,7 +120,7 @@ export function useProductManagement() {
 
   const cancelAdd = () => {
     setIsAdding(false);
-    setNewData({ name: '', isMaintenanceType: false });
+    setNewData({ name: '', type: 'General' });
   };
 
   return {
@@ -130,8 +129,8 @@ export function useProductManagement() {
     isLoading,
     error,
     setError,
-    filterMaintenance,
-    setFilterMaintenance,
+    filterType,
+    setFilterType,
     editingId,
     editData,
     setEditData,

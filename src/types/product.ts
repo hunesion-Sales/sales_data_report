@@ -1,11 +1,13 @@
 import type { ProductData } from './core';
 
+export type ProductType = 'General' | 'Cloud' | 'Maintenance';
+
 /** 제품 마스터 (Firestore products_master/{productId}) */
 export interface ProductMaster {
   id: string;
   name: string;
   divisionId?: string | null; // @deprecated
-  isMaintenanceType: boolean;
+  type: ProductType;
   sortOrder: number;
   createdAt: Date;
   updatedAt: Date;
@@ -15,7 +17,7 @@ export interface ProductMaster {
 export interface ProductMasterInput {
   name: string;
   divisionId?: string | null; // @deprecated
-  isMaintenanceType: boolean;
+  type: ProductType;
   sortOrder?: number;
 }
 

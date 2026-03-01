@@ -162,3 +162,24 @@
 | 순서 | 영역 | 작업 | 난이도 |
 |------|------|------|--------|
 | 27 | 보안 | Firebase Custom Claims 도입 (Cloud Functions) | ★★★ |
+
+---
+
+## 9. Phase 9: 제품 마스터 및 UI 차트 개선 — ✅ 완료 (2026-03-01)
+
+### 9.1 작업 항목 (제품 마스터 데이터베이스 마이그레이션)
+| 영역 | 작업 | 파일 | 상태 |
+|------|------|------|------|
+| 데이터 | `isMaintenanceType`을 `ProductType`으로 마이그레이션 (General/Cloud/Maintenance) | `types/product.ts`, `productMasterService.ts` | ✅ 완료 |
+| 데이터 | 누락된 신규 제품 및 Cloud 속성 제품 추가 파싱 로직 적용 | `productMasterService.ts` | ✅ 완료 |
+| UI | 제품 관리 페이지에 마이그레이션 및 동기화 액션 버튼 2종 추가 | `ProductManagementPage.tsx`外 | ✅ 완료 |
+
+### 9.2 작업 항목 (막대 차트 라벨 개선)
+| 영역 | 작업 | 포함 차트 및 컴포넌트 | 상태 |
+|------|------|-----------------------|------|
+| UI | 막대 그래프 상단 숫자를 백만원 단위로 노출 (`LabelList` 적용) | 대시보드 (`TopProductsChart`, `DivisionOverviewChart`, `MonthlyTrendChart`, `DashboardDetailModal`) | ✅ 완료 |
+| UI | 보고서 및 달성 현황 차트 렌더링 방식 일원화 (`formatMillionWonChart` 헬퍼 적용) | 보고서 및 달성 현황 (`ProductCharts`, `DivisionCharts`, `AchievementCharts`, `DualAxisChart`) | ✅ 완료 |
+
+### 9.3 변경 요약
+- **제품 마스터 업데이트**: 데이터베이스 구조 한계를 극복하기 위해 `ProductType` 도입. 마이그레이션 스크립트를 관리자 페이지에 연동해 안전하게 클라우드 및 유지보수 데이터를 분리함.
+- **차트 가독성 향상**: Recharts 모듈의 `LabelList`를 적용하고 기존 `formatMillionWonChart` 함수를 이용해 100만 원 단위 축소 포맷팅을 일괄 적용. TypeScript 에러 방지를 위해 Formatter 래핑을 꼼꼼하게 처리함. 모든 막대 차트에서 즉시 직관적인 실적 파악이 가능해짐.

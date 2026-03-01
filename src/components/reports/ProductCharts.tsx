@@ -7,6 +7,7 @@ import {
     CartesianGrid,
     Tooltip,
     Legend,
+    LabelList,
     PieChart,
     Pie,
     Cell,
@@ -25,16 +26,29 @@ function ProductCharts({ items, months, viewMode }: ProductChartsProps) {
     // 필터링 제거: props로 전달된 items를 그대로 사용
     const validItems = items;
 
-    // 1. Stacked Bar Chart용 데이터: 월별 제품 매출/이익 스택
+    // 1. Stacked Bar Chart용 데이터: 월별 제품 매출/이익 스택 (순서: 위쪽부터 큰 금액)
+    // Recharts는 첫 번째 항목을 가장 아래에 렌더링하므로, 오름차순으로 정렬된 키를 반환해야 큰 값이 위에 위치합니다.
     const stackedBarData = useMemo(() => {
         return months.map(month => {
             const entry: Record<string, string | number> = { name: month };
-            validItems.forEach(item => {
-                const md = item.months[month];
-                if (md) {
-                    entry[item.product] = viewMode === 'sales' ? md.sales : md.profit;
-                }
+
+            // 해당 월에 실적이 있는 제품들을 추출하고 값에 따라 오름차순 정렬 (렌더링 시 위로 올라감)
+            const monthProducts = validItems
+                .map(item => {
+                    const md = item.months[month];
+                    return {
+                        product: item.product,
+                        value: md ? (viewMode === 'sales' ? md.sales : md.profit) : 0
+                    };
+                })
+                .filter(p => p.value > 0)
+                .sort((a, b) => a.value - b.value);
+
+            // 정렬된 순서대로 객체에 할당. (객체의 키 순서를 보장하기 위해 이렇게 함)
+            monthProducts.forEach(p => {
+                entry[p.product] = p.value;
             });
+
             return entry;
         });
     }, [months, validItems, viewMode]);
@@ -73,13 +87,35 @@ function ProductCharts({ items, months, viewMode }: ProductChartsProps) {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 print-avoid-break">
             {/* 1. Stacked Bar Chart: 기간별 제품 추이 (Full Width) */}
             <ChartWrapper title={`기간별 제품 ${metricLabel} 추이 (단위: 백만원)`} height={350} className="lg:col-span-2">
-                <BarChart data={stackedBarData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                <BarChart data={stackedBarData} margin={{ top: 30, right: 30, left: 20, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
                     <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                    <YAxis tickFormatter={formatMillionWonChart} tick={{ fontSize: 11 }} />
+                    <YAxis
+                        tickFormatter={formatMillionWonChart}
+                        tick={{ fontSize: 11 }}
+                        label={{ value: '(백만원)', angle: -90, position: 'insideLeft', style: { fontSize: 11, fill: '#64748b' } }}
+                    />
                     <Tooltip
-                        formatter={(value) => formatMillionWonTooltip(Number(value))}
-                        labelStyle={{ fontWeight: 'bold' }}
+                        content={({ active, payload, label }) => {
+                            if (!active || !payload || payload.length === 0) return null;
+                            // 툴팁에서는 위에서 아래로 보기 편하도록 내림차순 정렬
+                            const sortedPayload = [...payload].sort((a, b) => Number(b.value) - Number(a.value));
+                            const total = sortedPayload.reduce((sum, entry) => sum + Number(entry.value || 0), 0);
+                            return (
+                                <div className="bg-white border border-slate-200 rounded-lg shadow-lg p-3 text-sm">
+                                    <p className="font-bold text-slate-800 mb-2">{label}</p>
+                                    {sortedPayload.map(entry => (
+                                        <p key={entry.name} style={{ color: entry.color }} className="py-0.5">
+                                            {entry.name}: {formatMillionWonTooltip(Number(entry.value))}
+                                        </p>
+                                    ))}
+                                    <hr className="my-1.5 border-slate-200" />
+                                    <p className="font-bold text-slate-800">
+                                        총계: {formatMillionWonTooltip(total)}
+                                    </p>
+                                </div>
+                            );
+                        }}
                     />
                     <Legend wrapperStyle={{ fontSize: 11 }} />
                     {validItems.map((item, idx) => (
@@ -88,7 +124,32 @@ function ProductCharts({ items, months, viewMode }: ProductChartsProps) {
                             dataKey={item.product}
                             stackId="a"
                             fill={getItemColor(idx)}
-                        />
+                        >
+                            {idx === validItems.length - 1 && (
+                                <LabelList
+                                    content={({ x, y, width, index }: any) => {
+                                        if (index === undefined || index === null) return null;
+                                        const total = validItems.reduce((sum, p) => {
+                                            return sum + (Number(stackedBarData[index]?.[p.product]) || 0);
+                                        }, 0);
+                                        if (total === 0) return null;
+                                        const label = formatMillionWonChart(total);
+                                        return (
+                                            <text
+                                                x={(x as number) + (width as number) / 2}
+                                                y={(y as number) - 8}
+                                                textAnchor="middle"
+                                                fontSize={11}
+                                                fill="#374151"
+                                                fontWeight={600}
+                                            >
+                                                {label}
+                                            </text>
+                                        );
+                                    }}
+                                />
+                            )}
+                        </Bar>
                     ))}
                 </BarChart>
             </ChartWrapper>
@@ -190,7 +251,9 @@ function ProductCharts({ items, months, viewMode }: ProductChartsProps) {
                         fill={viewMode === 'sales' ? '#2563eb' : '#06b6d4'}
                         radius={[0, 4, 4, 0]}
                         barSize={20}
-                    />
+                    >
+                        <LabelList dataKey="value" position="right" formatter={(val: any) => formatMillionWonChart(val)} fontSize={10} fill="#64748b" />
+                    </Bar>
                 </BarChart>
             </ChartWrapper>
         </div>

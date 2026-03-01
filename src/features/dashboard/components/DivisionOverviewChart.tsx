@@ -1,7 +1,7 @@
 import React from 'react';
 import {
   ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid,
-  Tooltip as RechartsTooltip, Legend,
+  Tooltip as RechartsTooltip, Legend, LabelList
 } from 'recharts';
 import { ChartWrapper } from '@/components/charts';
 import { formatMillionWonChart, formatMillionWonTooltip } from '@/utils/formatUtils';
@@ -33,8 +33,12 @@ function DivisionOverviewChart({ data, viewMode, onDivisionClick }: DivisionOver
           return formatMillionWonTooltip(value);
         }} />
         <Legend />
-        <Bar yAxisId="left" dataKey="sales" name="매출액" fill="#6366f1" barSize={30} radius={[4, 4, 0, 0]} />
-        <Bar yAxisId="left" dataKey="profit" name="매출이익" fill="#059669" barSize={30} radius={[4, 4, 0, 0]} />
+        <Bar yAxisId="left" dataKey="sales" name="매출액" fill="#6366f1" barSize={30} radius={[4, 4, 0, 0]}>
+          <LabelList dataKey="sales" position="top" formatter={(val: any) => formatMillionWonChart(val)} fontSize={10} fill="#64748b" offset={10} />
+        </Bar>
+        <Bar yAxisId="left" dataKey="profit" name="매출이익" fill="#059669" barSize={30} radius={[4, 4, 0, 0]}>
+          <LabelList dataKey="profit" position="top" formatter={(val: any) => formatMillionWonChart(val)} fontSize={10} fill="#64748b" offset={10} />
+        </Bar>
         <Line yAxisId="right" type="monotone" dataKey="rate" name="달성율" stroke="#f43f5e" strokeWidth={3} dot={{ r: 4 }} />
       </ComposedChart>
     </ChartWrapper>

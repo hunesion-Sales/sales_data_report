@@ -1,22 +1,22 @@
-import React, { useMemo } from 'react';
-import type { ProductData, ProcessedProduct, Totals } from '@/types';
-import { getMonthFullLabel } from '@/types';
+import React, { useState, useMemo } from 'react';
+import type { ProductData, ReportFilter } from '@/types';
 import { useReport } from '@/hooks/useReport';
-import { Table as TableIcon, Printer, Cloud, CloudOff, Loader2, Package } from 'lucide-react';
+import { useProductReport } from '@/hooks/useProductReport';
+import { Cloud, CloudOff, Loader2, Package } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { CURRENT_YEAR } from '@/config/appConfig';
 import { formatMillionWon, formatCurrency as formatCurrencyFull } from '@/utils/formatUtils';
+import { getAvailableYears, getPeriodInfoList } from '@/utils/periodUtils';
 import ProductCharts from '@/components/reports/ProductCharts';
 import ProductReportTable from '@/components/reports/ProductReportTable';
+import ReportFilterBar from '@/components/reports/ReportFilterBar';
 import ViewToggle from '@/components/ui/ViewToggle';
 import { useViewMode } from '@/hooks/useViewMode';
 import KPICardGrid from '@/components/common/KPICardGrid';
 
-// --- 초기 데이터 (동적 월 구조) ---
-// --- 초기 데이터 (DB 로딩 전 빈 상태) ---
 const DEFAULT_MONTHS: string[] = [];
 const DEFAULT_MONTH_LABELS: Record<string, string> = {};
 const INITIAL_DATA: ProductData[] = [];
-
 
 export default function ProductReportPage() {
     const { firebaseUser, authReady } = useAuth();
@@ -29,149 +29,25 @@ export default function ProductReportPage() {
         authReady,
     });
 
-    // 제품의 특정 월 데이터를 안전하게 가져오기
-    const getMonthData = (item: ProductData, monthKey: string) => {
-        return item.months[monthKey] ?? { sales: 0, cost: 0 };
-    };
+    // 기간 필터 상태
+    const [filter, setFilter] = useState<ReportFilter>({
+        year: CURRENT_YEAR,
+        periodType: 'monthly',
+    });
 
-    // --- 데이터 가공 및 통계 계산 ---
-    const { mainData, cloudData } = useMemo(() => {
-        // 빈 월 데이터 생성 헬퍼
-        const emptyMonths = (): Record<string, { sales: number; cost: number }> => {
-            const m: Record<string, { sales: number; cost: number }> = {};
-            months.forEach(key => { m[key] = { sales: 0, cost: 0 }; });
-            return m;
-        };
+    const availableYears = useMemo(() => getAvailableYears(months), [months]);
 
-        const aggregatedGroups: Record<string, ProductData> = {
-            '유지보수': { id: 'maintenance_total', product: '유지보수', months: emptyMonths() },
-            '기타': { id: 'etc_total', product: '기타', months: emptyMonths() },
-        };
+    // 기간 필터 적용
+    const filteredMonths = useMemo(() => {
+        if (filter.periodType === 'monthly') {
+            return months.filter(m => m.startsWith(`${filter.year}`));
+        }
+        const periodInfoList = getPeriodInfoList(filter.year, filter.periodType, months);
+        return periodInfoList.flatMap(p => p.months);
+    }, [filter.year, filter.periodType, months]);
 
-        // Groups
-        const regularItems: ProductData[] = [];
-        const cloudItems: ProductData[] = [];
-        const cloudSubtotal: ProductData = { id: 'cloud_total', product: 'Cloud 서비스', months: emptyMonths() };
-
-        data.forEach(item => {
-            // 1. Maintenance & Etc/HW Aggregation
-            if (item.product.endsWith('_MA')) {
-                months.forEach(mk => {
-                    const md = getMonthData(item, mk);
-                    aggregatedGroups['유지보수'].months[mk].sales += md.sales;
-                    aggregatedGroups['유지보수'].months[mk].cost += md.cost;
-                });
-            } else if (item.product === 'H/W' || item.product === '기타') {
-                months.forEach(mk => {
-                    const md = getMonthData(item, mk);
-                    aggregatedGroups['기타'].months[mk].sales += md.sales;
-                    aggregatedGroups['기타'].months[mk].cost += md.cost;
-                });
-            }
-            // 2. Cloud Items
-            else if (item.product.toUpperCase().includes('CLOUD')) {
-                cloudItems.push(item);
-                // Add to Cloud Subtotal
-                months.forEach(mk => {
-                    const md = getMonthData(item, mk);
-                    cloudSubtotal.months[mk].sales += md.sales;
-                    cloudSubtotal.months[mk].cost += md.cost;
-                });
-            }
-            // 3. Regular Items
-            else {
-                regularItems.push(item);
-            }
-        });
-
-        // Sort Lists Ascending by Name
-        regularItems.sort((a, b) => a.product.localeCompare(b.product));
-        cloudItems.sort((a, b) => a.product.localeCompare(b.product));
-
-        // Helper to process list
-        const processList = (list: ProductData[]) => list.map(item => {
-            const processedMonths: Record<string, { sales: number; cost: number; profit: number }> = {};
-            let totalSales = 0;
-            let totalCost = 0;
-
-            months.forEach(mk => {
-                const md = getMonthData(item, mk);
-                const profit = md.sales - md.cost;
-                processedMonths[mk] = { sales: md.sales, cost: md.cost, profit };
-                totalSales += md.sales;
-                totalCost += md.cost;
-            });
-
-            return {
-                id: item.id,
-                product: item.product,
-                months: processedMonths,
-                totalSales,
-                totalCost,
-                totalProfit: totalSales - totalCost,
-            };
-        });
-
-        // Main Report Data: Regular -> Cloud Service -> Maintenance -> Etc
-        const mainRaw = [
-            ...regularItems,
-            cloudSubtotal,
-            aggregatedGroups['유지보수'],
-            aggregatedGroups['기타']
-        ];
-
-        // Cloud Report Data: Individual Cloud Items
-        const cloudRaw = [...cloudItems];
-
-        return {
-            mainData: processList(mainRaw),
-            cloudData: processList(cloudRaw)
-        };
-    }, [data, months]);
-
-    const totals = useMemo<Totals>(() => {
-        const byMonth: Record<string, { sales: number; cost: number; profit: number }> = {};
-        months.forEach(mk => { byMonth[mk] = { sales: 0, cost: 0, profit: 0 }; });
-
-        let totalSales = 0;
-        let totalCost = 0;
-
-        // Use mainData for totals (it includes Cloud Service aggregated, and verified single entries)
-        mainData.forEach(item => {
-            months.forEach(mk => {
-                const md = item.months[mk] ?? { sales: 0, cost: 0, profit: 0 };
-                byMonth[mk].sales += md.sales;
-                byMonth[mk].cost += md.cost;
-                byMonth[mk].profit += md.profit;
-            });
-            totalSales += item.totalSales;
-            totalCost += item.totalCost;
-        });
-
-        return { byMonth, totalSales, totalCost, totalProfit: totalSales - totalCost };
-    }, [mainData, months]);
-
-    // Cloud Totals (for Cloud Report Footer)
-    const cloudTotals = useMemo<Totals>(() => {
-        const byMonth: Record<string, { sales: number; cost: number; profit: number }> = {};
-        months.forEach(mk => { byMonth[mk] = { sales: 0, cost: 0, profit: 0 }; });
-
-        let totalSales = 0;
-        let totalCost = 0;
-
-        cloudData.forEach(item => {
-            months.forEach(mk => {
-                const md = item.months[mk] ?? { sales: 0, cost: 0, profit: 0 };
-                byMonth[mk].sales += md.sales;
-                byMonth[mk].cost += md.cost;
-                byMonth[mk].profit += md.profit;
-            });
-            totalSales += item.totalSales;
-            totalCost += item.totalCost;
-        });
-
-        return { byMonth, totalSales, totalCost, totalProfit: totalSales - totalCost };
-    }, [cloudData, months]);
+    // 훅으로 추출된 데이터 가공
+    const { mainData, cloudData, totals, cloudTotals } = useProductReport(data, filteredMonths);
 
     const { viewMode, setViewMode } = useViewMode('sales');
 
@@ -184,10 +60,7 @@ export default function ProductReportPage() {
                 </div>
 
                 <div className="flex items-center gap-4">
-                    {/* View Mode Toggle */}
                     <ViewToggle viewMode={viewMode} onChange={setViewMode} />
-
-                    {/* Firestore Data Status */}
                     <div className="flex items-center gap-3">
                         {isSaving ? (
                             <span className="flex items-center gap-1 text-xs text-amber-600">
@@ -208,6 +81,15 @@ export default function ProductReportPage() {
                     </div>
                 </div>
             </div>
+
+            {/* 기간 필터 바 */}
+            <ReportFilterBar
+                filter={filter}
+                onFilterChange={setFilter}
+                divisions={[]}
+                availableYears={availableYears}
+                isLoading={isLoading}
+            />
 
             {/* Summary KPI Cards */}
             <KPICardGrid
@@ -242,19 +124,17 @@ export default function ProductReportPage() {
 
             {/* 1. Main Report Section */}
             <div className="space-y-6">
-                {/* Product Charts (Main) */}
-                <ProductCharts items={mainData} months={months} viewMode={viewMode} />
-
-                {/* Detailed Report Table (Main) */}
+                <ProductCharts items={mainData} months={filteredMonths} viewMode={viewMode} />
                 <ProductReportTable
                     title="상세 실적 보고서"
                     items={mainData}
-                    months={months}
+                    months={filteredMonths}
                     totals={totals}
+                    enableQuarterGrouping={filteredMonths.length > 6}
                 />
             </div>
 
-            {/* 2. Cloud Report Section (Separate) */}
+            {/* 2. Cloud Report Section */}
             <div className="mt-12 space-y-6 pt-8 no-print-break-before">
                 <div className="bg-indigo-50 border-l-4 border-indigo-500 p-4 rounded-r-lg mb-6 flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -268,15 +148,13 @@ export default function ProductReportPage() {
                     </div>
                 </div>
 
-                {/* Product Charts (Cloud) */}
-                <ProductCharts items={cloudData} months={months} viewMode={viewMode} />
-
-                {/* Detailed Report Table (Cloud) */}
+                <ProductCharts items={cloudData} months={filteredMonths} viewMode={viewMode} />
                 <ProductReportTable
                     title="클라우드 상세 실적"
                     items={cloudData}
-                    months={months}
+                    months={filteredMonths}
                     totals={cloudTotals}
+                    enableQuarterGrouping={filteredMonths.length > 6}
                 />
             </div>
         </div>

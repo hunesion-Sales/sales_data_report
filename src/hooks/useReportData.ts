@@ -3,6 +3,7 @@ import type { ProductData } from '@/types';
 import { getOrCreateReport, getReport, updateReportMonths } from '@/firebase/services/reportService';
 import { getProducts, saveProducts, addProduct, deleteProduct } from '@/firebase/services/productService';
 import { recordUploadHistory } from '@/firebase/services/uploadHistoryService';
+import { CURRENT_YEAR } from '@/config/appConfig';
 import { logger } from '@/utils/logger';
 import type { User } from 'firebase/auth';
 
@@ -22,8 +23,6 @@ interface UseReportDataOptions {
   firebaseUser: User | null;
   authReady: boolean;
 }
-
-const CURRENT_YEAR = 2026;
 
 /**
  * 두 ProductData 배열을 병합
@@ -178,6 +177,7 @@ export function useReportData(
     newMonthLabels: Record<string, string>,
     fileName: string,
     mergeMode: UploadMergeMode = 'overwrite',
+    targetYear?: number,
   ): Promise<{ newCount: number; updatedCount: number }> => {
     let finalProducts: ProductData[];
     let finalMonths: string[];
@@ -207,7 +207,7 @@ export function useReportData(
 
     setIsSaving(true);
     try {
-      const { reportId } = await getOrCreateReport(CURRENT_YEAR);
+      const { reportId } = await getOrCreateReport(targetYear ?? CURRENT_YEAR);
       reportIdRef.current = reportId;
 
       await updateReportMonths(reportId, finalMonths, finalMonthLabels);

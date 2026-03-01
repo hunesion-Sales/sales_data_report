@@ -1,12 +1,12 @@
-import { Pencil, Trash2, Save, X, Loader2, Wrench } from 'lucide-react';
-import type { ProductMaster } from '@/types';
+import { Pencil, Trash2, Save, X, Loader2, Cloud, Wrench, Menu } from 'lucide-react';
+import type { ProductMaster, ProductType } from '@/types';
 
 interface ProductTableProps {
   filteredProducts: ProductMaster[];
   totalCount: number;
   editingId: string | null;
-  editData: { name: string; isMaintenanceType: boolean };
-  setEditData: (data: { name: string; isMaintenanceType: boolean }) => void;
+  editData: { name: string; type: ProductType };
+  setEditData: (data: { name: string; type: ProductType }) => void;
   isSaving: boolean;
   onEdit: (product: ProductMaster) => void;
   onSaveEdit: () => void;
@@ -53,15 +53,15 @@ export default function ProductTable({
                     />
                   </td>
                   <td className="px-4 py-3 text-center">
-                    <label className="inline-flex items-center gap-1 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={editData.isMaintenanceType}
-                        onChange={(e) => setEditData({ ...editData, isMaintenanceType: e.target.checked })}
-                        className="w-4 h-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
-                      />
-                      <span className="text-xs text-slate-500">유지보수</span>
-                    </label>
+                    <select
+                      value={editData.type}
+                      onChange={(e) => setEditData({ ...editData, type: e.target.value as ProductType })}
+                      className="px-2 py-1 bg-white border border-slate-300 rounded focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-sm"
+                    >
+                      <option value="General">일반</option>
+                      <option value="Cloud">클라우드</option>
+                      <option value="Maintenance">유지보수</option>
+                    </select>
                   </td>
                   <td className="px-4 py-3 text-center">
                     <div className="flex items-center justify-center gap-1">
@@ -86,13 +86,23 @@ export default function ProductTable({
                   <td className="px-4 py-3 text-slate-400">{idx + 1}</td>
                   <td className="px-4 py-3 font-medium text-slate-700">{product.name}</td>
                   <td className="px-4 py-3 text-center">
-                    {product.isMaintenanceType ? (
+                    {product.type === 'Maintenance' && (
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-100 text-amber-700 rounded text-xs">
                         <Wrench className="w-3 h-3" />
                         유지보수
                       </span>
-                    ) : (
-                      <span className="text-slate-400 text-xs">일반</span>
+                    )}
+                    {product.type === 'Cloud' && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs">
+                        <Cloud className="w-3 h-3" />
+                        클라우드
+                      </span>
+                    )}
+                    {product.type === 'General' && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-xs">
+                        <Menu className="w-3 h-3" />
+                        일반
+                      </span>
                     )}
                   </td>
                   <td className="px-4 py-3 text-center">

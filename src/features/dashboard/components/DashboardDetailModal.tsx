@@ -1,7 +1,7 @@
 import React from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  Tooltip as RechartsTooltip,
+  Tooltip as RechartsTooltip, LabelList
 } from 'recharts';
 import { ChartWrapper } from '@/components/charts';
 import { Modal } from '@/components/ui/Modal';
@@ -106,7 +106,9 @@ export default function DashboardDetailModal({
               fill={viewMode === 'sales' ? '#3b82f6' : '#10b981'}
               radius={[4, 4, 0, 0]}
               barSize={40}
-            />
+            >
+              <LabelList dataKey="value" position="top" formatter={(val: any) => formatMillionWonChart(val)} fontSize={10} fill="#64748b" />
+            </Bar>
           </BarChart>
         </ChartWrapper>
       </div>

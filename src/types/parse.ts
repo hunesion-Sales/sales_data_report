@@ -11,6 +11,7 @@ export interface ParseResult {
   data: ProductData[];
   months: string[]; // 감지된 월 키 목록 (정렬됨): ["2026-01", "2026-02", ...]
   monthLabels: Record<string, string>; // key -> 표시명: { "2026-01": "1월 2026" }
+  detectedYear: number; // 엑셀 헤더에서 감지된 연도
 }
 
 /**

@@ -33,6 +33,7 @@ interface UseReportReturn {
     monthLabels: Record<string, string>,
     fileName: string,
     mergeMode?: import('./useReportData').UploadMergeMode,
+    targetYear?: number,
   ) => Promise<{ newCount: number; updatedCount: number }>;
   addEntry: (product: ProductData) => Promise<void>;
   removeEntry: (id: number | string) => Promise<void>;
@@ -43,11 +44,13 @@ interface UseReportReturn {
     products: ProductData[],
     months: string[],
     monthLabels: Record<string, string>,
+    targetYear?: number,
   ) => Promise<UploadAnalysisResult>;
   saveWithConflictResolution: (
     analysisResult: UploadAnalysisResult,
     resolutions: ConflictResolution[],
     fileName: string,
+    targetYear?: number,
   ) => Promise<ConflictResolutionSaveResult>;
   loadSnapshot: (weekKey: WeekKey) => Promise<void>;
   loadLatest: () => Promise<void>;

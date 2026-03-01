@@ -11,8 +11,9 @@ import {
   DataManagementTools,
   DataListTable,
 } from '@/features/dataInput';
+import { CURRENT_YEAR } from '@/config/appConfig';
 import {
-  Upload, FileText, Loader2, Save, X, Cloud, CloudOff,
+  Upload, FileText, Loader2, Save, X, Cloud, CloudOff, CalendarDays,
 } from 'lucide-react';
 
 // --- 초기 데이터 (동적 월 구조) ---
@@ -56,6 +57,7 @@ export default function DataInputPage() {
     setUploadAnalysis,
     pendingFileName,
     setPendingFileName,
+    detectedYear,
     handleFileUpload,
     handleConflictResolve,
   } = useDataInput({
@@ -128,6 +130,18 @@ export default function DataInputPage() {
 
         <UploadTypeSelector uploadType={uploadType} onChangeType={setUploadType} />
         <MergeModeSelector mergeMode={mergeMode} onChangeMode={setMergeMode} uploadType={uploadType} />
+
+        {detectedYear && (
+          <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium mb-4 ${
+            detectedYear === CURRENT_YEAR
+              ? 'bg-emerald-100 text-emerald-800'
+              : 'bg-amber-100 text-amber-800'
+          }`}>
+            <CalendarDays className="w-4 h-4" />
+            자동 감지된 연도: {detectedYear}년
+            {detectedYear !== CURRENT_YEAR && ' (과거 데이터)'}
+          </div>
+        )}
 
         <div
           className={`border-2 border-dashed border-primary-200 rounded-xl p-8 bg-primary-50/50 text-center transition-colors ${isUploading ? 'opacity-60 cursor-wait' : 'hover:bg-primary-50 cursor-pointer'}`}

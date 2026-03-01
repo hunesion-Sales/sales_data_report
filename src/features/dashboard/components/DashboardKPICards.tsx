@@ -1,7 +1,15 @@
 import React from 'react';
 import { DollarSign, TrendingUp, Target } from 'lucide-react';
 import { formatMillionWon } from '@/utils/formatUtils';
+import { formatYoYRate, getYoYColorClass } from '@/utils/yoyUtils';
 import type { Totals } from '@/types';
+
+interface YoYMetrics {
+  salesRate: number | null;
+  profitRate: number | null;
+  previousSales: number;
+  previousProfit: number;
+}
 
 interface DashboardKPICardsProps {
   totals: Totals;
@@ -11,6 +19,7 @@ interface DashboardKPICardsProps {
   onSalesClick: () => void;
   onProfitClick: () => void;
   onAchievementClick: () => void;
+  yoyMetrics?: YoYMetrics;
 }
 
 function DashboardKPICards({
@@ -21,6 +30,7 @@ function DashboardKPICards({
   onSalesClick,
   onProfitClick,
   onAchievementClick,
+  yoyMetrics,
 }: DashboardKPICardsProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -34,6 +44,14 @@ function DashboardKPICards({
           <DollarSign className="w-5 h-5 text-blue-500" />
         </div>
         <div className="text-2xl font-bold text-slate-900">{formatMillionWon(totals.totalSales)}</div>
+        {yoyMetrics && (
+          <div className="flex items-center gap-2 mt-1">
+            <span className="text-xs text-slate-400">전년: {formatMillionWon(yoyMetrics.previousSales)}</span>
+            <span className={`text-xs font-semibold ${getYoYColorClass(yoyMetrics.salesRate)}`}>
+              {formatYoYRate(yoyMetrics.salesRate)}
+            </span>
+          </div>
+        )}
         <p className="text-xs text-slate-400 mt-1">{monthRangeText} 합계</p>
       </div>
 
@@ -62,6 +80,14 @@ function DashboardKPICards({
           <TrendingUp className="w-5 h-5 text-emerald-500" />
         </div>
         <div className="text-2xl font-bold text-emerald-600">{formatMillionWon(totals.totalProfit)}</div>
+        {yoyMetrics && (
+          <div className="flex items-center gap-2 mt-1">
+            <span className="text-xs text-slate-400">전년: {formatMillionWon(yoyMetrics.previousProfit)}</span>
+            <span className={`text-xs font-semibold ${getYoYColorClass(yoyMetrics.profitRate)}`}>
+              {formatYoYRate(yoyMetrics.profitRate)}
+            </span>
+          </div>
+        )}
         <p className="text-xs text-slate-400 mt-1">{monthRangeText} 합계</p>
       </div>
 

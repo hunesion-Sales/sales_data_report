@@ -1,8 +1,11 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { ProductData } from '@/types';
 import { useReport } from '@/hooks/useReport';
+import { useYoYReport } from '@/hooks/useYoYReport';
+import { CURRENT_YEAR } from '@/config/appConfig';
+import { calculateYoYRate } from '@/utils/yoyUtils';
 import { Cloud, CloudOff, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAchievement } from '@/hooks/useAchievement';
@@ -76,6 +79,54 @@ export default function SolutionBusinessDashboard() {
     totalSalesTarget,
     totalProfitTarget,
   });
+
+  // YoY 전년도 비교 데이터
+  const { previousData, previousMonths } = useYoYReport(CURRENT_YEAR, true);
+
+  const yoyMetrics = useMemo(() => {
+    if (previousData.length === 0) return undefined;
+    let previousSales = 0;
+    let previousProfit = 0;
+    previousData.forEach(item => {
+      Object.values(item.months).forEach(md => {
+        previousSales += md.sales;
+        previousProfit += md.sales - md.cost;
+      });
+    });
+    return {
+      salesRate: calculateYoYRate(totals.totalSales, previousSales),
+      profitRate: calculateYoYRate(totals.totalProfit, previousProfit),
+      previousSales,
+      previousProfit,
+    };
+  }, [previousData, totals]);
+
+  // 월별 트렌드에 전년도 데이터 병합
+  const enrichedTrendData = useMemo(() => {
+    if (previousData.length === 0) return monthlyTrendData;
+    // 전년도 데이터를 월별로 집계
+    const prevByMonth: Record<string, { sales: number; profit: number }> = {};
+    previousData.forEach(item => {
+      Object.entries(item.months).forEach(([mk, md]) => {
+        const monthNum = mk.split('-')[1]; // "01", "02", etc.
+        if (!prevByMonth[monthNum]) prevByMonth[monthNum] = { sales: 0, profit: 0 };
+        prevByMonth[monthNum].sales += md.sales;
+        prevByMonth[monthNum].profit += md.sales - md.cost;
+      });
+    });
+
+    return monthlyTrendData.map(entry => {
+      // name is like "1월", "2월" etc.
+      const match = entry.name.match(/^(\d+)월/);
+      const monthNum = match ? match[1].padStart(2, '0') : null;
+      const prev = monthNum ? prevByMonth[monthNum] : null;
+      return {
+        ...entry,
+        previousSales: prev?.sales ?? 0,
+        previousProfit: prev?.profit ?? 0,
+      };
+    });
+  }, [monthlyTrendData, previousData]);
 
   const handleProductClick = useCallback((data: any) => {
     if (data && data.activeLabel) {
@@ -157,11 +208,12 @@ export default function SolutionBusinessDashboard() {
         onSalesClick={handleSalesClick}
         onProfitClick={handleProfitClick}
         onAchievementClick={handleAchievementClick}
+        yoyMetrics={yoyMetrics}
       />
 
       {/* Charts Section */}
       <div className="space-y-6 no-print">
-        <MonthlyTrendChart data={monthlyTrendData} viewMode={viewMode} />
+        <MonthlyTrendChart data={enrichedTrendData} viewMode={viewMode} showYoY={previousData.length > 0} />
         <TopProductsChart data={allProducts} onProductClick={handleProductClick} />
         <div>
           <DivisionOverviewChart data={divisionChartData} viewMode={viewMode} onDivisionClick={handleDivisionClick} />

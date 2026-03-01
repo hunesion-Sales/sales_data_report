@@ -7,9 +7,10 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
   Legend,
   ResponsiveContainer,
+  LabelList,
+  Tooltip,
 } from 'recharts';
 import type { TargetAchievement } from '@/types';
 import { ChartWrapper } from '@/components/charts';
@@ -71,9 +72,12 @@ function AchievementCharts({ achievements, viewMode }: AchievementChartsProps) {
                 return formatMillionWonTooltip(value);
               }}
             />
-            <Legend wrapperStyle={{ fontSize: 12 }} />
-            <Bar yAxisId="left" dataKey="target" name="목표" fill="#94a3b8" radius={[4, 4, 0, 0]} barSize={40} />
-            <Bar yAxisId="left" dataKey="actual" name="실적" fill={isSalesMode ? "#2563eb" : "#059669"} radius={[4, 4, 0, 0]} barSize={40} />
+            <Bar yAxisId="left" dataKey="target" name="목표" fill="#94a3b8" radius={[4, 4, 0, 0]} barSize={40}>
+              <LabelList dataKey="target" position="top" formatter={(val: any) => formatMillionWonChart(val)} fontSize={10} fill="#64748b" offset={5} />
+            </Bar>
+            <Bar yAxisId="left" dataKey="actual" name="실적" fill={isSalesMode ? "#2563eb" : "#059669"} radius={[4, 4, 0, 0]} barSize={40}>
+              <LabelList dataKey="actual" position="top" formatter={(val: any) => formatMillionWonChart(val)} fontSize={10} fill="#64748b" offset={5} />
+            </Bar>
             <Line yAxisId="right" type="monotone" dataKey="rate" name="달성율" stroke="#f59e0b" strokeWidth={3} dot={{ r: 4 }} />
           </ComposedChart>
         </ResponsiveContainer>

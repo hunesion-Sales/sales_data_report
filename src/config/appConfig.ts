@@ -22,6 +22,10 @@ export const TOAST_DURATION = 3000; // 3초
 export const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 export const ALLOWED_FILE_TYPES = ['.xlsx', '.xls'];
 
+// 연도 설정
+export const CURRENT_YEAR = new Date().getFullYear();
+export const VALID_YEAR_RANGE = { min: 2020, max: 2030 };
+
 // 숫자 포맷
 export const CURRENCY_LOCALE = 'ko-KR';
 

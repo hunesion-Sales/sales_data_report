@@ -10,10 +10,9 @@ import {
   analyzeUpload as analyzeUploadService,
   saveWithResolutions as saveWithResolutionsService,
 } from '@/firebase/services/snapshotService';
+import { CURRENT_YEAR } from '@/config/appConfig';
 import type { User } from 'firebase/auth';
 import type { ReportDataInternals } from './useReportData';
-
-const CURRENT_YEAR = 2026;
 
 interface UseReportUploadOptions {
   internals: ReportDataInternals;
@@ -29,8 +28,9 @@ export function useReportUpload({ internals, refreshSnapshots, firebaseUser }: U
     products: import('@/types').ProductData[],
     newMonths: string[],
     newMonthLabels: Record<string, string>,
+    targetYear?: number,
   ): Promise<UploadAnalysisResult> => {
-    const { reportId } = await getOrCreateReport(CURRENT_YEAR);
+    const { reportId } = await getOrCreateReport(targetYear ?? CURRENT_YEAR);
     reportIdRef.current = reportId;
     return analyzeUploadService(reportId, products, newMonths, newMonthLabels);
   }, [reportIdRef]);
@@ -40,9 +40,10 @@ export function useReportUpload({ internals, refreshSnapshots, firebaseUser }: U
     analysisResult: UploadAnalysisResult,
     resolutions: ConflictResolution[],
     fileName: string,
+    targetYear?: number,
   ): Promise<ConflictResolutionSaveResult> => {
     if (!reportIdRef.current) {
-      const { reportId } = await getOrCreateReport(CURRENT_YEAR);
+      const { reportId } = await getOrCreateReport(targetYear ?? CURRENT_YEAR);
       reportIdRef.current = reportId;
     }
 

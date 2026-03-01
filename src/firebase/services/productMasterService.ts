@@ -22,11 +22,13 @@ const COLLECTION_NAME = 'products_master';
  * Firestore 문서를 ProductMaster로 변환
  */
 function docToProductMaster(id: string, data: Record<string, unknown>): ProductMaster {
+  // Add fallback for legacy isMaintenanceType
+  const legacyType = data.isMaintenanceType ? 'Maintenance' : 'General';
   return {
     id,
     name: data.name as string,
     // divisionId: (data.divisionId as string) || null, // Removed
-    isMaintenanceType: data.isMaintenanceType as boolean || false,
+    type: (data.type as any) || legacyType,
     sortOrder: data.sortOrder as number || 0,
     createdAt: (data.createdAt as Timestamp)?.toDate() || new Date(),
     updatedAt: (data.updatedAt as Timestamp)?.toDate() || new Date(),
@@ -81,7 +83,7 @@ export async function createProductMaster(input: ProductMasterInput): Promise<Pr
   const data = {
     name: input.name,
     // divisionId: input.divisionId, // Removed
-    isMaintenanceType: input.isMaintenanceType,
+    type: input.type,
     sortOrder,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
@@ -93,7 +95,7 @@ export async function createProductMaster(input: ProductMasterInput): Promise<Pr
     id: docRef.id,
     name: input.name,
     // divisionId: input.divisionId, // Removed
-    isMaintenanceType: input.isMaintenanceType,
+    type: input.type,
     sortOrder,
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -139,10 +141,14 @@ export async function seedProductMastersFromProducts(productNames: string[]): Pr
 
   for (const name of newProducts) {
     const docRef = doc(collection(db, COLLECTION_NAME));
+    const isMaintenance = name.endsWith('_MA') || name.includes('_MA');
+    const isCloud = name.includes('CLOUD') || name.includes('Cloud');
+    const type = isMaintenance ? 'Maintenance' : (isCloud ? 'Cloud' : 'General');
+
     batch.set(docRef, {
       name,
       // divisionId: null, // Removed
-      isMaintenanceType: name.endsWith('_MA'),
+      type,
       sortOrder: sortOrder++,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
@@ -178,11 +184,22 @@ export async function updateProductMasterOrders(
 export const INITIAL_PRODUCT_MASTERS = [
   'NGS',
   'CamPASS',
-  '기타',
+  'i-oneJTac',
+  'i-oneNAC',
   'i-oneNet',
   'i-oneNet DD',
-  'i-oneNAC',
+  'i-oneNet DX',
+  'i-oneNet UC',
+  'i-Spector',
+  'KCDS-GUARD',
+  'MoBiCa',
+  'Multi Anti Virus',
+  'OtoRAS',
   'Safe IP',
+  'ViSiCa',
+  '기타',
+  'S/W',
+  'H/W',
   'i_oneJTac_MA',
   'i-oneNAC_MA',
   'i-oneNet_MA',
@@ -222,11 +239,13 @@ export async function seedInitialProductMasters(): Promise<{ created: number; sk
 
     const docRef = doc(collection(db, COLLECTION_NAME));
     const isMaintenance = name.endsWith('_MA') || name.includes('_MA'); // _MA로 끝나거나 포함되면 유지보수
+    const isCloud = name.includes('CLOUD') || name.includes('Cloud');
+    const type = isMaintenance ? 'Maintenance' : (isCloud ? 'Cloud' : 'General');
 
     batch.set(docRef, {
       name,
       // divisionId: null, // Removed
-      isMaintenanceType: isMaintenance,
+      type,
       sortOrder: index, // 리스트 순서대로 0, 1, 2...
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
@@ -239,4 +258,35 @@ export async function seedInitialProductMasters(): Promise<{ created: number; sk
   }
 
   return { created: createdCount, skipped: skippedCount };
+}
+
+/**
+ * 기존 데이터를 신규 type 체계로 일괄 마이그레이션 확인/적용용 함수
+ */
+export async function updateAllProductTypes(): Promise<number> {
+  const snapshot = await getDocs(collection(db, COLLECTION_NAME));
+  const batch = writeBatch(db);
+  let updatedCount = 0;
+
+  for (const d of snapshot.docs) {
+    const data = d.data();
+    const name = data.name as string;
+
+    // 이미 type 필드가 들어있으면 스킵
+    if (data.type) continue;
+
+    const isMaintenance = name.endsWith('_MA') || name.includes('_MA');
+    const isCloud = name.includes('CLOUD') || name.includes('Cloud');
+    const type = isMaintenance ? 'Maintenance' : (isCloud ? 'Cloud' : 'General');
+
+    batch.update(doc(db, COLLECTION_NAME, d.id), {
+      type,
+    });
+    updatedCount++;
+  }
+
+  if (updatedCount > 0) {
+    await batch.commit();
+  }
+  return updatedCount;
 }

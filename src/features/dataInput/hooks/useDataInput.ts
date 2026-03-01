@@ -15,16 +15,19 @@ interface UseDataInputOptions {
     monthLabels: Record<string, string>,
     fileName: string,
     mergeMode?: UploadMergeMode,
+    targetYear?: number,
   ) => Promise<{ newCount: number; updatedCount: number }>;
   analyzeUpload: (
     products: ProductData[],
     months: string[],
     monthLabels: Record<string, string>,
+    targetYear?: number,
   ) => Promise<UploadAnalysisResult>;
   saveWithConflictResolution: (
     analysisResult: UploadAnalysisResult,
     resolutions: ConflictResolution[],
     fileName: string,
+    targetYear?: number,
   ) => Promise<ConflictResolutionSaveResult>;
   showNotification: (message: string, type?: 'success' | 'error') => void;
 }
@@ -51,6 +54,7 @@ export function useDataInput({
   const [showConflictModal, setShowConflictModal] = useState(false);
   const [uploadAnalysis, setUploadAnalysis] = useState<UploadAnalysisResult | null>(null);
   const [pendingFileName, setPendingFileName] = useState<string>('');
+  const [detectedYear, setDetectedYear] = useState<number | null>(null);
 
   const handleFileUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -96,12 +100,15 @@ export function useDataInput({
         );
       } else {
         const result = await parseExcelFile(buffer);
+        setDetectedYear(result.detectedYear);
+        const yearForUpload = result.detectedYear;
 
         if (mergeMode === 'smart') {
           const analysis = await analyzeUpload(
             result.data,
             result.months,
             result.monthLabels,
+            yearForUpload,
           );
 
           if (analysis.conflicts.length > 0) {
@@ -117,14 +124,16 @@ export function useDataInput({
             analysis,
             [],
             file.name,
+            yearForUpload,
           );
 
+          const yearInfo = yearForUpload !== new Date().getFullYear() ? ` [${yearForUpload}년]` : '';
           const monthInfo = result.months.length > 0
             ? ` (${result.months.map(m => getMonthShortLabel(m)).join(', ')})`
             : '';
 
           showNotification(
-            `데이터가 저장되었습니다: 신규 ${analysis.newMonths.length}개 월, 변경 없음 ${saveResult.skippedMonths.length}개 월${monthInfo}`
+            `${yearInfo}데이터가 저장되었습니다: 신규 ${analysis.newMonths.length}개 월, 변경 없음 ${saveResult.skippedMonths.length}개 월${monthInfo}`
           );
         } else {
           const { newCount, updatedCount } = await saveUploadedData(
@@ -133,18 +142,20 @@ export function useDataInput({
             result.monthLabels,
             file.name,
             mergeMode,
+            yearForUpload,
           );
 
+          const yearInfo = yearForUpload !== new Date().getFullYear() ? ` [${yearForUpload}년]` : '';
           const monthInfo = result.months.length > 0
             ? ` (${result.months.map(m => getMonthShortLabel(m)).join(', ')})`
             : '';
 
           if (mergeMode === 'merge') {
             showNotification(
-              `데이터가 병합되었습니다: 신규 ${newCount}건, 업데이트 ${updatedCount}건${monthInfo}`
+              `${yearInfo}데이터가 병합되었습니다: 신규 ${newCount}건, 업데이트 ${updatedCount}건${monthInfo}`
             );
           } else {
-            showNotification(`${result.data.length}건의 데이터를 불러왔습니다.${monthInfo}`);
+            showNotification(`${yearInfo}${result.data.length}건의 데이터를 불러왔습니다.${monthInfo}`);
           }
         }
       }
@@ -198,6 +209,7 @@ export function useDataInput({
     setUploadAnalysis,
     pendingFileName,
     setPendingFileName,
+    detectedYear,
     handleFileUpload,
     handleConflictResolve,
   };

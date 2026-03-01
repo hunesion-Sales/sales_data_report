@@ -6,6 +6,7 @@
  */
 
 import type { ProductData, ParseResult } from '@/types';
+import { VALID_YEAR_RANGE } from '@/config/appConfig';
 import { logger } from './logger';
 
 /**
@@ -200,6 +201,16 @@ export async function parseExcelFile(buffer: ArrayBuffer): Promise<ParseResult> 
     throw new Error('유효한 데이터를 찾을 수 없습니다. 엑셀 파일 형식을 확인해주세요.');
   }
 
-  logger.debug(`[ExcelParser] Parsing complete. Found ${data.length} items.`);
-  return { data, months, monthLabels };
+  // 연도 추출: 첫 번째 월 키에서 연도 파싱
+  const detectedYear = months.length > 0
+    ? parseInt(months[0].split('-')[0], 10)
+    : new Date().getFullYear();
+
+  // 연도 범위 검증
+  if (detectedYear < VALID_YEAR_RANGE.min || detectedYear > VALID_YEAR_RANGE.max) {
+    throw new Error(`유효하지 않은 연도입니다: ${detectedYear}년. (${VALID_YEAR_RANGE.min}~${VALID_YEAR_RANGE.max}년 범위만 지원)`);
+  }
+
+  logger.debug(`[ExcelParser] Parsing complete. Found ${data.length} items. Detected year: ${detectedYear}`);
+  return { data, months, monthLabels, detectedYear };
 }

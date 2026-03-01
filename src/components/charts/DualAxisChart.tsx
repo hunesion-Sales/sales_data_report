@@ -1,6 +1,6 @@
 
 import {
-    ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
+    ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList, Cell
 } from 'recharts';
 import { formatMillionWonChart, formatMillionWonTooltip } from '@/utils/formatUtils';
 import { ChartWrapper } from '@/components/charts';
@@ -12,11 +12,12 @@ interface DualAxisChartProps {
     lineKey: string;
     barName: string;
     lineName: string;
-    barColor?: string;
+    barColor?: string | string[] | readonly string[]; // Allow an array of colors
     lineColor?: string;
     title?: string;
     height?: number;
     onClick?: (data: any) => void;
+    children?: React.ReactNode;
 }
 
 export default function DualAxisChart({
@@ -30,14 +31,19 @@ export default function DualAxisChart({
     lineColor = '#f59e0b',
     title,
     height = 320,
-    onClick
+    onClick,
+    children
 }: DualAxisChartProps) {
     return (
         <ChartWrapper title={title} height={height}>
             <ResponsiveContainer width="100%" height="100%" minWidth={100}>
-                <ComposedChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }} onClick={onClick}>
+                <ComposedChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 40 }} onClick={onClick}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                    <XAxis dataKey={xAxisKey} tick={{ fontSize: 12 }} />
+                    <XAxis
+                        dataKey={xAxisKey}
+                        tick={false}
+                        tickLine={false}
+                    />
                     <YAxis
                         yAxisId="left"
                         tickFormatter={formatMillionWonChart}
@@ -57,15 +63,21 @@ export default function DualAxisChart({
                             return formatMillionWonTooltip(value);
                         }}
                     />
-                    <Legend />
                     <Bar
                         yAxisId="left"
                         dataKey={barKey}
                         name={barName}
-                        fill={barColor}
+                        fill={Array.isArray(barColor) || (barColor as readonly string[])?.length ? barColor[0] : (barColor as string)} // Default fill if colors not array
                         barSize={30}
                         radius={[4, 4, 0, 0]}
-                    />
+                    >
+                        {
+                            (Array.isArray(barColor) || (barColor as readonly string[])?.length) && data.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={(barColor as readonly string[])[index % (barColor as readonly string[]).length]} />
+                            ))
+                        }
+                        <LabelList dataKey={barKey} position="top" formatter={(val: any) => formatMillionWonChart(val)} fontSize={10} fill="#64748b" offset={10} />
+                    </Bar>
                     <Line
                         yAxisId="right"
                         type="monotone"
@@ -75,6 +87,7 @@ export default function DualAxisChart({
                         strokeWidth={3}
                         dot={{ r: 4 }}
                     />
+                    {children}
                 </ComposedChart>
             </ResponsiveContainer>
         </ChartWrapper>

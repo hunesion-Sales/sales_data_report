@@ -6,6 +6,7 @@ import {
   ProductTable,
   DeleteConfirmModal,
 } from '@/features/productManagement';
+import { updateAllProductTypes, seedInitialProductMasters } from '@/firebase/services/productMasterService';
 
 export default function ProductManagementPage() {
   const navigate = useNavigate();
@@ -15,8 +16,8 @@ export default function ProductManagementPage() {
     isLoading,
     error,
     setError,
-    filterMaintenance,
-    setFilterMaintenance,
+    filterType,
+    setFilterType,
     editingId,
     editData,
     setEditData,
@@ -85,27 +86,61 @@ export default function ProductManagementPage() {
             <div className="flex items-center gap-3">
               <Filter className="w-4 h-4 text-slate-400" />
               <select
-                value={filterMaintenance}
-                onChange={(e) => setFilterMaintenance(e.target.value)}
+                value={filterType}
+                onChange={(e) => setFilterType(e.target.value)}
                 className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
               >
                 <option value="all">전체 유형</option>
-                <option value="regular">일반 제품</option>
-                <option value="maintenance">유지보수</option>
+                <option value="General">일반 제품</option>
+                <option value="Cloud">클라우드</option>
+                <option value="Maintenance">유지보수</option>
               </select>
               <span className="text-sm text-slate-500">
                 {filteredProducts.length}개 / 총 {products.length}개
               </span>
             </div>
-            {!isAdding && (
+            <div className="flex items-center gap-2">
               <button
-                onClick={() => setIsAdding(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors"
+                onClick={async () => {
+                  try {
+                    const { created } = await seedInitialProductMasters();
+                    alert(`마스터 생성 완료: 신규 ${created}개 추가됨`);
+                    window.location.reload();
+                  } catch (e) {
+                    alert('에러: ' + e);
+                  }
+                }}
+                className="px-3 py-2 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-200 transition-colors"
+                title="누락된 새 제품 자동 추가"
               >
-                <Plus className="w-4 h-4" />
-                제품 추가
+                신규제품 DB 연동
               </button>
-            )}
+              <button
+                onClick={async () => {
+                  try {
+                    const count = await updateAllProductTypes();
+                    alert(`유형 업데이트 완료: ${count}개 데이터 마이그레이션됨`);
+                    window.location.reload();
+                  } catch (e) {
+                    alert('에러: ' + e);
+                  }
+                }}
+                className="px-3 py-2 bg-slate-100 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-200 transition-colors"
+                title="기존 데이터에 유형(클라우드/일반/유지보수) 반영"
+              >
+                기존 데이터 마이그레이션
+              </button>
+
+              {!isAdding && (
+                <button
+                  onClick={() => setIsAdding(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors ml-2"
+                >
+                  <Plus className="w-4 h-4" />
+                  제품 추가
+                </button>
+              )}
+            </div>
           </div>
 
           {isAdding && (

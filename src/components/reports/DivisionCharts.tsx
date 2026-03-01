@@ -11,6 +11,7 @@ import {
   PieChart,
   Pie,
   Cell,
+  LabelList
 } from 'recharts';
 import type { DivisionSummary, PeriodInfo, TargetAchievement } from '@/types';
 import { ChartWrapper } from '@/components/charts';
@@ -119,10 +120,31 @@ function DivisionCharts({
             lineKey="rate"
             barName={metricLabel}
             lineName="달성율"
-            barColor={viewMode === 'sales' ? '#3b82f6' : '#10b981'}
+            barColor={DIVISION_COLORS} // Pass array of colors for individual divisions
             lineColor="#f59e0b"
-            height={350}
-          />
+            height={400}
+          >
+            <Legend
+              layout="horizontal"
+              verticalAlign="bottom"
+              align="center"
+              wrapperStyle={{ fontSize: 11, paddingTop: 8 }}
+              content={() => {
+                return (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '8px 16px', fontSize: 11, paddingTop: 8 }}>
+                    {chartData.map((d, idx) => {
+                      return (
+                        <span key={d.name} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                          <span style={{ width: 10, height: 10, backgroundColor: DIVISION_COLORS[idx % DIVISION_COLORS.length], display: 'inline-block', borderRadius: 2 }} />
+                          {d.name} ({formatMillionWonTooltip(d.amount)})
+                        </span>
+                      );
+                    })}
+                  </div>
+                );
+              }}
+            />
+          </DualAxisChart>
           {/* Note: DualAxisChart inside doesn't expose onClick. I should have added it.
             For now, user can click label? 
             Wait, I need to open modal on click.
@@ -136,7 +158,7 @@ function DivisionCharts({
         </div>
 
         {/* 2. Pie Chart: Market Share */}
-        <ChartWrapper title={`부문별 ${metricLabel} 비중`} height={420}>
+        <ChartWrapper title={`부문별 ${metricLabel} 비중`} height={400}>
           <PieChart>
             <Pie
               data={pieData}
@@ -233,7 +255,9 @@ function DivisionCharts({
                 fill={viewMode === 'sales' ? '#3b82f6' : '#10b981'}
                 radius={[4, 4, 0, 0]}
                 barSize={40}
-              />
+              >
+                <LabelList dataKey="value" position="top" formatter={(val: any) => formatMillionWonChart(val)} fontSize={10} fill="#64748b" />
+              </Bar>
             </BarChart>
           </ChartWrapper>
         </div>
