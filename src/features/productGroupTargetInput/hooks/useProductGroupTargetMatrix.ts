@@ -43,9 +43,10 @@ export function useProductGroupTargetMatrix() {
 
       for (const t of targets) {
         if (newMatrix[t.productGroup] && newMatrix[t.productGroup][t.quarter]) {
+          // Firestore 원 단위 → 화면 백만원 단위
           newMatrix[t.productGroup][t.quarter] = {
-            salesTarget: t.salesTarget,
-            profitTarget: t.profitTarget,
+            salesTarget: Math.round(t.salesTarget / 1000000),
+            profitTarget: Math.round(t.profitTarget / 1000000),
           };
         }
       }
@@ -87,12 +88,13 @@ export function useProductGroupTargetMatrix() {
         for (const q of QUARTERS) {
           const cell = matrix[group][q];
           if (cell.salesTarget > 0 || cell.profitTarget > 0) {
+            // 화면 백만원 단위 → Firestore 원 단위
             inputs.push({
               year,
               quarter: q,
               productGroup: group,
-              salesTarget: cell.salesTarget,
-              profitTarget: cell.profitTarget,
+              salesTarget: cell.salesTarget * 1000000,
+              profitTarget: cell.profitTarget * 1000000,
             });
           }
         }

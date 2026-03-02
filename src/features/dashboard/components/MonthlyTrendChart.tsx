@@ -31,7 +31,7 @@ function MonthlyTrendChart({ data, viewMode }: MonthlyTrendChartProps) {
           name: item.name,
           prevYearActual: (prev?.prevYearActual ?? 0) + item.prevYearActual,
           currentActual: (prev?.currentActual ?? 0) + item.currentActual,
-          backlog: item.backlog, // 수주잔액은 당월만 표시 (누적 아님)
+          backlog: (prev?.backlog ?? 0) + item.backlog,
           achievementRate: item.achievementRate,
           growthRate: item.growthRate,
         });

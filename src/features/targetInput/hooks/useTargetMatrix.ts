@@ -34,9 +34,12 @@ export function useTargetMatrix({ divisions, targets, year }: UseTargetMatrixPar
 
     for (const t of targets) {
       const key = cellKey(t.divisionId, t.quarter);
+      // Firestore 원 단위 → 화면 백만원 단위
+      const salesInMillions = Math.round(t.salesTarget / 1000000);
+      const profitInMillions = t.profitTarget ? Math.round(t.profitTarget / 1000000) : 0;
       initial[key] = {
-        salesTarget: t.salesTarget > 0 ? String(t.salesTarget) : '',
-        profitTarget: t.profitTarget && t.profitTarget > 0 ? String(t.profitTarget) : '',
+        salesTarget: salesInMillions > 0 ? String(salesInMillions) : '',
+        profitTarget: profitInMillions > 0 ? String(profitInMillions) : '',
       };
     }
 
@@ -142,16 +145,17 @@ export function useTargetMatrix({ divisions, targets, year }: UseTargetMatrixPar
       for (const q of QUARTERS) {
         const key = cellKey(div.id, q);
         const cell = matrix[key];
-        const salesTarget = Number(cell?.salesTarget) || 0;
-        const profitTarget = Number(cell?.profitTarget) || 0;
+        const salesInMillions = Number(cell?.salesTarget) || 0;
+        const profitInMillions = Number(cell?.profitTarget) || 0;
 
-        if (salesTarget > 0) {
+        if (salesInMillions > 0) {
+          // 화면 백만원 단위 → Firestore 원 단위
           inputs.push({
             year,
             quarter: q,
             divisionId: div.id,
-            salesTarget,
-            ...(profitTarget > 0 && { profitTarget }),
+            salesTarget: salesInMillions * 1000000,
+            ...(profitInMillions > 0 && { profitTarget: profitInMillions * 1000000 }),
           });
         }
       }

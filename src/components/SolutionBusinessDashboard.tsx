@@ -233,6 +233,7 @@ export default function SolutionBusinessDashboard() {
         data={kpiData}
         periodLabel={periodLabel}
         viewMode={viewMode}
+        year={selection.year}
       />
 
       {/* Charts Section */}

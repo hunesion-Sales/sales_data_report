@@ -58,7 +58,7 @@ export async function parseIndustryGroupExcelFile(
         let salesCol = colNumber;
         let costCol = colNumber + 1;
 
-        for (let c = colNumber; c <= colNumber + 3; c++) {
+        for (let c = colNumber; c <= colNumber + 2; c++) {
           const subVal = String(subRow.getCell(c).value ?? '').trim();
           if (subVal.includes('매출') && !subVal.includes('이익') && !subVal.includes('코드')) {
             salesCol = c;
@@ -77,13 +77,18 @@ export async function parseIndustryGroupExcelFile(
     throw new Error('월 헤더("1월 2026" 등)를 찾을 수 없습니다.');
   }
 
-  // 2) 항목명 컬럼 탐색
+  // 2) 항목명 컬럼 및 섹션 구분 컬럼 탐색
   let nameCol = 2;
+  let sectionCol = 2; // 섹션 구분 컬럼 ("매출코드 레코드 유형" 등)
   const subHeaderRow = worksheet.getRow(monthHeaderRow + 1);
   subHeaderRow.eachCell({ includeEmpty: false }, (cell, colNumber) => {
     const val = String(cell.value ?? '').trim();
     if (['고객구분', '산업군', '인더스트리'].some(k => val.includes(k))) {
       nameCol = colNumber;
+    }
+    // 섹션 구분 컬럼 (매출코드/유지보수코드 레이블이 있는 컬럼)
+    if (val.includes('레코드') || val.includes('유형') || val.includes('코드')) {
+      sectionCol = colNumber;
     }
   });
 
@@ -96,20 +101,23 @@ export async function parseIndustryGroupExcelFile(
     const row = worksheet.getRow(rowNum);
     const name = getCellStringFromRow(row, nameCol);
 
-    if (!name) continue;
+    // 섹션 구분 컬럼 값 확인 (nameCol과 다를 수 있음)
+    const sectionValue = getCellStringFromRow(row, sectionCol);
+    const normalizedSection = sectionValue.replace(/\s+/g, '');
 
-    // 섹션 구분 (공백/다양한 형식 처리)
-    const normalizedName = name.replace(/\s+/g, '');
-    if (normalizedName === '매출코드' || normalizedName.includes('매출코드')) {
+    // 섹션 구분: sectionCol 또는 nameCol에서 키워드 확인
+    if (normalizedSection === '매출코드' || normalizedSection.includes('매출코드')) {
       isMaintenanceSection = false;
-      logger.debug(`[IndustryGroupExcelParser] 매출코드 섹션 시작 (row ${rowNum}, name="${name}")`);
-      continue;
+      logger.debug(`[IndustryGroupExcelParser] 매출코드 섹션 시작 (row ${rowNum}, section="${sectionValue}")`);
+      // 같은 행에 데이터가 있을 수 있으므로 continue 하지 않음
     }
-    if (normalizedName.includes('유지보수') && normalizedName.includes('코드')) {
+    if (normalizedSection.includes('유지보수') && normalizedSection.includes('코드')) {
       isMaintenanceSection = true;
-      logger.debug(`[IndustryGroupExcelParser] 유지보수코드 섹션 시작 (row ${rowNum}, name="${name}")`);
-      continue;
+      logger.debug(`[IndustryGroupExcelParser] 유지보수코드 섹션 감지 (row ${rowNum}, section="${sectionValue}")`);
+      // 유지보수코드 섹션의 모든 행에 레이블이 반복되므로 continue 하지 않음
     }
+
+    if (!name) continue;
 
     // 합계 행 건너뛰기
     if (name === '전체' || name === '부분합' || name === '합계') continue;

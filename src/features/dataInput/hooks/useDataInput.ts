@@ -142,7 +142,31 @@ export function useDataInput({
     try {
       const buffer = await file.arrayBuffer();
 
-      if (uploadType === 'backlog') {
+      // === 시트명 기반 업로드 타입 자동 감지 ===
+      // 70%~80% → 수주잔액(backlog), 90%~100% → 실적(performance)
+      let effectiveUploadType: UploadType = uploadType;
+      {
+        const ExcelJS = await import('exceljs');
+        const wb = new ExcelJS.Workbook();
+        await wb.xlsx.load(buffer);
+        const sheetName = wb.worksheets[0]?.name || '';
+
+        if (sheetName.includes('70%~80%') || sheetName.includes('잔액')) {
+          if (uploadType !== 'backlog') {
+            logger.info(`[DataInput] 시트명 자동 감지: "${sheetName}" → 수주잔액 (사용자 선택: ${uploadType})`);
+            showNotification('시트명에서 수주잔액 데이터가 감지되어 자동 전환되었습니다.');
+          }
+          effectiveUploadType = 'backlog';
+        } else if (sheetName.includes('90%~100%') || sheetName.includes('90%~1000%')) {
+          if (uploadType !== 'performance') {
+            logger.info(`[DataInput] 시트명 자동 감지: "${sheetName}" → 실적 (사용자 선택: ${uploadType})`);
+            showNotification('시트명에서 실적 데이터가 감지되어 자동 전환되었습니다.');
+          }
+          effectiveUploadType = 'performance';
+        }
+      }
+
+      if (effectiveUploadType === 'backlog') {
         // === 수주잔액 업로드 (시트명 자동 감지) ===
         // filterPastMonths = false: 과거 월 데이터도 모두 저장 (전체 수주잔액 합계 표시용)
         const result = await parseBacklogExcel(buffer, false);
@@ -173,7 +197,11 @@ export function useDataInput({
           await saveBacklogDivisions(result.year, mappedDivisions);
           logger.debug(`[DataInput] Division mapping: ${result.divisions.map(d => d.division).join(', ')} → ${mappedDivisions.map(d => d.division).join(', ')}`);
         } else if (result.type === 'industry' && result.industryGroups) {
-          await saveBacklogIndustryGroups(result.year, result.industryGroups);
+          // 산업군 키워드 매핑 적용 (실적 데이터와 동일한 매핑 로직)
+          const industryGroups = await getIndustryGroups();
+          const mappedGroups = mapToIndustryGroups(result.industryGroups, industryGroups);
+          await saveBacklogIndustryGroups(result.year, mappedGroups);
+          logger.debug(`[DataInput] Backlog industry mapping: ${result.industryGroups.length} raw → ${mappedGroups.length} mapped groups`);
         }
 
         const monthCount = result.monthsIncluded.length;
@@ -212,12 +240,17 @@ export function useDataInput({
           const industryGroups = await getIndustryGroups();
           const mappedData = mapToIndustryGroups(result.data, industryGroups);
 
-          const currentYear = new Date().getFullYear();
-          const reportId = `report-${currentYear}`;
+          // 월 키에서 연도 추출 (예: "2025-01" → 2025)
+          const detectedYr = result.months.length > 0
+            ? parseInt(result.months[0].split('-')[0], 10)
+            : new Date().getFullYear();
+          setDetectedYear(detectedYr);
+          const reportId = `report-${detectedYr}`;
           await saveIndustryGroupData(reportId, mappedData, 'overwrite');
 
+          const yearInfo = detectedYr !== new Date().getFullYear() ? ` [${detectedYr}년]` : '';
           showNotification(
-            `산업군별 데이터가 업로드되었습니다 (${mappedData.length}개 산업군, ${result.months.length}개 월)`
+            `${yearInfo}산업군별 데이터가 업로드되었습니다 (${mappedData.length}개 산업군, ${result.months.length}개 월)`
           );
         } else if (subType === 'division') {
           // --- 부문별 ---
@@ -240,12 +273,17 @@ export function useDataInput({
             };
           });
 
-          const currentYear = new Date().getFullYear();
-          const reportId = `report-${currentYear}`;
+          // 월 키에서 연도 추출 (예: "2025-01" → 2025)
+          const detectedYr = result.months.length > 0
+            ? parseInt(result.months[0].split('-')[0], 10)
+            : new Date().getFullYear();
+          setDetectedYear(detectedYr);
+          const reportId = `report-${detectedYr}`;
           await saveDivisionData(reportId, items, 'overwrite');
 
+          const yearInfo = detectedYr !== new Date().getFullYear() ? ` [${detectedYr}년]` : '';
           showNotification(
-            `부문별 데이터가 업로드되었습니다 (${items.length}개 부문, ${matchedCount}개 매칭, ${unmatchedCount}개 미매칭)`
+            `${yearInfo}부문별 데이터가 업로드되었습니다 (${items.length}개 부문, ${matchedCount}개 매칭, ${unmatchedCount}개 미매칭)`
           );
         } else {
           // --- 제품별 (기본) ---

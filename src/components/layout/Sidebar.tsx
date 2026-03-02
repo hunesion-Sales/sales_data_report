@@ -52,8 +52,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleCollapse })
         { path: '/admin/industry-groups', label: '산업군 관리', icon: Factory },
         { path: '/admin/products', label: '제품 마스터 관리', icon: Package },
         { path: '/admin/users', label: '사용자 관리', icon: Users },
-        { path: '/admin/targets', label: '목표 관리', icon: Target },
-        { path: '/admin/product-group-targets', label: '제품군별 목표', icon: Target },
+        { path: '/admin/targets', label: '부문별 목표', icon: Target },
+        { path: '/admin/product-group-targets', label: '제품별 목표', icon: Target },
     ];
 
     const isActive = (path: string) => location.pathname === path;

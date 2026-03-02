@@ -43,6 +43,9 @@ interface DualBarLineChartProps {
  * 4개 차트 섹션(월별/제품군별/산업군별/부문별)에서 재사용
  * 색상 테마: colors.ts의 DASHBOARD_BAR_COLORS, DASHBOARD_LINE_COLORS 사용
  */
+/** X축 라벨 최대 표시 글자 수 */
+const LABEL_MAX_CHARS = 10;
+
 export default function DualBarLineChart({
   data,
   title,
@@ -63,18 +66,43 @@ export default function DualBarLineChart({
   const bar3Name = barOverrides?.bar3Name ?? '수주잔액';
   const bar3Color = barOverrides?.bar3Color ?? DASHBOARD_BAR_COLORS.backlog;
 
+  // 긴 라벨이 있을 때만 기울임 (제품군별 등), 짧은 라벨(월별/산업군별)은 수평 유지
+  const hasLongLabels = data.some(d => d.name.length > 6);
+  const needsAngle = data.length > 6 && hasLongLabels;
+
+  const renderXAxisTick = ({ x, y, payload }: any) => {
+    const label: string = payload.value ?? '';
+    const display = label.length > LABEL_MAX_CHARS
+      ? `${label.slice(0, LABEL_MAX_CHARS)}…`
+      : label;
+
+    return (
+      <g transform={`translate(${x},${y})`}>
+        <text
+          x={0}
+          y={0}
+          dy={needsAngle ? 6 : 14}
+          textAnchor={needsAngle ? 'end' : 'middle'}
+          fill="#475569"
+          fontSize={11}
+          transform={needsAngle ? 'rotate(-45)' : undefined}
+        >
+          {display}
+        </text>
+      </g>
+    );
+  };
+
   return (
     <ChartWrapper title={title} height={height} loading={loading} hasData={data.length > 0}>
       <ComposedChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
         <CartesianGrid strokeDasharray="3 3" vertical={false} />
         <XAxis
           dataKey="name"
-          tick={{ fontSize: 11 }}
+          tick={renderXAxisTick}
           tickLine={false}
           interval={0}
-          angle={data.length > 8 ? -30 : 0}
-          textAnchor={data.length > 8 ? 'end' : 'middle'}
-          height={data.length > 8 ? 60 : 30}
+          height={needsAngle ? 80 : 35}
         />
         <YAxis
           yAxisId="left"

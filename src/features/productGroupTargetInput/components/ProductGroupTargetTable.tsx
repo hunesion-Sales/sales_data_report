@@ -88,7 +88,8 @@ export default function ProductGroupTargetTable({
         <thead className="bg-slate-100 text-slate-600">
           <tr>
             <th className="px-3 py-2 text-left font-medium sticky left-0 bg-slate-100 z-10 min-w-[160px]">
-              제품군
+              <div>제품군</div>
+              <div className="text-xs font-normal text-slate-400">(단위: 백만원)</div>
             </th>
             {quarters.map((q) => (
               <th key={q} className="px-3 py-2 text-center font-medium" colSpan={viewMode === 'both' ? 2 : 1}>

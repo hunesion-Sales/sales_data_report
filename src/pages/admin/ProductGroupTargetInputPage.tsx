@@ -156,7 +156,7 @@ export default function ProductGroupTargetInputPage() {
         </div>
 
         <p className="mt-4 text-xs text-slate-400 text-center">
-          단위: 원 (백만원 환산 표시). 0이 아닌 값만 저장됩니다.
+          단위: 백만원. 0이 아닌 값만 저장됩니다.
         </p>
       </main>
     </div>

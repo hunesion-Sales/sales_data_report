@@ -37,7 +37,7 @@ export default function TargetDataTable({
     <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
       <div className="p-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
         <span className="text-sm text-slate-500">
-          {year}년 분기별 매출 목표 (단위: 원)
+          {year}년 분기별 매출 목표 (단위: 백만원)
           {matrix && Object.values(matrix).some(v => v.salesTarget || v.profitTarget) &&
             <span className="ml-2 text-xs text-orange-500 font-medium">
               * {mode === 'manual' ? '저장 버튼을 눌러야 반영됩니다.' : '자동 배분된 값은 저장 시 확정됩니다.'}

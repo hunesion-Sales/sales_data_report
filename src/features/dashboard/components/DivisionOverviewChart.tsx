@@ -40,7 +40,7 @@ function DivisionOverviewChart({ data, viewMode }: DivisionOverviewChartProps) {
   return (
     <div>
       <div className="flex items-center justify-between mb-2">
-        <h3 className="text-lg font-bold text-slate-800">부문별 {label} 목표 및 실적 / 달성율</h3>
+        <h3 className="text-lg font-bold text-slate-800">부문별 {label} 목표 및 실적</h3>
         <div className="flex bg-slate-100 rounded-lg p-0.5">
           <button
             onClick={() => setIncludeBacklog(false)}
@@ -63,7 +63,7 @@ function DivisionOverviewChart({ data, viewMode }: DivisionOverviewChartProps) {
       <DualBarLineChart
         data={chartData}
         height={380}
-        lineCount={1}
+        lineCount={0}
         barOverrides={{
           bar1Key: 'prevYearActual',
           bar1Name: '목표',

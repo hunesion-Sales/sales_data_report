@@ -146,23 +146,28 @@ export async function parseBacklogExcel(
 
   const monthsIncluded = filteredMonthColumns.map(m => m.key);
 
-  // 2) 항목명 컬럼 탐색
+  // 2) 항목명 컬럼 및 섹션 구분 컬럼 탐색
   let nameCol = 2;
+  let sectionCol = 2; // 섹션 구분 컬럼 (매출코드/유지보수코드 레이블)
   const subHeaderRow = worksheet.getRow(monthHeaderRow + 1);
   subHeaderRow.eachCell({ includeEmpty: false }, (cell, colNumber) => {
     const val = String(cell.value ?? '').trim();
-    if (['제품군', '제품명', '사업부문', '부문', '고객구분', '매출코드 소유자'].some(k => val.includes(k))) {
+    if (['제품군', '제품명', '사업부문', '부문', '고객구분', '매출코드 소유자', '산업군', '인더스트리'].some(k => val.includes(k))) {
       nameCol = colNumber;
+    }
+    // 섹션 구분 컬럼 (매출코드/유지보수코드 레이블이 있는 컬럼)
+    if (val.includes('레코드') || val.includes('유형') || val.includes('코드')) {
+      sectionCol = colNumber;
     }
   });
 
-  logger.debug(`[BacklogParser] nameCol=${nameCol}, monthHeaderRow=${monthHeaderRow}, dataStartRow=${monthHeaderRow + 2}`);
+  logger.debug(`[BacklogParser] nameCol=${nameCol}, sectionCol=${sectionCol}, monthHeaderRow=${monthHeaderRow}, dataStartRow=${monthHeaderRow + 2}`);
 
   // 3) 데이터 파싱
   const dataStartRow = monthHeaderRow + 2;
 
   if (type === 'industry') {
-    return parseIndustryBacklog(worksheet, dataStartRow, nameCol, filteredMonthColumns, detectedYear, monthsIncluded);
+    return parseIndustryBacklog(worksheet, dataStartRow, nameCol, sectionCol, filteredMonthColumns, detectedYear, monthsIncluded);
   }
 
   // 제품별 / 부문별 파싱
@@ -223,11 +228,14 @@ export async function parseBacklogExcel(
 
 /**
  * 산업군별 파싱 (2섹션: 매출코드 + 유지보수코드)
+ * - sectionCol: 섹션 구분 컬럼 (매출코드/유지보수코드 레이블)
+ * - nameCol: 항목명 컬럼 (고객구분/산업군명)
  */
 function parseIndustryBacklog(
   worksheet: any,
   dataStartRow: number,
   nameCol: number,
+  sectionCol: number,
   monthColumns: { key: string; salesCol: number; costCol: number }[],
   year: number,
   monthsIncluded: string[]
@@ -239,20 +247,23 @@ function parseIndustryBacklog(
     const row = worksheet.getRow(rowNum);
     const name = getCellString(row, nameCol);
 
-    if (!name) continue;
+    // 섹션 구분 컬럼 값 확인 (nameCol과 다를 수 있음)
+    const sectionValue = getCellString(row, sectionCol);
+    const normalizedSection = sectionValue.replace(/\s+/g, '');
 
-    // 섹션 구분 (공백/다양한 형식 처리)
-    const normalizedName = name.replace(/\s+/g, '');
-    if (normalizedName === '매출코드' || normalizedName.includes('매출코드')) {
+    // 섹션 구분: sectionCol 또는 nameCol에서 키워드 확인
+    if (normalizedSection === '매출코드' || normalizedSection.includes('매출코드')) {
       isMaintenanceSection = false;
-      logger.debug(`[BacklogParser:Industry] 매출코드 섹션 시작 (row ${rowNum}, name="${name}")`);
-      continue;
+      logger.debug(`[BacklogParser:Industry] 매출코드 섹션 시작 (row ${rowNum}, section="${sectionValue}")`);
+      // 같은 행에 데이터가 있을 수 있으므로 continue 하지 않음
     }
-    if (normalizedName.includes('유지보수') && normalizedName.includes('코드')) {
+    if (normalizedSection.includes('유지보수') && normalizedSection.includes('코드')) {
       isMaintenanceSection = true;
-      logger.debug(`[BacklogParser:Industry] 유지보수코드 섹션 시작 (row ${rowNum}, name="${name}")`);
-      continue;
+      logger.debug(`[BacklogParser:Industry] 유지보수코드 섹션 감지 (row ${rowNum}, section="${sectionValue}")`);
+      // 유지보수코드 섹션의 모든 행에 레이블이 반복되므로 continue 하지 않음
     }
+
+    if (!name) continue;
 
     // 합계/부분합 행 건너뛰기
     if (name === '전체' || name === '부분합' || name === '합계') continue;

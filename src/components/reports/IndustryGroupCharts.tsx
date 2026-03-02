@@ -39,11 +39,13 @@ function IndustryGroupCharts({
 
   // 1. Dual Axis Chart Data (amount + profit rate)
   const chartData = useMemo(() => {
-    return summaries.map((s) => ({
-      name: s.industryGroupName,
-      amount: viewMode === 'sales' ? s.totalSales : s.totalProfit,
-      rate: s.totalSales > 0 ? ((s.totalProfit / s.totalSales) * 100) : 0,
-    }));
+    return summaries
+      .map((s) => ({
+        name: s.industryGroupName,
+        amount: viewMode === 'sales' ? s.totalSales : s.totalProfit,
+        rate: s.totalSales > 0 ? ((s.totalProfit / s.totalSales) * 100) : 0,
+      }))
+      .sort((a, b) => b.amount - a.amount);
   }, [summaries, viewMode]);
 
   // 2. Pie Chart Data

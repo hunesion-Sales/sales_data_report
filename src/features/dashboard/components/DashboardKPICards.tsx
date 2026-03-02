@@ -20,6 +20,7 @@ interface DashboardKPICardsProps {
   data: DashboardKPIData;
   periodLabel: string;
   viewMode: 'sales' | 'profit';
+  year?: number;
 }
 
 function formatRate(rate: number | null): string {
@@ -47,7 +48,10 @@ function formatGrowth(rate: number | null): string {
   return `${sign}${rate.toFixed(1)}%`;
 }
 
-function DashboardKPICards({ data, periodLabel, viewMode }: DashboardKPICardsProps) {
+function DashboardKPICards({ data, periodLabel, viewMode, year }: DashboardKPICardsProps) {
+  const prevYear = year ? year - 1 : new Date().getFullYear() - 1;
+  // periodLabel "2026년 1월~3월" → 전년도 "2025년 1월~3월"
+  const prevPeriodLabel = year ? periodLabel.replace(String(year), String(prevYear)) : periodLabel;
   const label = viewMode === 'sales' ? '매출' : '매출이익';
 
   return (
@@ -123,7 +127,7 @@ function DashboardKPICards({ data, periodLabel, viewMode }: DashboardKPICardsPro
               <DollarSign className="w-4 h-4 text-slate-400" />
             </div>
             <div className="text-xl font-bold text-slate-600">{formatMillionWon(data.prevYearActual)}</div>
-            <p className="text-xs text-slate-400 mt-0.5">{periodLabel} 기준</p>
+            <p className="text-xs text-slate-400 mt-0.5">{prevPeriodLabel} 기준</p>
           </div>
 
           {/* 7. 기간 대비 성장율 */}
@@ -145,7 +149,7 @@ function DashboardKPICards({ data, periodLabel, viewMode }: DashboardKPICardsPro
               <DollarSign className="w-4 h-4 text-slate-400" />
             </div>
             <div className="text-xl font-bold text-slate-600">{formatMillionWon(data.prevYearAnnual)}</div>
-            <p className="text-xs text-slate-400 mt-0.5">{(data as any).prevYear ?? '전년'}년 전체</p>
+            <p className="text-xs text-slate-400 mt-0.5">{prevYear}년 실적</p>
           </div>
 
           {/* 9. 연간 대비 성장율(예측) */}
