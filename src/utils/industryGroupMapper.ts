@@ -88,6 +88,7 @@ export const DEFAULT_INDUSTRY_GROUPS: Array<{ name: string; keywords: string[]; 
 
 /**
  * 수주잔액 산업군별 데이터를 설정된 산업군 기준으로 재분류
+ * - "_MA"로 끝나는 고객구분 → "유지보수" 산업군
  * - 산업군명과 정확히 일치 → 해당 산업군
  * - 키워드 매칭 → 해당 산업군
  * - 미매칭 → "기타"로 분류
@@ -101,11 +102,15 @@ export function remapBacklogByIndustryGroup(
   for (const [rawName, data] of Object.entries(backlogMap)) {
     let targetName: string;
 
-    // 1. 산업군명과 정확히 일치
-    if (groups.find(g => g.name === rawName)) {
+    // 1. "_MA"로 끝나는 고객구분은 유지보수 산업군으로 분류
+    if (rawName.trim().endsWith('_MA')) {
+      targetName = '유지보수';
+    }
+    // 2. 산업군명과 정확히 일치
+    else if (groups.find(g => g.name === rawName)) {
       targetName = rawName;
     }
-    // 2. 키워드 매칭
+    // 3. 키워드 매칭
     else {
       const matched = groups.find(g =>
         g.keywords.some(kw =>
