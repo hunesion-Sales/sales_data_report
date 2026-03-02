@@ -9,6 +9,7 @@ export interface ProductData {
   id: number | string;
   product: string;
   division?: string; // Excel에서 추출된 영업부문명
+  industryGroupId?: string; // 산업군 ID (산업군별 데이터 연동)
   months: Record<string, MonthData>; // key: "2026-01", "2026-02", ...
   sortOrder?: number;
 }

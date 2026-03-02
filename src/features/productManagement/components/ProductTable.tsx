@@ -33,6 +33,7 @@ export default function ProductTable({
           <tr>
             <th className="px-4 py-3 text-left font-medium">#</th>
             <th className="px-4 py-3 text-left font-medium">제품명</th>
+            <th className="px-4 py-3 text-left font-medium">제품군</th>
             <th className="px-4 py-3 text-center font-medium">유형</th>
             <th className="px-4 py-3 text-center font-medium">관리</th>
           </tr>
@@ -51,6 +52,9 @@ export default function ProductTable({
                       className="w-full px-2 py-1 border border-slate-300 rounded focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
                       autoFocus
                     />
+                  </td>
+                  <td className="px-4 py-3 text-slate-400 text-xs">
+                    {product.productGroup || '-'}
                   </td>
                   <td className="px-4 py-3 text-center">
                     <select
@@ -85,6 +89,15 @@ export default function ProductTable({
                 <>
                   <td className="px-4 py-3 text-slate-400">{idx + 1}</td>
                   <td className="px-4 py-3 font-medium text-slate-700">{product.name}</td>
+                  <td className="px-4 py-3">
+                    {product.productGroup ? (
+                      <span className="text-xs text-slate-500 bg-slate-50 px-2 py-0.5 rounded">
+                        {product.productGroup}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-slate-300">-</span>
+                    )}
+                  </td>
                   <td className="px-4 py-3 text-center">
                     {product.type === 'Maintenance' && (
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-100 text-amber-700 rounded text-xs">
@@ -130,7 +143,7 @@ export default function ProductTable({
 
           {filteredProducts.length === 0 && (
             <tr>
-              <td colSpan={4} className="px-4 py-8 text-center text-slate-500">
+              <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
                 {totalCount === 0
                   ? '등록된 제품이 없습니다.'
                   : '필터 조건에 맞는 제품이 없습니다.'}

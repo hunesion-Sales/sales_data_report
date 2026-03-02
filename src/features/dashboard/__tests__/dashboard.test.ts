@@ -10,9 +10,19 @@ describe('dashboard barrel exports', () => {
     const mod = await import('@/features/dashboard');
     expect(mod.DashboardKPICards).toBeDefined();
     expect(mod.MonthlyTrendChart).toBeDefined();
-    expect(mod.TopProductsChart).toBeDefined();
+    expect(mod.ProductGroupChart).toBeDefined();
+    expect(mod.IndustryGroupChart).toBeDefined();
     expect(mod.DivisionOverviewChart).toBeDefined();
     expect(mod.DashboardDetailModal).toBeDefined();
+    expect(mod.PeriodSelector).toBeDefined();
+  });
+
+  it('exports hooks', async () => {
+    const mod = await import('@/features/dashboard');
+    expect(typeof mod.useDashboardData).toBe('function');
+    expect(typeof mod.usePeriodSelector).toBe('function');
+    expect(typeof mod.useBacklogData).toBe('function');
+    expect(typeof mod.useUploadDate).toBe('function');
   });
 });
 
@@ -39,8 +49,13 @@ describe('dashboard components React.memo', () => {
     expect(mod.default.$$typeof).toBe(Symbol.for('react.memo'));
   });
 
-  it('TopProductsChart is wrapped with React.memo', async () => {
-    const mod = await import('@/features/dashboard/components/TopProductsChart');
+  it('ProductGroupChart is wrapped with React.memo', async () => {
+    const mod = await import('@/features/dashboard/components/ProductGroupChart');
+    expect(mod.default.$$typeof).toBe(Symbol.for('react.memo'));
+  });
+
+  it('IndustryGroupChart is wrapped with React.memo', async () => {
+    const mod = await import('@/features/dashboard/components/IndustryGroupChart');
     expect(mod.default.$$typeof).toBe(Symbol.for('react.memo'));
   });
 });

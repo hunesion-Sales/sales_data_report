@@ -1,0 +1,235 @@
+import React, { useMemo, useState } from 'react';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  PieChart,
+  Pie,
+  Cell,
+  LabelList,
+} from 'recharts';
+import type { IndustryGroupSummary, PeriodInfo } from '@/types';
+import { ChartWrapper } from '@/components/charts';
+import { formatMillionWonChart, formatMillionWonTooltip } from '@/utils/formatUtils';
+import DualAxisChart from '@/components/charts/DualAxisChart';
+import { Modal } from '@/components/ui/Modal';
+import { getMonthShortLabel } from '@/types';
+import { INDUSTRY_GROUP_COLORS } from '@/constants/colors';
+import type { IndustryGroupDataItem } from '@/firebase/services/industryGroupDataService';
+
+interface IndustryGroupChartsProps {
+  summaries: IndustryGroupSummary[];
+  periodInfoList: PeriodInfo[];
+  viewMode: 'sales' | 'profit';
+  dataItems: IndustryGroupDataItem[];
+}
+
+function IndustryGroupCharts({
+  summaries,
+  periodInfoList,
+  viewMode,
+  dataItems,
+}: IndustryGroupChartsProps) {
+  const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // 1. Dual Axis Chart Data (amount + profit rate)
+  const chartData = useMemo(() => {
+    return summaries.map((s) => ({
+      name: s.industryGroupName,
+      amount: viewMode === 'sales' ? s.totalSales : s.totalProfit,
+      rate: s.totalSales > 0 ? ((s.totalProfit / s.totalSales) * 100) : 0,
+    }));
+  }, [summaries, viewMode]);
+
+  // 2. Pie Chart Data
+  const pieData = useMemo(() => {
+    return summaries
+      .filter((s) => s.totalSales > 0)
+      .map((s) => ({
+        name: s.industryGroupName,
+        value: viewMode === 'sales' ? s.totalSales : s.totalProfit,
+      }))
+      .sort((a, b) => b.value - a.value);
+  }, [summaries, viewMode]);
+
+  // 3. Modal Trend Data
+  const modalTrendData = useMemo(() => {
+    if (!selectedGroup) return [];
+    const item = dataItems.find((d) => d.industryGroupName === selectedGroup);
+    if (!item) return [];
+
+    const monthKeys = Object.keys(item.months).sort();
+    return monthKeys.map((mk) => {
+      const md = item.months[mk];
+      return {
+        name: getMonthShortLabel(mk),
+        value: viewMode === 'sales' ? md.sales : md.sales - md.cost,
+      };
+    });
+  }, [selectedGroup, dataItems, viewMode]);
+
+  const handleBarClick = (data: any) => {
+    if (data && data.activeLabel) {
+      setSelectedGroup(data.activeLabel);
+      setIsModalOpen(true);
+    }
+  };
+
+  if (summaries.length === 0) {
+    return null;
+  }
+
+  const metricLabel = viewMode === 'sales' ? '매출액' : '매출이익';
+
+  return (
+    <>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 print-avoid-break">
+        {/* 1. Dual Axis Chart: Industry Group Performance */}
+        <DualAxisChart
+          title={`산업군별 ${metricLabel} 및 매출이익률`}
+          data={chartData}
+          xAxisKey="name"
+          barKey="amount"
+          lineKey="rate"
+          barName={metricLabel}
+          lineName="매출이익률"
+          barColor={INDUSTRY_GROUP_COLORS}
+          lineColor="#f59e0b"
+          height={400}
+          onClick={handleBarClick}
+        >
+          <Legend
+            layout="horizontal"
+            verticalAlign="bottom"
+            align="center"
+            wrapperStyle={{ fontSize: 11, paddingTop: 8 }}
+            content={() => {
+              return (
+                <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '8px 16px', fontSize: 11, paddingTop: 8 }}>
+                  {chartData.map((d, idx) => (
+                    <span key={d.name} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                      <span style={{ width: 10, height: 10, backgroundColor: INDUSTRY_GROUP_COLORS[idx % INDUSTRY_GROUP_COLORS.length], display: 'inline-block', borderRadius: 2 }} />
+                      {d.name} ({formatMillionWonTooltip(d.amount)})
+                    </span>
+                  ))}
+                </div>
+              );
+            }}
+          />
+        </DualAxisChart>
+
+        {/* 2. Pie Chart: Market Share */}
+        <ChartWrapper title={`산업군별 ${metricLabel} 비중`} height={400}>
+          <PieChart>
+            <Pie
+              data={pieData}
+              cx="50%"
+              cy="45%"
+              innerRadius={55}
+              outerRadius={95}
+              paddingAngle={2}
+              dataKey="value"
+              label={({ name, percent, cx: cxVal, cy: cyVal, midAngle = 0, outerRadius: oR }) => {
+                if ((percent ?? 0) < 0.03) return null;
+                const RADIAN = Math.PI / 180;
+                const radius = (oR as number) + 25;
+                const x = (cxVal as number) + radius * Math.cos(-midAngle * RADIAN);
+                const y = (cyVal as number) + radius * Math.sin(-midAngle * RADIAN);
+                return (
+                  <text
+                    x={x}
+                    y={y}
+                    fill="#374151"
+                    textAnchor={x > (cxVal as number) ? 'start' : 'end'}
+                    dominantBaseline="central"
+                    fontSize={12}
+                    fontWeight={500}
+                  >
+                    {`${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
+                  </text>
+                );
+              }}
+              labelLine={({ percent, points }) => {
+                if ((percent ?? 0) < 0.03) return <></>;
+                if (!points || points.length < 2) return <></>;
+                return (
+                  <path
+                    d={`M${points[0].x},${points[0].y}L${points[1].x},${points[1].y}`}
+                    stroke="#94a3b8"
+                    strokeWidth={1}
+                    fill="none"
+                  />
+                );
+              }}
+            >
+              {pieData.map((_, idx) => (
+                <Cell key={`cell-${idx}`} fill={INDUSTRY_GROUP_COLORS[idx % INDUSTRY_GROUP_COLORS.length]} />
+              ))}
+            </Pie>
+            <Tooltip
+              formatter={(value: any, name: any) => [formatMillionWonTooltip(Number(value)), name]}
+              contentStyle={{ fontSize: 12 }}
+            />
+            <Legend
+              layout="horizontal"
+              verticalAlign="bottom"
+              align="center"
+              wrapperStyle={{ fontSize: 11, paddingTop: 8 }}
+              content={() => {
+                const total = pieData.reduce((sum, d) => sum + d.value, 0);
+                return (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '8px 16px', fontSize: 11, paddingTop: 8 }}>
+                    {pieData.map((d, idx) => {
+                      const pct = total > 0 ? ((d.value / total) * 100).toFixed(0) : '0';
+                      return (
+                        <span key={d.name} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                          <span style={{ width: 10, height: 10, backgroundColor: INDUSTRY_GROUP_COLORS[idx % INDUSTRY_GROUP_COLORS.length], display: 'inline-block', borderRadius: 2 }} />
+                          {d.name} ({pct}%)
+                        </span>
+                      );
+                    })}
+                  </div>
+                );
+              }}
+            />
+          </PieChart>
+        </ChartWrapper>
+      </div>
+
+      {/* Modal */}
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title={`${selectedGroup || '산업군'} 월별 ${metricLabel} 추이`}
+        size="2xl"
+      >
+        <div style={{ height: 300 }}>
+          <ChartWrapper height={300}>
+            <BarChart data={modalTrendData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} />
+              <XAxis dataKey="name" />
+              <YAxis tickFormatter={formatMillionWonChart} width={45} />
+              <Tooltip formatter={(value: any) => formatMillionWonTooltip(value)} />
+              <Bar
+                dataKey="value"
+                name={metricLabel}
+                fill={viewMode === 'sales' ? '#059669' : '#0d9488'}
+                radius={[4, 4, 0, 0]}
+                barSize={40}
+              >
+                <LabelList dataKey="value" position="top" formatter={(val: any) => formatMillionWonChart(val)} fontSize={10} fill="#64748b" />
+              </Bar>
+            </BarChart>
+          </ChartWrapper>
+        </div>
+      </Modal>
+    </>
+  );
+}
+
+export default React.memo(IndustryGroupCharts);

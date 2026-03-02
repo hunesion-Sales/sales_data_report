@@ -5,3 +5,6 @@ export * from './product';
 export * from './report';
 export * from './target';
 export * from './snapshot';
+export * from './industryGroup';
+export * from './backlog';
+export * from './productTarget';

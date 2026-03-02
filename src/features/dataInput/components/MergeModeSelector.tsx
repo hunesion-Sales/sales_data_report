@@ -5,7 +5,7 @@ import type { UploadMergeMode } from '@/hooks/useReport';
 interface MergeModeSelectorProps {
   mergeMode: UploadMergeMode;
   onChangeMode: (mode: UploadMergeMode) => void;
-  uploadType: 'product' | 'division';
+  uploadType: string;
 }
 
 export default function MergeModeSelector({ mergeMode, onChangeMode, uploadType }: MergeModeSelectorProps) {
@@ -25,9 +25,7 @@ export default function MergeModeSelector({ mergeMode, onChangeMode, uploadType 
           <div>
             <span className="text-sm font-medium text-slate-700">스마트 (권장)</span>
             <p className="text-xs text-slate-500">
-              {uploadType === 'product'
-                ? '변경된 월만 감지, 충돌 시 선택'
-                : '기존 데이터와 병합 (충돌 시 자동 병합)'}
+              변경된 월만 감지, 충돌 시 선택
             </p>
           </div>
         </label>

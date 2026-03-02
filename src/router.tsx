@@ -20,6 +20,9 @@ const DivisionManagementPage = lazy(() => import('./pages/admin/DivisionManageme
 const ProductManagementPage = lazy(() => import('./pages/admin/ProductManagementPage'));
 const UserManagementPage = lazy(() => import('./pages/admin/UserManagementPage'));
 const TargetInputPage = lazy(() => import('./pages/admin/TargetInputPage'));
+const IndustryGroupManagementPage = lazy(() => import('./pages/admin/IndustryGroupManagementPage'));
+const ProductGroupTargetInputPage = lazy(() => import('./pages/admin/ProductGroupTargetInputPage'));
+const IndustryGroupReportPage = lazy(() => import('./pages/IndustryGroupReportPage'));
 
 function SuspenseWrapper({ children }: { children: React.ReactNode }) {
   return (
@@ -74,6 +77,14 @@ export const router = createBrowserRouter([
         ),
       },
       {
+        path: '/industry-group-reports',
+        element: (
+          <SuspenseWrapper>
+            <IndustryGroupReportPage />
+          </SuspenseWrapper>
+        ),
+      },
+      {
         path: '/achievement',
         element: (
           <SuspenseWrapper>
@@ -117,6 +128,26 @@ export const router = createBrowserRouter([
           <ProtectedRoute adminOnly>
             <SuspenseWrapper>
               <TargetInputPage />
+            </SuspenseWrapper>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/admin/industry-groups',
+        element: (
+          <ProtectedRoute adminOnly>
+            <SuspenseWrapper>
+              <IndustryGroupManagementPage />
+            </SuspenseWrapper>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/admin/product-group-targets',
+        element: (
+          <ProtectedRoute adminOnly>
+            <SuspenseWrapper>
+              <ProductGroupTargetInputPage />
             </SuspenseWrapper>
           </ProtectedRoute>
         ),

@@ -29,6 +29,7 @@ function docToProductMaster(id: string, data: Record<string, unknown>): ProductM
     name: data.name as string,
     // divisionId: (data.divisionId as string) || null, // Removed
     type: (data.type as any) || legacyType,
+    productGroup: (data.productGroup as string) || undefined,
     sortOrder: data.sortOrder as number || 0,
     createdAt: (data.createdAt as Timestamp)?.toDate() || new Date(),
     updatedAt: (data.updatedAt as Timestamp)?.toDate() || new Date(),
@@ -80,22 +81,24 @@ export async function createProductMaster(input: ProductMasterInput): Promise<Pr
     sortOrder = existing.length > 0 ? Math.max(...existing.map(p => p.sortOrder)) + 1 : 0;
   }
 
-  const data = {
+  const data: Record<string, unknown> = {
     name: input.name,
-    // divisionId: input.divisionId, // Removed
     type: input.type,
     sortOrder,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   };
+  if (input.productGroup) {
+    data.productGroup = input.productGroup;
+  }
 
   await setDoc(docRef, data);
 
   return {
     id: docRef.id,
     name: input.name,
-    // divisionId: input.divisionId, // Removed
     type: input.type,
+    productGroup: input.productGroup,
     sortOrder,
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -283,6 +286,89 @@ export async function updateAllProductTypes(): Promise<number> {
       type,
     });
     updatedCount++;
+  }
+
+  if (updatedCount > 0) {
+    await batch.commit();
+  }
+  return updatedCount;
+}
+
+/**
+ * 제품군 매핑 데이터
+ * 제품명 → 제품군 매핑
+ */
+export const PRODUCT_GROUP_MAPPING: Record<string, string> = {
+  'i-oneNet': 'i-oneNet',
+  'i-oneNet UC': 'i-oneNet',
+  'i-oneNet DX': 'i-oneNet DD/DX',
+  'i-oneNet DD': 'i-oneNet DD/DX',
+  'NGS': 'NGS',
+  'i-oneNAC': 'i-oneNAC & Safe IP',
+  'Safe IP': 'i-oneNAC & Safe IP',
+  'i-oneJTac': 'i-oneJTac',
+  'CamPASS': 'CamPASS',
+  'i-Spector': 'i-Spector',
+  'MoBiCa': 'MoBiCa',
+  'ViSiCa': 'MoBiCa',
+  'NGS CLOUD': 'Cloud (NGS, ION, Jtac)',
+  'i-oneNet CLOUD': 'Cloud (NGS, ION, Jtac)',
+  'i-oneJTac CLOUD': 'Cloud (NGS, ION, Jtac)',
+  '기타': '기타',
+  'Multi Anti Virus': '기타',
+  'S/W': '기타',
+  'KCDS-GUARD': '기타',
+  'OtoRAS': '기타',
+  'H/W': '기타',
+  // 유지보수 제품 (_MA)
+  'i-oneNet_MA': '유지보수',
+  'i-oneNet DD_MA': '유지보수',
+  'i-oneNet DX_MA': '유지보수',
+  'i-oneNAC_MA': '유지보수',
+  'i_oneJTac_MA': '유지보수',
+  'NGS_MA': '유지보수',
+  'CamPASS_MA': '유지보수',
+  'MoBiCa_MA': '유지보수',
+  'ViSiCa_MA': '유지보수',
+  'Safe IP_MA': '유지보수',
+  'TresDM_MA': '유지보수',
+  'i-Spector_MA': '유지보수',
+};
+
+/**
+ * 제품군 목록 (고유 값)
+ */
+export const PRODUCT_GROUPS = [
+  'i-oneNet',
+  'i-oneNet DD/DX',
+  'NGS',
+  'i-oneNAC & Safe IP',
+  'i-oneJTac',
+  'CamPASS',
+  'i-Spector',
+  'MoBiCa',
+  'Cloud (NGS, ION, Jtac)',
+  '기타',
+  '유지보수',
+] as const;
+
+/**
+ * 기존 products_master에 제품군(productGroup) 필드를 일괄 업데이트
+ */
+export async function batchUpdateProductGroups(): Promise<number> {
+  const products = await getProductMasters();
+  const batch = writeBatch(db);
+  let updatedCount = 0;
+
+  for (const product of products) {
+    const productGroup = PRODUCT_GROUP_MAPPING[product.name];
+    if (productGroup && productGroup !== product.productGroup) {
+      batch.update(doc(db, COLLECTION_NAME, product.id), {
+        productGroup,
+        updatedAt: serverTimestamp(),
+      });
+      updatedCount++;
+    }
   }
 
   if (updatedCount > 0) {

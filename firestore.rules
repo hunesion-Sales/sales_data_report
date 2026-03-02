@@ -215,6 +215,22 @@ service cloud.firestore {
         allow delete: if isAdmin() || isApproved();
       }
 
+      // Industry Group Data (산업군별 실적 데이터)
+      match /industry_group_data/{igDocId} {
+
+        function isValidIndustryGroupData() {
+          let data = request.resource.data;
+          return data.keys().hasAll(['industryGroupName', 'months'])
+            && isNonEmptyString(data.industryGroupName)
+            && isStringMaxLen(data.industryGroupName, 100)
+            && data.months is map;
+        }
+
+        allow read: if isAuthenticated();
+        allow create, update: if (isAdmin() || isApproved()) && isValidIndustryGroupData();
+        allow delete: if isAdmin() || isApproved();
+      }
+
       // Snapshots (주차별 스냅샷)
       match /snapshots/{snapshotId} {
         allow read: if isAuthenticated();
@@ -251,6 +267,88 @@ service cloud.firestore {
 
       // 삭제: 관리자만
       allow delete: if isAdmin();
+    }
+
+    // ========================================
+    // Industry Groups Collection (산업군)
+    // ========================================
+    match /industry_groups/{groupId} {
+
+      function isValidIndustryGroup() {
+        let data = request.resource.data;
+        return data.keys().hasAll(['name', 'sortOrder'])
+          && isNonEmptyString(data.name)
+          && isStringMaxLen(data.name, 100)
+          && data.sortOrder is number;
+      }
+
+      // 읽기: 인증된 모든 사용자
+      allow read: if isAuthenticated();
+
+      // 생성/수정: 관리자만 + 필드 검증
+      allow create, update: if isAdmin() && isValidIndustryGroup();
+
+      // 삭제: 관리자만
+      allow delete: if isAdmin();
+    }
+
+    // ========================================
+    // Product Group Targets Collection (제품군별 목표)
+    // ========================================
+    match /product_group_targets/{targetId} {
+
+      function isValidProductGroupTarget() {
+        let data = request.resource.data;
+        return data.keys().hasAll(['year', 'quarter', 'productGroup', 'salesTarget'])
+          && data.year is number
+          && data.year >= 2020
+          && data.year <= 2100
+          && data.quarter in ['Q1', 'Q2', 'Q3', 'Q4']
+          && isNonEmptyString(data.productGroup)
+          && isStringMaxLen(data.productGroup, 100)
+          && isNonNegativeNumber(data.salesTarget);
+      }
+
+      // 읽기: 인증된 모든 사용자
+      allow read: if isAuthenticated();
+
+      // 생성/수정: 관리자만 + 필드 검증
+      allow create, update: if isAdmin() && isValidProductGroupTarget();
+
+      // 삭제: 관리자만
+      allow delete: if isAdmin();
+    }
+
+    // ========================================
+    // Backlog Collection (수주잔액)
+    // ========================================
+    match /backlog/{year} {
+
+      // 메타 문서 읽기/쓰기
+      allow read: if isAuthenticated();
+      allow create, update: if isAdmin() || isApproved();
+      allow delete: if isAdmin();
+
+      // 제품별 수주잔액
+      match /products/{docId} {
+        allow read: if isAuthenticated();
+        allow create, update: if isAdmin() || isApproved();
+        allow delete: if isAdmin() || isApproved();
+      }
+
+      // 부문별 수주잔액
+      match /divisions/{docId} {
+        allow read: if isAuthenticated();
+        allow create, update: if isAdmin() || isApproved();
+        allow delete: if isAdmin() || isApproved();
+      }
+
+      // 산업군별 수주잔액
+      match /industry_groups/{docId} {
+        allow read: if isAuthenticated();
+        allow create, update: if isAdmin() || isApproved();
+        allow delete: if isAdmin() || isApproved();
+      }
     }
 
     // ========================================

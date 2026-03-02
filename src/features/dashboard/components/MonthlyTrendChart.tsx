@@ -1,52 +1,76 @@
-import React from 'react';
-import {
-  ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid,
-  Tooltip as RechartsTooltip, Legend, LabelList
-} from 'recharts';
-import { ChartWrapper } from '@/components/charts';
-import { formatMillionWonChart, formatMillionWonTooltip } from '@/utils/formatUtils';
+import React, { useState } from 'react';
+import DualBarLineChart from './shared/DualBarLineChart';
+import type { DualBarLineChartDataItem } from './shared/DualBarLineChart';
 
-interface MonthlyTrendChartProps {
-  data: Array<{ name: string; sales: number; profit: number; rate: number; previousSales?: number; previousProfit?: number }>;
-  viewMode: 'sales' | 'profit';
-  showYoY?: boolean;
+export interface MonthlyTrendDataItem {
+  name: string;
+  prevYearActual: number;
+  currentActual: number;
+  backlog: number;
+  achievementRate: number;
+  growthRate: number;
 }
 
-function MonthlyTrendChart({ data, viewMode, showYoY = false }: MonthlyTrendChartProps) {
-  const hasPreviousData = showYoY && data.some(d => (d.previousSales ?? 0) > 0 || (d.previousProfit ?? 0) > 0);
+interface MonthlyTrendChartProps {
+  data: MonthlyTrendDataItem[];
+  viewMode: 'sales' | 'profit';
+}
+
+/**
+ * 월별 실적 및 예측 현황 차트
+ * - 누적/월별 토글
+ * - 바 3개: 전년실적(회색) + 당년실적(남색) + 수주잔액(베이지)
+ * - 라인 2개: 달성율(남색) + 성장율(주황)
+ */
+function MonthlyTrendChart({ data, viewMode }: MonthlyTrendChartProps) {
+  const [isCumulative, setIsCumulative] = useState(false);
+
+  const chartData: DualBarLineChartDataItem[] = isCumulative
+    ? data.reduce<DualBarLineChartDataItem[]>((acc, item, idx) => {
+        const prev = acc[idx - 1];
+        acc.push({
+          name: item.name,
+          prevYearActual: (prev?.prevYearActual ?? 0) + item.prevYearActual,
+          currentActual: (prev?.currentActual ?? 0) + item.currentActual,
+          backlog: item.backlog, // 수주잔액은 당월만 표시 (누적 아님)
+          achievementRate: item.achievementRate,
+          growthRate: item.growthRate,
+        });
+        return acc;
+      }, [])
+    : data;
+
+  const label = viewMode === 'sales' ? '매출액' : '매출이익';
 
   return (
-    <ChartWrapper title="월별 매출/매출이익 및 달성율 추이 (누적)" height={350}>
-      <ComposedChart data={data} margin={{ top: 20, right: 30, left: 30, bottom: 5 }}>
-        <CartesianGrid strokeDasharray="3 3" vertical={false} />
-        <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-        <YAxis yAxisId="left" tickFormatter={formatMillionWonChart} tick={{ fontSize: 11 }} label={{ value: '(백만원)', position: 'top', offset: 10, fontSize: 11, fill: '#64748b' }} />
-        <YAxis yAxisId="right" orientation="right" tickFormatter={(val) => `${val.toFixed(0)}%`} tick={{ fontSize: 11 }} domain={[0, 'auto']} label={{ value: '(%)', position: 'top', offset: 10, fontSize: 11, fill: '#64748b' }} />
-        <RechartsTooltip formatter={(value: any, name: any) => {
-          if (name === '달성율') return [`${Number(value).toFixed(1)}%`, viewMode === 'sales' ? '매출목표 달성율' : '매출이익 달성율'];
-          if (name === '전년 매출액' || name === '전년 매출이익') return [formatMillionWonTooltip(value), name];
-          return formatMillionWonTooltip(value);
-        }} />
-        <Legend />
-        {hasPreviousData && (
-          <Bar yAxisId="left" dataKey="previousSales" name="전년 매출액" fill="#cbd5e1" barSize={30} radius={[4, 4, 0, 0]} opacity={0.5}>
-            <LabelList dataKey="previousSales" position="top" formatter={(val: any) => formatMillionWonChart(val)} fontSize={10} fill="#94a3b8" offset={5} />
-          </Bar>
-        )}
-        <Bar yAxisId="left" dataKey="sales" name="매출액" fill="#3b82f6" barSize={30} radius={[4, 4, 0, 0]}>
-          <LabelList dataKey="sales" position="top" formatter={(val: any) => formatMillionWonChart(val)} fontSize={10} fill="#64748b" offset={5} />
-        </Bar>
-        {hasPreviousData && (
-          <Bar yAxisId="left" dataKey="previousProfit" name="전년 매출이익" fill="#a7f3d0" barSize={30} radius={[4, 4, 0, 0]} opacity={0.5}>
-            <LabelList dataKey="previousProfit" position="top" formatter={(val: any) => formatMillionWonChart(val)} fontSize={10} fill="#94a3b8" offset={5} />
-          </Bar>
-        )}
-        <Bar yAxisId="left" dataKey="profit" name="매출이익" fill="#10b981" barSize={30} radius={[4, 4, 0, 0]}>
-          <LabelList dataKey="profit" position="top" formatter={(val: any) => formatMillionWonChart(val)} fontSize={10} fill="#64748b" offset={5} />
-        </Bar>
-        <Line yAxisId="right" type="monotone" dataKey="rate" name="달성율" stroke="#f59e0b" strokeWidth={3} dot={{ r: 4 }} />
-      </ComposedChart>
-    </ChartWrapper>
+    <div>
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="text-lg font-bold text-slate-800">월별 {label} 및 예측 현황</h3>
+        <div className="flex bg-slate-100 rounded-lg p-0.5">
+          <button
+            onClick={() => setIsCumulative(true)}
+            className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${
+              isCumulative ? 'bg-slate-800 text-white' : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            누적 실적
+          </button>
+          <button
+            onClick={() => setIsCumulative(false)}
+            className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${
+              !isCumulative ? 'bg-slate-800 text-white' : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            월별 실적
+          </button>
+        </div>
+      </div>
+      <DualBarLineChart
+        data={chartData}
+        height={380}
+        lineCount={2}
+      />
+    </div>
   );
 }
 

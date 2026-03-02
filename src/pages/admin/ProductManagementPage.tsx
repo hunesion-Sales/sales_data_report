@@ -6,7 +6,7 @@ import {
   ProductTable,
   DeleteConfirmModal,
 } from '@/features/productManagement';
-import { updateAllProductTypes, seedInitialProductMasters } from '@/firebase/services/productMasterService';
+import { updateAllProductTypes, seedInitialProductMasters, batchUpdateProductGroups } from '@/firebase/services/productMasterService';
 
 export default function ProductManagementPage() {
   const navigate = useNavigate();
@@ -129,6 +129,21 @@ export default function ProductManagementPage() {
                 title="기존 데이터에 유형(클라우드/일반/유지보수) 반영"
               >
                 기존 데이터 마이그레이션
+              </button>
+              <button
+                onClick={async () => {
+                  try {
+                    const count = await batchUpdateProductGroups();
+                    alert(`제품군 매핑 완료: ${count}개 제품 업데이트됨`);
+                    window.location.reload();
+                  } catch (e) {
+                    alert('에러: ' + e);
+                  }
+                }}
+                className="px-3 py-2 bg-indigo-100 text-indigo-700 rounded-lg text-sm font-medium hover:bg-indigo-200 transition-colors"
+                title="제품명 → 제품군(11개) 자동 매핑"
+              >
+                제품군 일괄 적용
               </button>
 
               {!isAdding && (

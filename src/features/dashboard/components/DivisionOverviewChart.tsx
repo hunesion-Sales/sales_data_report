@@ -1,47 +1,81 @@
-import React from 'react';
-import {
-  ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid,
-  Tooltip as RechartsTooltip, Legend, LabelList
-} from 'recharts';
-import { ChartWrapper } from '@/components/charts';
-import { formatMillionWonChart, formatMillionWonTooltip } from '@/utils/formatUtils';
+import React, { useState } from 'react';
+import DualBarLineChart from './shared/DualBarLineChart';
+import type { DualBarLineChartDataItem } from './shared/DualBarLineChart';
 
-interface DivisionChartItem {
+export interface DivisionChartDataItem {
   name: string;
-  sales: number;
-  profit: number;
-  rate: number;
+  target: number;         // 목표
+  actual: number;         // 실적
+  backlog: number;        // 수주잔액
+  achievementRate: number; // 달성율 (실적 기준 or 실적+수주잔액 기준)
+  achievementRateWithBacklog: number; // 실적+수주잔액 기준 달성율
   divisionId: string;
 }
 
 interface DivisionOverviewChartProps {
-  data: DivisionChartItem[];
+  data: DivisionChartDataItem[];
   viewMode: 'sales' | 'profit';
-  onDivisionClick: (data: any) => void;
 }
 
-function DivisionOverviewChart({ data, viewMode, onDivisionClick }: DivisionOverviewChartProps) {
+/**
+ * 부문별 매출이익 목표 및 실적 / 달성율 차트
+ * - 바: 목표(베이지) + 실적(남색) + 수주잔액(연한색)
+ * - 라인: 달성율(남색) — 1개만
+ * - 실적만 보기 / 실적+수주잔액 보기 토글
+ */
+function DivisionOverviewChart({ data, viewMode }: DivisionOverviewChartProps) {
+  const [includeBacklog, setIncludeBacklog] = useState(false);
+  const label = viewMode === 'sales' ? '매출' : '매출이익';
+
+  const chartData: DualBarLineChartDataItem[] = data.map(d => ({
+    name: d.name,
+    prevYearActual: d.target,
+    currentActual: d.actual,
+    backlog: includeBacklog ? d.backlog : 0,
+    achievementRate: includeBacklog ? d.achievementRateWithBacklog : d.achievementRate,
+    growthRate: 0, // 부문별 차트는 성장율 미표시
+  }));
+
   return (
-    <ChartWrapper title="부문별 매출/매출이익 및 달성율" height={350}>
-      <ComposedChart data={data} margin={{ top: 20, right: 30, left: 30, bottom: 5 }} onClick={onDivisionClick}>
-        <CartesianGrid strokeDasharray="3 3" vertical={false} />
-        <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-        <YAxis yAxisId="left" tickFormatter={formatMillionWonChart} tick={{ fontSize: 11 }} label={{ value: '(백만원)', position: 'top', offset: 10, fontSize: 11, fill: '#64748b' }} />
-        <YAxis yAxisId="right" orientation="right" tickFormatter={(val) => `${val.toFixed(0)}%`} tick={{ fontSize: 11 }} domain={[0, 'auto']} label={{ value: '(%)', position: 'top', offset: 10, fontSize: 11, fill: '#64748b' }} />
-        <RechartsTooltip formatter={(value: any, name: any) => {
-          if (name === '달성율') return [`${Number(value).toFixed(1)}%`, viewMode === 'sales' ? '매출목표 달성율' : '매출이익 달성율'];
-          return formatMillionWonTooltip(value);
-        }} />
-        <Legend />
-        <Bar yAxisId="left" dataKey="sales" name="매출액" fill="#6366f1" barSize={30} radius={[4, 4, 0, 0]}>
-          <LabelList dataKey="sales" position="top" formatter={(val: any) => formatMillionWonChart(val)} fontSize={10} fill="#64748b" offset={10} />
-        </Bar>
-        <Bar yAxisId="left" dataKey="profit" name="매출이익" fill="#059669" barSize={30} radius={[4, 4, 0, 0]}>
-          <LabelList dataKey="profit" position="top" formatter={(val: any) => formatMillionWonChart(val)} fontSize={10} fill="#64748b" offset={10} />
-        </Bar>
-        <Line yAxisId="right" type="monotone" dataKey="rate" name="달성율" stroke="#f43f5e" strokeWidth={3} dot={{ r: 4 }} />
-      </ComposedChart>
-    </ChartWrapper>
+    <div>
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="text-lg font-bold text-slate-800">부문별 {label} 목표 및 실적 / 달성율</h3>
+        <div className="flex bg-slate-100 rounded-lg p-0.5">
+          <button
+            onClick={() => setIncludeBacklog(false)}
+            className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${
+              !includeBacklog ? 'bg-slate-800 text-white' : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            실적만 보기
+          </button>
+          <button
+            onClick={() => setIncludeBacklog(true)}
+            className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${
+              includeBacklog ? 'bg-slate-800 text-white' : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            실적+수주잔액
+          </button>
+        </div>
+      </div>
+      <DualBarLineChart
+        data={chartData}
+        height={380}
+        lineCount={1}
+        barOverrides={{
+          bar1Key: 'prevYearActual',
+          bar1Name: '목표',
+          bar1Color: '#fde68a',
+          bar2Key: 'currentActual',
+          bar2Name: '실적',
+          bar2Color: '#1e3a5f',
+          bar3Key: 'backlog',
+          bar3Name: '수주잔액',
+          bar3Color: '#93c5fd',
+        }}
+      />
+    </div>
   );
 }
 

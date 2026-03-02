@@ -1,6 +1,12 @@
 export { useDashboardData } from './hooks/useDashboardData';
+export { usePeriodSelector } from './hooks/usePeriodSelector';
+export { useBacklogData } from './hooks/useBacklogData';
+export { useUploadDate } from './hooks/useUploadDate';
 export { default as DashboardKPICards } from './components/DashboardKPICards';
+export type { DashboardKPIData } from './components/DashboardKPICards';
 export { default as MonthlyTrendChart } from './components/MonthlyTrendChart';
-export { default as TopProductsChart } from './components/TopProductsChart';
+export { default as ProductGroupChart } from './components/ProductGroupChart';
+export { default as IndustryGroupChart } from './components/IndustryGroupChart';
 export { default as DivisionOverviewChart } from './components/DivisionOverviewChart';
 export { default as DashboardDetailModal } from './components/DashboardDetailModal';
+export { default as PeriodSelector } from './components/shared/PeriodSelector';

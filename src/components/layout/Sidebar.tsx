@@ -15,7 +15,8 @@ import {
     Package,
     Users,
     ChevronDown,
-    ChevronUp
+    ChevronUp,
+    Factory
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -42,14 +43,17 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleCollapse })
         { path: '/', label: '대시보드', icon: LayoutDashboard },
         { path: '/product-reports', label: '제품별 보고서', icon: Package },
         { path: '/reports', label: '부문별 보고서', icon: BarChart3 },
+        { path: '/industry-group-reports', label: '산업군별 보고서', icon: Factory },
         { path: '/achievement', label: '달성율', icon: Target },
     ];
 
     const adminItems = [
         { path: '/admin/divisions', label: '영업부문 관리', icon: Building2 },
+        { path: '/admin/industry-groups', label: '산업군 관리', icon: Factory },
         { path: '/admin/products', label: '제품 마스터 관리', icon: Package },
         { path: '/admin/users', label: '사용자 관리', icon: Users },
         { path: '/admin/targets', label: '목표 관리', icon: Target },
+        { path: '/admin/product-group-targets', label: '제품군별 목표', icon: Target },
     ];
 
     const isActive = (path: string) => location.pathname === path;

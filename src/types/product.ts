@@ -8,6 +8,7 @@ export interface ProductMaster {
   name: string;
   divisionId?: string | null; // @deprecated
   type: ProductType;
+  productGroup?: string; // 제품군 (예: "i-oneNet", "NGS")
   sortOrder: number;
   createdAt: Date;
   updatedAt: Date;
@@ -18,6 +19,7 @@ export interface ProductMasterInput {
   name: string;
   divisionId?: string | null; // @deprecated
   type: ProductType;
+  productGroup?: string;
   sortOrder?: number;
 }
 

@@ -28,6 +28,22 @@ export const DIVISION_COLORS = [
     '#818cf8', // indigo-400
 ] as const;
 
+/** Chart color palette for industry group charts (12 colors, green-teal series) */
+export const INDUSTRY_GROUP_COLORS = [
+    '#059669', // emerald-600
+    '#0d9488', // teal-600
+    '#0891b2', // cyan-600
+    '#2563eb', // blue-600
+    '#7c3aed', // violet-600
+    '#c026d3', // fuchsia-600
+    '#e11d48', // rose-600
+    '#ea580c', // orange-600
+    '#ca8a04', // yellow-600
+    '#16a34a', // green-600
+    '#0e7490', // cyan-700
+    '#4f46e5', // indigo-600
+] as const;
+
 /** Month background color palette for table headers (12 months) */
 export const MONTH_COLORS = [
     { bg: 'bg-blue-50/50', bgLight: 'bg-blue-50/30', text: 'text-blue-700' },
