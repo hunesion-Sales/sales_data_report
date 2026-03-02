@@ -98,13 +98,16 @@ export async function parseIndustryGroupExcelFile(
 
     if (!name) continue;
 
-    // 섹션 구분
-    if (name === '매출코드' || name.includes('매출코드')) {
+    // 섹션 구분 (공백/다양한 형식 처리)
+    const normalizedName = name.replace(/\s+/g, '');
+    if (normalizedName === '매출코드' || normalizedName.includes('매출코드')) {
       isMaintenanceSection = false;
+      logger.debug(`[IndustryGroupExcelParser] 매출코드 섹션 시작 (row ${rowNum}, name="${name}")`);
       continue;
     }
-    if (name === '유지보수코드' || name.includes('유지보수코드')) {
+    if (normalizedName.includes('유지보수') && normalizedName.includes('코드')) {
       isMaintenanceSection = true;
+      logger.debug(`[IndustryGroupExcelParser] 유지보수코드 섹션 시작 (row ${rowNum}, name="${name}")`);
       continue;
     }
 
@@ -113,6 +116,9 @@ export async function parseIndustryGroupExcelFile(
 
     // 유지보수코드 섹션은 모두 "유지보수" 산업군으로 합산
     const targetGroup = isMaintenanceSection ? '유지보수' : name;
+    if (isMaintenanceSection) {
+      logger.debug(`[IndustryGroupExcelParser] 유지보수 합산: "${name}" → "유지보수" (row ${rowNum})`);
+    }
 
     const months: Record<string, { sales: number; cost: number }> = {};
     for (const mc of monthColumns) {

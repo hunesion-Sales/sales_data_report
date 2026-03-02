@@ -151,10 +151,12 @@ export async function parseBacklogExcel(
   const subHeaderRow = worksheet.getRow(monthHeaderRow + 1);
   subHeaderRow.eachCell({ includeEmpty: false }, (cell, colNumber) => {
     const val = String(cell.value ?? '').trim();
-    if (['제품군', '제품명', '사업부문', '부문', '고객구분'].some(k => val.includes(k))) {
+    if (['제품군', '제품명', '사업부문', '부문', '고객구분', '매출코드 소유자'].some(k => val.includes(k))) {
       nameCol = colNumber;
     }
   });
+
+  logger.debug(`[BacklogParser] nameCol=${nameCol}, monthHeaderRow=${monthHeaderRow}, dataStartRow=${monthHeaderRow + 2}`);
 
   // 3) 데이터 파싱
   const dataStartRow = monthHeaderRow + 2;
@@ -165,6 +167,7 @@ export async function parseBacklogExcel(
 
   // 제품별 / 부문별 파싱
   const items: Array<{ name: string; months: Record<string, MonthData> }> = [];
+  const skippedItems: string[] = [];
 
   for (let rowNum = dataStartRow; rowNum <= worksheet.rowCount; rowNum++) {
     const row = worksheet.getRow(rowNum);
@@ -173,9 +176,14 @@ export async function parseBacklogExcel(
     if (!name || name === '전체' || name === '부분합' || name === '합계') continue;
 
     const months: Record<string, MonthData> = {};
+    let totalSales = 0;
+    let totalCost = 0;
+
     for (const mc of filteredMonthColumns) {
       const sales = getCellNumber(row, mc.salesCol);
       const cost = getCellNumber(row, mc.costCol);
+      totalSales += sales;
+      totalCost += cost;
       if (sales !== 0 || cost !== 0) {
         months[mc.key] = { sales, cost };
       }
@@ -183,8 +191,17 @@ export async function parseBacklogExcel(
 
     if (Object.keys(months).length > 0) {
       items.push({ name, months });
+      logger.debug(`[BacklogParser] Added: ${name}, sales=${totalSales}, cost=${totalCost}, months=${Object.keys(months).length}`);
+    } else {
+      skippedItems.push(name);
     }
   }
+
+  if (skippedItems.length > 0) {
+    logger.debug(`[BacklogParser] Skipped (no data): ${skippedItems.join(', ')}`);
+  }
+
+  logger.debug(`[BacklogParser] Total items: ${items.length}, type: ${type}`);
 
   if (type === 'product') {
     return {
@@ -224,13 +241,16 @@ function parseIndustryBacklog(
 
     if (!name) continue;
 
-    // 섹션 구분
-    if (name === '매출코드' || name.includes('매출코드')) {
+    // 섹션 구분 (공백/다양한 형식 처리)
+    const normalizedName = name.replace(/\s+/g, '');
+    if (normalizedName === '매출코드' || normalizedName.includes('매출코드')) {
       isMaintenanceSection = false;
+      logger.debug(`[BacklogParser:Industry] 매출코드 섹션 시작 (row ${rowNum}, name="${name}")`);
       continue;
     }
-    if (name === '유지보수코드' || name.includes('유지보수코드')) {
+    if (normalizedName.includes('유지보수') && normalizedName.includes('코드')) {
       isMaintenanceSection = true;
+      logger.debug(`[BacklogParser:Industry] 유지보수코드 섹션 시작 (row ${rowNum}, name="${name}")`);
       continue;
     }
 
@@ -239,6 +259,9 @@ function parseIndustryBacklog(
 
     // 유지보수코드 섹션은 모두 "유지보수" 산업군으로 합산
     const targetGroup = isMaintenanceSection ? '유지보수' : name;
+    if (isMaintenanceSection) {
+      logger.debug(`[BacklogParser:Industry] 유지보수 합산: "${name}" → "유지보수" (row ${rowNum})`);
+    }
 
     const months: Record<string, MonthData> = {};
     for (const mc of monthColumns) {
