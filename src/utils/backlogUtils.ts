@@ -6,26 +6,44 @@ import {
 } from '@/utils/periodUtils';
 
 /**
- * 선택한 기간에 해당하는 월 키 목록 반환
+ * 선택한 기간에 해당하는 월 키 목록 반환 (다중 선택 지원)
  */
 export function getMonthKeysForPeriod(selection: DashboardPeriodSelection): string[] {
-  const { periodType, year, month, quarter, halfYear } = selection;
+  const { periodType, year, months, quarters, halfYears } = selection;
+  const monthSet = new Set<string>();
 
   switch (periodType) {
     case 'monthly':
-      if (month) return [`${year}-${String(month).padStart(2, '0')}`];
-      return getMonthsInYear(year);
+      if (months && months.length > 0) {
+        months.forEach(m => monthSet.add(`${year}-${String(m).padStart(2, '0')}`));
+      } else {
+        getMonthsInYear(year).forEach(m => monthSet.add(m));
+      }
+      break;
     case 'quarterly':
-      if (quarter) return getMonthsInQuarter(year, quarter);
-      return getMonthsInYear(year);
+      if (quarters && quarters.length > 0) {
+        quarters.forEach(q => {
+          getMonthsInQuarter(year, q).forEach(m => monthSet.add(m));
+        });
+      } else {
+        getMonthsInYear(year).forEach(m => monthSet.add(m));
+      }
+      break;
     case 'semi-annual':
-      if (halfYear) return getMonthsInHalfYear(year, halfYear);
-      return getMonthsInYear(year);
+      if (halfYears && halfYears.length > 0) {
+        halfYears.forEach(h => {
+          getMonthsInHalfYear(year, h).forEach(m => monthSet.add(m));
+        });
+      } else {
+        getMonthsInYear(year).forEach(m => monthSet.add(m));
+      }
+      break;
     case 'annual':
-      return getMonthsInYear(year);
     default:
-      return getMonthsInYear(year);
+      getMonthsInYear(year).forEach(m => monthSet.add(m));
   }
+
+  return Array.from(monthSet).sort();
 }
 
 /**

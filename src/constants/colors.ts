@@ -44,6 +44,21 @@ export const INDUSTRY_GROUP_COLORS = [
     '#4f46e5', // indigo-600
 ] as const;
 
+/**
+ * Dashboard chart color palette for bar charts
+ * - 3개년 트렌드 분석 스타일 참조 (가독성 개선)
+ */
+export const DASHBOARD_BAR_COLORS = {
+  prevYear: '#cbd5e1',    // slate-300 (회색 - 전년/목표)
+  current: '#4f46e5',     // indigo-600 (남색 - 당년/실적)
+  backlog: '#fbbf24',     // amber-400 (골드 - 수주잔액)
+} as const;
+
+export const DASHBOARD_LINE_COLORS = {
+  achievement: '#4338ca', // indigo-700 (달성율)
+  growth: '#f97316',      // orange-500 (성장율)
+} as const;
+
 /** Month background color palette for table headers (12 months) */
 export const MONTH_COLORS = [
     { bg: 'bg-blue-50/50', bgLight: 'bg-blue-50/30', text: 'text-blue-700' },

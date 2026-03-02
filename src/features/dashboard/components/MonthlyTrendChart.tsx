@@ -19,8 +19,7 @@ interface MonthlyTrendChartProps {
 /**
  * 월별 실적 및 예측 현황 차트
  * - 누적/월별 토글
- * - 바 3개: 전년실적(회색) + 당년실적(남색) + 수주잔액(베이지)
- * - 라인 2개: 달성율(남색) + 성장율(주황)
+ * - 바 3개: 전년실적(회색) + 당년실적(남색) + 수주잔액(골드)
  */
 function MonthlyTrendChart({ data, viewMode }: MonthlyTrendChartProps) {
   const [isCumulative, setIsCumulative] = useState(false);
@@ -68,7 +67,7 @@ function MonthlyTrendChart({ data, viewMode }: MonthlyTrendChartProps) {
       <DualBarLineChart
         data={chartData}
         height={380}
-        lineCount={2}
+        lineCount={0}
       />
     </div>
   );

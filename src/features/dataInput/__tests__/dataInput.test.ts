@@ -50,7 +50,6 @@ describe('dataInput barrel exports', () => {
     expect(typeof mod.useDataInput).toBe('function');
     expect(typeof mod.matchDivision).toBe('function');
     expect(mod.UploadTypeSelector).toBeDefined();
-    expect(mod.MergeModeSelector).toBeDefined();
     expect(mod.DataManagementTools).toBeDefined();
     expect(mod.DataListTable).toBeDefined();
   });

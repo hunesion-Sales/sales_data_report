@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   getIndustryGroups,
   createIndustryGroup,
@@ -6,6 +6,8 @@ import {
   deleteIndustryGroup,
   resetToDefaultIndustryGroups,
 } from '@/firebase/services/industryGroupService';
+import { db } from '@/firebase/config';
+import { collection, doc, writeBatch, serverTimestamp } from 'firebase/firestore';
 import type { IndustryGroup } from '@/types';
 
 export function useIndustryGroupManagement() {
@@ -28,11 +30,7 @@ export function useIndustryGroupManagement() {
   const [deleteTarget, setDeleteTarget] = useState<IndustryGroup | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  useEffect(() => {
-    loadGroups();
-  }, []);
-
-  const loadGroups = async () => {
+  const loadGroups = useCallback(async () => {
     try {
       setIsLoading(true);
       const data = await getIndustryGroups();
@@ -44,7 +42,11 @@ export function useIndustryGroupManagement() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadGroups();
+  }, [loadGroups]);
 
   const handleAdd = async () => {
     if (!newName.trim()) return;
@@ -146,6 +148,69 @@ export function useIndustryGroupManagement() {
     setNewKeywords([]);
   };
 
+  /** 엑셀 파일에서 산업군 데이터 임포트 (기존 데이터 삭제 후 재생성) */
+  const importFromExcel = useCallback(async (file: File) => {
+    try {
+      setIsSaving(true);
+      const ExcelJS = await import('exceljs');
+      const workbook = new ExcelJS.Workbook();
+      const buffer = await file.arrayBuffer();
+      await workbook.xlsx.load(buffer);
+      const ws = workbook.worksheets[0];
+      if (!ws) throw new Error('시트를 찾을 수 없습니다.');
+
+      // 엑셀 파싱: 산업군명 → 키워드 목록
+      const groupMap = new Map<string, string[]>();
+      ws.eachRow((row, rowNum) => {
+        if (rowNum <= 1) return; // 헤더 스킵
+        let groupName = row.getCell(1).value;
+        let keyword = row.getCell(2).value;
+        if (groupName && typeof groupName === 'object' && 'richText' in groupName) {
+          groupName = (groupName as { richText: { text: string }[] }).richText.map(t => t.text).join('');
+        }
+        if (keyword && typeof keyword === 'object' && 'richText' in keyword) {
+          keyword = (keyword as { richText: { text: string }[] }).richText.map(t => t.text).join('');
+        }
+        if (!groupName || !keyword) return;
+        const name = String(groupName).trim();
+        const kw = String(keyword).trim();
+        if (!groupMap.has(name)) groupMap.set(name, []);
+        groupMap.get(name)!.push(kw);
+      });
+
+      if (groupMap.size === 0) throw new Error('유효한 산업군 데이터가 없습니다.');
+
+      // 기존 산업군 삭제
+      const existing = await getIndustryGroups();
+      const batch = writeBatch(db);
+      for (const group of existing) {
+        batch.delete(doc(db, 'industry_groups', group.id));
+      }
+
+      // 새 산업군 생성
+      let sortOrder = 1;
+      for (const [name, keywords] of groupMap) {
+        const docRef = doc(collection(db, 'industry_groups'));
+        batch.set(docRef, {
+          name,
+          keywords,
+          sortOrder: sortOrder++,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+      }
+
+      await batch.commit();
+      await loadGroups();
+      alert(`엑셀에서 ${groupMap.size}개 산업군을 가져왔습니다.`);
+    } catch (err) {
+      setError('엑셀 임포트에 실패했습니다: ' + (err instanceof Error ? err.message : ''));
+      console.error(err);
+    } finally {
+      setIsSaving(false);
+    }
+  }, [loadGroups]);
+
   return {
     groups,
     isLoading,
@@ -174,5 +239,6 @@ export function useIndustryGroupManagement() {
     handleCancelDelete,
     handleInitialize,
     cancelAdd,
+    importFromExcel,
   };
 }

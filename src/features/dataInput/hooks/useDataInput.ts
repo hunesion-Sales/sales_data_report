@@ -4,17 +4,17 @@ import { parseDivisionExcelFile } from '@/utils/divisionExcelParser';
 import { parseIndustryGroupExcelFile } from '@/utils/industryGroupExcelParser';
 import { parseBacklogExcel } from '@/utils/backlogExcelParser';
 import { validateExcelFile } from '@/utils/fileValidator';
-import type { UploadMergeMode } from '@/hooks/useReport';
 import { getDivisions } from '@/firebase/services/divisionService';
 import { saveDivisionData } from '@/firebase/services/divisionDataService';
-import { saveIndustryGroupData } from '@/firebase/services/industryGroupDataService';
+import { saveIndustryGroupData, type IndustryGroupDataItem } from '@/firebase/services/industryGroupDataService';
+import { getIndustryGroups } from '@/firebase/services/industryGroupService';
 import {
   saveBacklogMeta,
   saveBacklogProducts,
   saveBacklogDivisions,
   saveBacklogIndustryGroups,
 } from '@/firebase/services/backlogService';
-import type { ProductData, Division, UploadAnalysisResult, ConflictResolution, ConflictResolutionSaveResult } from '@/types';
+import type { ProductData, Division } from '@/types';
 import { getMonthShortLabel } from '@/types';
 import type { UploadType } from '../components/UploadTypeSelector';
 import { logger } from '@/utils/logger';
@@ -25,21 +25,9 @@ interface UseDataInputOptions {
     months: string[],
     monthLabels: Record<string, string>,
     fileName: string,
-    mergeMode?: UploadMergeMode,
+    mergeMode?: 'overwrite' | 'merge' | 'smart',
     targetYear?: number,
   ) => Promise<{ newCount: number; updatedCount: number }>;
-  analyzeUpload: (
-    products: ProductData[],
-    months: string[],
-    monthLabels: Record<string, string>,
-    targetYear?: number,
-  ) => Promise<UploadAnalysisResult>;
-  saveWithConflictResolution: (
-    analysisResult: UploadAnalysisResult,
-    resolutions: ConflictResolution[],
-    fileName: string,
-    targetYear?: number,
-  ) => Promise<ConflictResolutionSaveResult>;
   showNotification: (message: string, type?: 'success' | 'error') => void;
 }
 
@@ -50,6 +38,63 @@ export function matchDivision(excelName: string, divisions: Division[]): Divisio
     d.name.includes(excelName) || excelName.includes(d.name)
   );
   return partial || null;
+}
+
+/**
+ * 파서가 반환한 원시 데이터(고객구분명)를 산업군 키워드로 매핑하여 합산
+ * - "공공기관", "공기업", "부,청" → "공공" 산업군으로 합산
+ * - "유지보수" 항목은 이미 파서에서 합산되어 있으므로 그대로 유지
+ * - 고객구분이 "_MA"로 끝나면 "유지보수" 산업군으로 분류 (2025년 데이터 호환)
+ * - 매칭 안 되는 항목은 "기타"로 분류
+ */
+function mapToIndustryGroups(
+  rawData: IndustryGroupDataItem[],
+  industryGroups: { name: string; keywords: string[] }[],
+): IndustryGroupDataItem[] {
+  const groupMap = new Map<string, Record<string, { sales: number; cost: number }>>();
+
+  for (const item of rawData) {
+    let targetName: string;
+
+    // 1. "_MA"로 끝나는 고객구분은 유지보수 산업군으로 분류 (2025년 데이터 호환)
+    if (item.industryGroupName.trim().endsWith('_MA')) {
+      targetName = '유지보수';
+      logger.debug(`[mapToIndustryGroups] "${item.industryGroupName}" → 유지보수 (MA 패턴)`);
+    }
+    // 2. 산업군명과 정확히 일치하면 바로 사용 (예: "유지보수", "기타")
+    else if (industryGroups.find(g => g.name === item.industryGroupName)) {
+      targetName = item.industryGroupName;
+    }
+    // 3. 키워드 매칭
+    else {
+      const matched = industryGroups.find(g =>
+        g.keywords.some(kw =>
+          kw === item.industryGroupName ||
+          item.industryGroupName.includes(kw) ||
+          kw.includes(item.industryGroupName)
+        )
+      );
+      targetName = matched?.name ?? '기타';
+    }
+
+    const existing = groupMap.get(targetName) || {};
+    for (const [monthKey, data] of Object.entries(item.months)) {
+      if (existing[monthKey]) {
+        existing[monthKey] = {
+          sales: existing[monthKey].sales + data.sales,
+          cost: existing[monthKey].cost + data.cost,
+        };
+      } else {
+        existing[monthKey] = { ...data };
+      }
+    }
+    groupMap.set(targetName, existing);
+  }
+
+  return Array.from(groupMap.entries()).map(([name, months]) => ({
+    industryGroupName: name,
+    months,
+  }));
 }
 
 type PerformanceSubType = 'product' | 'division' | 'industryGroup';
@@ -73,17 +118,11 @@ function detectPerformanceType(sheetName: string): PerformanceSubType {
 
 export function useDataInput({
   saveUploadedData,
-  analyzeUpload,
-  saveWithConflictResolution,
   showNotification,
 }: UseDataInputOptions) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadType, setUploadType] = useState<UploadType>('performance');
-  const [mergeMode, setMergeMode] = useState<UploadMergeMode>('smart');
-  const [showConflictModal, setShowConflictModal] = useState(false);
-  const [uploadAnalysis, setUploadAnalysis] = useState<UploadAnalysisResult | null>(null);
-  const [pendingFileName, setPendingFileName] = useState<string>('');
   const [detectedYear, setDetectedYear] = useState<number | null>(null);
   const [detectedSubType, setDetectedSubType] = useState<string | null>(null);
 
@@ -105,7 +144,8 @@ export function useDataInput({
 
       if (uploadType === 'backlog') {
         // === 수주잔액 업로드 (시트명 자동 감지) ===
-        const result = await parseBacklogExcel(buffer, true);
+        // filterPastMonths = false: 과거 월 데이터도 모두 저장 (전체 수주잔액 합계 표시용)
+        const result = await parseBacklogExcel(buffer, false);
         setDetectedYear(result.year);
 
         await saveBacklogMeta(result.year, {
@@ -121,7 +161,17 @@ export function useDataInput({
         if (result.type === 'product' && result.products) {
           await saveBacklogProducts(result.year, result.products);
         } else if (result.type === 'division' && result.divisions) {
-          await saveBacklogDivisions(result.year, result.divisions);
+          // 영업부문 매칭 적용 (공공사업부 → 공공사업부문 등)
+          const divisions = await getDivisions();
+          const mappedDivisions = result.divisions.map(d => {
+            const matched = matchDivision(d.division, divisions);
+            return {
+              division: matched?.name ?? d.division,
+              months: d.months,
+            };
+          });
+          await saveBacklogDivisions(result.year, mappedDivisions);
+          logger.debug(`[DataInput] Division mapping: ${result.divisions.map(d => d.division).join(', ')} → ${mappedDivisions.map(d => d.division).join(', ')}`);
         } else if (result.type === 'industry' && result.industryGroups) {
           await saveBacklogIndustryGroups(result.year, result.industryGroups);
         }
@@ -158,12 +208,16 @@ export function useDataInput({
           // --- 산업군별 ---
           const result = await parseIndustryGroupExcelFile(buffer);
 
+          // 고객구분(raw) → 산업군명 키워드 매핑 후 합산
+          const industryGroups = await getIndustryGroups();
+          const mappedData = mapToIndustryGroups(result.data, industryGroups);
+
           const currentYear = new Date().getFullYear();
           const reportId = `report-${currentYear}`;
-          await saveIndustryGroupData(reportId, result.data, mergeMode);
+          await saveIndustryGroupData(reportId, mappedData, 'overwrite');
 
           showNotification(
-            `산업군별 데이터가 업로드되었습니다 (${result.data.length}개 산업군, ${result.months.length}개 월)`
+            `산업군별 데이터가 업로드되었습니다 (${mappedData.length}개 산업군, ${result.months.length}개 월)`
           );
         } else if (subType === 'division') {
           // --- 부문별 ---
@@ -188,7 +242,7 @@ export function useDataInput({
 
           const currentYear = new Date().getFullYear();
           const reportId = `report-${currentYear}`;
-          await saveDivisionData(reportId, items, mergeMode);
+          await saveDivisionData(reportId, items, 'overwrite');
 
           showNotification(
             `부문별 데이터가 업로드되었습니다 (${items.length}개 부문, ${matchedCount}개 매칭, ${unmatchedCount}개 미매칭)`
@@ -199,61 +253,21 @@ export function useDataInput({
           setDetectedYear(result.detectedYear);
           const yearForUpload = result.detectedYear;
 
-          if (mergeMode === 'smart') {
-            const analysis = await analyzeUpload(
-              result.data,
-              result.months,
-              result.monthLabels,
-              yearForUpload,
-            );
+          await saveUploadedData(
+            result.data,
+            result.months,
+            result.monthLabels,
+            file.name,
+            'overwrite',
+            yearForUpload,
+          );
 
-            if (analysis.conflicts.length > 0) {
-              setUploadAnalysis(analysis);
-              setPendingFileName(file.name);
-              setShowConflictModal(true);
-              setIsUploading(false);
-              e.target.value = '';
-              return;
-            }
+          const yearInfo = yearForUpload !== new Date().getFullYear() ? ` [${yearForUpload}년]` : '';
+          const monthInfo = result.months.length > 0
+            ? ` (${result.months.map(m => getMonthShortLabel(m)).join(', ')})`
+            : '';
 
-            const saveResult = await saveWithConflictResolution(
-              analysis,
-              [],
-              file.name,
-              yearForUpload,
-            );
-
-            const yearInfo = yearForUpload !== new Date().getFullYear() ? ` [${yearForUpload}년]` : '';
-            const monthInfo = result.months.length > 0
-              ? ` (${result.months.map(m => getMonthShortLabel(m)).join(', ')})`
-              : '';
-
-            showNotification(
-              `${yearInfo}제품별 데이터가 저장되었습니다: 신규 ${analysis.newMonths.length}개 월, 변경 없음 ${saveResult.skippedMonths.length}개 월${monthInfo}`
-            );
-          } else {
-            const { newCount, updatedCount } = await saveUploadedData(
-              result.data,
-              result.months,
-              result.monthLabels,
-              file.name,
-              mergeMode,
-              yearForUpload,
-            );
-
-            const yearInfo = yearForUpload !== new Date().getFullYear() ? ` [${yearForUpload}년]` : '';
-            const monthInfo = result.months.length > 0
-              ? ` (${result.months.map(m => getMonthShortLabel(m)).join(', ')})`
-              : '';
-
-            if (mergeMode === 'merge') {
-              showNotification(
-                `${yearInfo}제품별 데이터가 병합되었습니다: 신규 ${newCount}건, 업데이트 ${updatedCount}건${monthInfo}`
-              );
-            } else {
-              showNotification(`${yearInfo}${result.data.length}건의 제품별 데이터를 불러왔습니다.${monthInfo}`);
-            }
-          }
+          showNotification(`${yearInfo}${result.data.length}건의 제품별 데이터를 불러왔습니다.${monthInfo}`);
         }
       }
     } catch (error) {
@@ -264,51 +278,15 @@ export function useDataInput({
       setIsUploading(false);
     }
     e.target.value = '';
-  }, [saveUploadedData, uploadType, mergeMode, analyzeUpload, saveWithConflictResolution, showNotification]);
-
-  const handleConflictResolve = useCallback(async (resolutions: ConflictResolution[]) => {
-    if (!uploadAnalysis) return;
-
-    setIsUploading(true);
-    try {
-      const result = await saveWithConflictResolution(
-        uploadAnalysis,
-        resolutions,
-        pendingFileName,
-      );
-
-      setShowConflictModal(false);
-      setUploadAnalysis(null);
-      setPendingFileName('');
-
-      const useNewCount = resolutions.filter(r => r.resolution === 'use_new').length;
-      showNotification(
-        `데이터가 저장되었습니다: 신규 ${result.newCount}개 월, 대체 ${useNewCount}개 월, 스킵 ${result.skippedMonths.length}개 월`
-      );
-    } catch (error) {
-      console.error('Conflict resolution error:', error);
-      showNotification('저장 중 오류가 발생했습니다.', 'error');
-    } finally {
-      setIsUploading(false);
-    }
-  }, [uploadAnalysis, pendingFileName, saveWithConflictResolution, showNotification]);
+  }, [saveUploadedData, uploadType, showNotification]);
 
   return {
     fileInputRef,
     isUploading,
     uploadType,
     setUploadType,
-    mergeMode,
-    setMergeMode,
-    showConflictModal,
-    setShowConflictModal,
-    uploadAnalysis,
-    setUploadAnalysis,
-    pendingFileName,
-    setPendingFileName,
     detectedYear,
     detectedSubType,
     handleFileUpload,
-    handleConflictResolve,
   };
 }

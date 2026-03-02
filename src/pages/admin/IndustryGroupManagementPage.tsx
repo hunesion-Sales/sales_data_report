@@ -1,5 +1,6 @@
+import { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plus, Factory, Loader2, AlertCircle, X } from 'lucide-react';
+import { ArrowLeft, Plus, Factory, Loader2, AlertCircle, X, Upload } from 'lucide-react';
 import {
   useIndustryGroupManagement,
   IndustryGroupList,
@@ -9,6 +10,7 @@ import { DeleteConfirmModal } from '@/features/productManagement';
 
 export default function IndustryGroupManagementPage() {
   const navigate = useNavigate();
+  const excelInputRef = useRef<HTMLInputElement>(null);
   const {
     groups,
     isLoading,
@@ -37,6 +39,7 @@ export default function IndustryGroupManagementPage() {
     handleCancelDelete,
     handleInitialize,
     cancelAdd,
+    importFromExcel,
   } = useIndustryGroupManagement();
 
   if (isLoading) {
@@ -87,6 +90,25 @@ export default function IndustryGroupManagementPage() {
           <div className="p-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
             <span className="text-sm text-slate-500">총 {groups.length}개 산업군</span>
             <div className="flex gap-2">
+              <input
+                type="file"
+                ref={excelInputRef}
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (file) await importFromExcel(file);
+                  e.target.value = '';
+                }}
+                accept=".xlsx,.xls"
+                className="hidden"
+              />
+              <button
+                onClick={() => excelInputRef.current?.click()}
+                disabled={isSaving}
+                className="flex items-center gap-2 px-4 py-2 text-slate-600 bg-white border border-slate-300 rounded-lg text-sm font-medium hover:bg-slate-50 disabled:opacity-50 transition-colors"
+              >
+                <Upload className="w-4 h-4" />
+                엑셀 가져오기
+              </button>
               <button
                 onClick={handleInitialize}
                 disabled={isSaving}

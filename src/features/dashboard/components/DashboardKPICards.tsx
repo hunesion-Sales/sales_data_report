@@ -29,9 +29,9 @@ function formatRate(rate: number | null): string {
 
 function getRateColor(rate: number | null): string {
   if (rate === null || rate === undefined || !isFinite(rate)) return 'text-slate-400';
-  if (rate >= 100) return 'text-indigo-600';
-  if (rate >= 75) return 'text-blue-600';
-  return 'text-amber-600';
+  if (rate >= 100) return 'text-blue-600';
+  if (rate >= 75) return 'text-blue-500';
+  return 'text-rose-500';
 }
 
 function getGrowthColor(rate: number | null): string {
@@ -67,10 +67,10 @@ function DashboardKPICards({ data, periodLabel, viewMode }: DashboardKPICardsPro
           </div>
 
           {/* 2. 연간 달성율 */}
-          <div className="bg-white p-4 rounded-xl shadow-sm border-t-4 border-indigo-500 border-x border-b">
+          <div className="bg-white p-4 rounded-xl shadow-sm border-t-4 border-blue-400 border-x border-b">
             <div className="flex justify-between items-center mb-1">
               <span className="text-xs font-medium text-slate-500">연간 달성율</span>
-              <Target className="w-4 h-4 text-indigo-500" />
+              <Target className="w-4 h-4 text-blue-400" />
             </div>
             <div className={`text-xl font-bold ${getRateColor(data.achievementRate)}`}>
               {formatRate(data.achievementRate)}
@@ -79,30 +79,30 @@ function DashboardKPICards({ data, periodLabel, viewMode }: DashboardKPICardsPro
           </div>
 
           {/* 3. 수주잔액 */}
-          <div className="bg-white p-4 rounded-xl shadow-sm border-t-4 border-amber-500 border-x border-b">
+          <div className="bg-white p-4 rounded-xl shadow-sm border-t-4 border-sky-400 border-x border-b">
             <div className="flex justify-between items-center mb-1">
               <span className="text-xs font-medium text-slate-500">수주잔액 (백만원)</span>
-              <ClipboardList className="w-4 h-4 text-amber-500" />
+              <ClipboardList className="w-4 h-4 text-sky-400" />
             </div>
-            <div className="text-xl font-bold text-amber-700">{formatMillionWon(data.backlogTotal)}</div>
+            <div className="text-xl font-bold text-sky-600">{formatMillionWon(data.backlogTotal)}</div>
             <p className="text-xs text-slate-400 mt-0.5">잔여 기간</p>
           </div>
 
           {/* 4. 연간 예상 실적 */}
-          <div className="bg-white p-4 rounded-xl shadow-sm border-t-4 border-emerald-500 border-x border-b">
+          <div className="bg-white p-4 rounded-xl shadow-sm border-t-4 border-blue-600 border-x border-b">
             <div className="flex justify-between items-center mb-1">
               <span className="text-xs font-medium text-slate-500">예상 실적 (백만원)</span>
-              <BarChart3 className="w-4 h-4 text-emerald-500" />
+              <BarChart3 className="w-4 h-4 text-blue-600" />
             </div>
-            <div className="text-xl font-bold text-emerald-600">{formatMillionWon(data.expectedPerformance)}</div>
+            <div className="text-xl font-bold text-blue-700">{formatMillionWon(data.expectedPerformance)}</div>
             <p className="text-xs text-slate-400 mt-0.5">실적 + 수주잔액</p>
           </div>
 
           {/* 5. 달성율(예측) */}
-          <div className="bg-white p-4 rounded-xl shadow-sm border-t-4 border-violet-500 border-x border-b">
+          <div className="bg-white p-4 rounded-xl shadow-sm border-t-4 border-indigo-400 border-x border-b">
             <div className="flex justify-between items-center mb-1">
               <span className="text-xs font-medium text-slate-500">달성율 (예측)</span>
-              <Target className="w-4 h-4 text-violet-500" />
+              <Target className="w-4 h-4 text-indigo-400" />
             </div>
             <div className={`text-xl font-bold ${getRateColor(data.predictedRate)}`}>
               {formatRate(data.predictedRate)}
@@ -127,10 +127,10 @@ function DashboardKPICards({ data, periodLabel, viewMode }: DashboardKPICardsPro
           </div>
 
           {/* 7. 기간 대비 성장율 */}
-          <div className="bg-white p-4 rounded-xl shadow-sm border-t-4 border-orange-400 border-x border-b">
+          <div className="bg-white p-4 rounded-xl shadow-sm border-t-4 border-cyan-500 border-x border-b">
             <div className="flex justify-between items-center mb-1">
               <span className="text-xs font-medium text-slate-500">기간 대비 성장율</span>
-              <TrendingUp className="w-4 h-4 text-orange-400" />
+              <TrendingUp className="w-4 h-4 text-cyan-500" />
             </div>
             <div className={`text-xl font-bold ${getGrowthColor(data.periodGrowthRate)}`}>
               {formatGrowth(data.periodGrowthRate)}
@@ -149,10 +149,10 @@ function DashboardKPICards({ data, periodLabel, viewMode }: DashboardKPICardsPro
           </div>
 
           {/* 9. 연간 대비 성장율(예측) */}
-          <div className="bg-white p-4 rounded-xl shadow-sm border-t-4 border-orange-400 border-x border-b">
+          <div className="bg-white p-4 rounded-xl shadow-sm border-t-4 border-teal-500 border-x border-b">
             <div className="flex justify-between items-center mb-1">
               <span className="text-xs font-medium text-slate-500">성장율 (예측)</span>
-              <TrendingUp className="w-4 h-4 text-orange-400" />
+              <TrendingUp className="w-4 h-4 text-teal-500" />
             </div>
             <div className={`text-xl font-bold ${getGrowthColor(data.annualGrowthRate)}`}>
               {formatGrowth(data.annualGrowthRate)}

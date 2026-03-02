@@ -9,15 +9,13 @@ import { formatMillionWon, formatCurrency as formatCurrencyFull } from '@/utils/
 import ViewToggle from '@/components/ui/ViewToggle';
 import { useViewMode } from '@/hooks/useViewMode';
 import KPICardGrid from '@/components/common/KPICardGrid';
-import { getIndustryGroupData, type IndustryGroupDataItem } from '@/firebase/services/industryGroupDataService';
-import { useState, useEffect } from 'react';
+import type { IndustryGroupDataItem } from '@/firebase/services/industryGroupDataService';
 
 export default function IndustryGroupReportPage() {
   const navigate = useNavigate();
   const { viewMode, setViewMode } = useViewMode('sales');
 
   const {
-    industryGroups,
     summaries,
     periodInfoList,
     availableYears,
@@ -26,17 +24,9 @@ export default function IndustryGroupReportPage() {
     isLoading,
     error,
     refresh,
+    industryGroups,
+    dataItems,
   } = useIndustryGroupReport();
-
-  // Raw data items for chart modal drill-down
-  const [dataItems, setDataItems] = useState<IndustryGroupDataItem[]>([]);
-
-  useEffect(() => {
-    const reportId = `report-${filter.year}`;
-    getIndustryGroupData(reportId)
-      .then(setDataItems)
-      .catch(() => setDataItems([]));
-  }, [filter.year]);
 
   return (
     <div className="min-h-screen bg-slate-50">

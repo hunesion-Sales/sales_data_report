@@ -3,11 +3,10 @@ import type { ProductData } from '@/types';
 import { useReport } from '@/hooks/useReport';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotification } from '@/hooks/useNotification';
-import { WeekSelector, ConflictResolutionModal } from '@/components/upload';
+import { WeekSelector } from '@/components/upload';
 import {
   useDataInput,
   UploadTypeSelector,
-  MergeModeSelector,
   DataManagementTools,
   DataListTable,
 } from '@/features/dataInput';
@@ -33,8 +32,6 @@ export default function DataInputPage() {
     currentWeekKey,
     availableSnapshots,
     selectedSnapshot,
-    analyzeUpload,
-    saveWithConflictResolution,
     loadSnapshot,
     loadLatest,
   } = useReport(INITIAL_DATA, DEFAULT_MONTHS, DEFAULT_MONTH_LABELS, {
@@ -49,22 +46,11 @@ export default function DataInputPage() {
     isUploading,
     uploadType,
     setUploadType,
-    mergeMode,
-    setMergeMode,
-    showConflictModal,
-    setShowConflictModal,
-    uploadAnalysis,
-    setUploadAnalysis,
-    pendingFileName,
-    setPendingFileName,
     detectedYear,
     detectedSubType,
     handleFileUpload,
-    handleConflictResolve,
   } = useDataInput({
     saveUploadedData,
-    analyzeUpload,
-    saveWithConflictResolution,
     showNotification,
   });
 
@@ -133,9 +119,6 @@ export default function DataInputPage() {
         </div>
 
         <UploadTypeSelector uploadType={uploadType} onChangeType={setUploadType} />
-        {uploadType !== 'backlog' && (
-          <MergeModeSelector mergeMode={mergeMode} onChangeMode={setMergeMode} uploadType={uploadType} />
-        )}
 
         {/* 감지된 연도/유형 표시 */}
         <div className="flex flex-wrap gap-2 mb-4">
@@ -194,21 +177,6 @@ export default function DataInputPage() {
         selectedSnapshot={selectedSnapshot}
         onDelete={handleDelete}
       />
-
-      {/* 충돌 해결 모달 */}
-      {uploadAnalysis && (
-        <ConflictResolutionModal
-          isOpen={showConflictModal}
-          onClose={() => {
-            setShowConflictModal(false);
-            setUploadAnalysis(null);
-            setPendingFileName('');
-          }}
-          analysis={uploadAnalysis}
-          onResolve={handleConflictResolve}
-          isProcessing={isUploading}
-        />
-      )}
     </div>
   );
 }

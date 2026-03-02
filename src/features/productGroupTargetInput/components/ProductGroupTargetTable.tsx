@@ -1,6 +1,53 @@
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import type { Quarter } from '@/types';
-import { formatMillionWon } from '@/utils/formatUtils';
+
+/** 숫자를 ###,### 형식으로 포맷 */
+function formatNumber(value: number): string {
+  if (!value) return '';
+  return value.toLocaleString('ko-KR');
+}
+
+/** 콤마 포함 문자열 → 숫자 변환 */
+function parseFormattedNumber(text: string): number {
+  return Number(text.replace(/,/g, '')) || 0;
+}
+
+/** 천단위 콤마 포맷 input (포커스 시 숫자만 표시, 블러 시 콤마 포맷) */
+function FormattedInput({
+  value,
+  onChange,
+  className,
+}: {
+  value: number;
+  onChange: (v: number) => void;
+  className: string;
+}) {
+  const [isFocused, setIsFocused] = useState(false);
+  const [editValue, setEditValue] = useState('');
+
+  const handleFocus = useCallback(() => {
+    setIsFocused(true);
+    setEditValue(value ? String(value) : '');
+  }, [value]);
+
+  const handleBlur = useCallback(() => {
+    setIsFocused(false);
+    onChange(parseFormattedNumber(editValue));
+  }, [editValue, onChange]);
+
+  return (
+    <input
+      type="text"
+      inputMode="numeric"
+      value={isFocused ? editValue : formatNumber(value)}
+      onChange={(e) => setEditValue(e.target.value.replace(/[^0-9]/g, ''))}
+      onFocus={handleFocus}
+      onBlur={handleBlur}
+      className={className}
+      placeholder="0"
+    />
+  );
+}
 
 interface TargetCell {
   salesTarget: number;
@@ -79,32 +126,26 @@ export default function ProductGroupTargetTable({
                   return viewMode === 'both' ? (
                     <React.Fragment key={q}>
                       <td className="px-1 py-1">
-                        <input
-                          type="number"
-                          value={cell.salesTarget || ''}
-                          onChange={(e) => updateCell(group, q, 'salesTarget', Number(e.target.value) || 0)}
+                        <FormattedInput
+                          value={cell.salesTarget}
+                          onChange={(v) => updateCell(group, q, 'salesTarget', v)}
                           className="w-full px-2 py-1 text-right text-xs border border-slate-200 rounded focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                          placeholder="0"
                         />
                       </td>
                       <td className="px-1 py-1">
-                        <input
-                          type="number"
-                          value={cell.profitTarget || ''}
-                          onChange={(e) => updateCell(group, q, 'profitTarget', Number(e.target.value) || 0)}
+                        <FormattedInput
+                          value={cell.profitTarget}
+                          onChange={(v) => updateCell(group, q, 'profitTarget', v)}
                           className="w-full px-2 py-1 text-right text-xs border border-slate-200 rounded focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
-                          placeholder="0"
                         />
                       </td>
                     </React.Fragment>
                   ) : (
                     <td key={q} className="px-1 py-1">
-                      <input
-                        type="number"
-                        value={viewMode === 'sales' ? (cell.salesTarget || '') : (cell.profitTarget || '')}
-                        onChange={(e) => updateCell(group, q, viewMode === 'sales' ? 'salesTarget' : 'profitTarget', Number(e.target.value) || 0)}
+                      <FormattedInput
+                        value={viewMode === 'sales' ? cell.salesTarget : cell.profitTarget}
+                        onChange={(v) => updateCell(group, q, viewMode === 'sales' ? 'salesTarget' : 'profitTarget', v)}
                         className="w-full px-2 py-1 text-right text-xs border border-slate-200 rounded focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                        placeholder="0"
                       />
                     </td>
                   );
@@ -112,15 +153,15 @@ export default function ProductGroupTargetTable({
                 {viewMode === 'both' ? (
                   <>
                     <td className="px-3 py-2 text-right font-medium text-slate-700 bg-slate-50">
-                      {formatMillionWon(annual.salesTotal)}
+                      {formatNumber(annual.salesTotal)}
                     </td>
                     <td className="px-3 py-2 text-right font-medium text-emerald-700 bg-slate-50">
-                      {formatMillionWon(annual.profitTotal)}
+                      {formatNumber(annual.profitTotal)}
                     </td>
                   </>
                 ) : (
                   <td className="px-3 py-2 text-right font-medium text-slate-700 bg-slate-50">
-                    {formatMillionWon(viewMode === 'sales' ? annual.salesTotal : annual.profitTotal)}
+                    {formatNumber(viewMode === 'sales' ? annual.salesTotal : annual.profitTotal)}
                   </td>
                 )}
               </tr>
@@ -139,23 +180,23 @@ export default function ProductGroupTargetTable({
               }
               return viewMode === 'both' ? (
                 <React.Fragment key={q}>
-                  <td className="px-3 py-2 text-right text-slate-800">{formatMillionWon(qSales)}</td>
-                  <td className="px-3 py-2 text-right text-emerald-700">{formatMillionWon(qProfit)}</td>
+                  <td className="px-3 py-2 text-right text-slate-800">{formatNumber(qSales)}</td>
+                  <td className="px-3 py-2 text-right text-emerald-700">{formatNumber(qProfit)}</td>
                 </React.Fragment>
               ) : (
                 <td key={q} className="px-3 py-2 text-right text-slate-800">
-                  {formatMillionWon(viewMode === 'sales' ? qSales : qProfit)}
+                  {formatNumber(viewMode === 'sales' ? qSales : qProfit)}
                 </td>
               );
             })}
             {viewMode === 'both' ? (
               <>
-                <td className="px-3 py-2 text-right text-slate-800 bg-slate-200">{formatMillionWon(grandTotal.salesTotal)}</td>
-                <td className="px-3 py-2 text-right text-emerald-700 bg-slate-200">{formatMillionWon(grandTotal.profitTotal)}</td>
+                <td className="px-3 py-2 text-right text-slate-800 bg-slate-200">{formatNumber(grandTotal.salesTotal)}</td>
+                <td className="px-3 py-2 text-right text-emerald-700 bg-slate-200">{formatNumber(grandTotal.profitTotal)}</td>
               </>
             ) : (
               <td className="px-3 py-2 text-right text-slate-800 bg-slate-200">
-                {formatMillionWon(viewMode === 'sales' ? grandTotal.salesTotal : grandTotal.profitTotal)}
+                {formatNumber(viewMode === 'sales' ? grandTotal.salesTotal : grandTotal.profitTotal)}
               </td>
             )}
           </tr>

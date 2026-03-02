@@ -64,7 +64,7 @@ export interface IndustryGroupReportFilter {
 export interface DashboardPeriodSelection {
   periodType: PeriodType;
   year: number;
-  month?: number;      // 월별 선택 시 (1~12)
-  quarter?: Quarter;   // 분기별 선택 시
-  halfYear?: HalfYear; // 반기별 선택 시
+  months?: number[];      // 월별 선택 시 (1~12) - 다중 선택 가능
+  quarters?: Quarter[];   // 분기별 선택 시 - 다중 선택 가능
+  halfYears?: HalfYear[]; // 반기별 선택 시 - 다중 선택 가능
 }

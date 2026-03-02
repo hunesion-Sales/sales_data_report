@@ -366,7 +366,8 @@ service cloud.firestore {
 
       allow read: if isAuthenticated();
       allow create: if (isAdmin() || isApproved()) && isValidUploadHistory();
-      allow update, delete: if false;
+      allow update: if false;
+      allow delete: if isAdmin();
     }
 
     // ========================================

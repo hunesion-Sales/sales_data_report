@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import DualBarLineChart from './shared/DualBarLineChart';
 import type { DualBarLineChartDataItem } from './shared/DualBarLineChart';
+import { DASHBOARD_BAR_COLORS } from '@/constants/colors';
 
 export interface DivisionChartDataItem {
   name: string;
@@ -19,8 +20,8 @@ interface DivisionOverviewChartProps {
 
 /**
  * 부문별 매출이익 목표 및 실적 / 달성율 차트
- * - 바: 목표(베이지) + 실적(남색) + 수주잔액(연한색)
- * - 라인: 달성율(남색) — 1개만
+ * - 바: 목표(회색) + 실적(남색) + 수주잔액(골드)
+ * - 라인: 달성율(인디고) — 1개만
  * - 실적만 보기 / 실적+수주잔액 보기 토글
  */
 function DivisionOverviewChart({ data, viewMode }: DivisionOverviewChartProps) {
@@ -66,13 +67,13 @@ function DivisionOverviewChart({ data, viewMode }: DivisionOverviewChartProps) {
         barOverrides={{
           bar1Key: 'prevYearActual',
           bar1Name: '목표',
-          bar1Color: '#fde68a',
+          bar1Color: DASHBOARD_BAR_COLORS.prevYear,
           bar2Key: 'currentActual',
           bar2Name: '실적',
-          bar2Color: '#1e3a5f',
+          bar2Color: DASHBOARD_BAR_COLORS.current,
           bar3Key: 'backlog',
           bar3Name: '수주잔액',
-          bar3Color: '#93c5fd',
+          bar3Color: DASHBOARD_BAR_COLORS.backlog,
         }}
       />
     </div>

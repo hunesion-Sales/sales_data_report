@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from 'react';
-import type { DashboardPeriodSelection } from '@/types';
+import type { DashboardPeriodSelection, Quarter, HalfYear } from '@/types';
 import { CURRENT_YEAR } from '@/config/appConfig';
 import {
   getMonthsInYear,
@@ -28,23 +28,43 @@ export function usePeriodSelector() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
   }, []);
 
-  /** 선택된 기간에 해당하는 월 키 목록 */
+  /** 선택된 기간에 해당하는 월 키 목록 (다중 선택 지원) */
   const selectedMonthKeys = useMemo((): string[] => {
-    const { periodType, year, month, quarter, halfYear } = selection;
+    const { periodType, year, months, quarters, halfYears } = selection;
+    const monthSet = new Set<string>();
+
     switch (periodType) {
       case 'monthly':
-        if (month) return [`${year}-${String(month).padStart(2, '0')}`];
-        return getMonthsInYear(year); // 월 미선택 시 연간
+        if (months && months.length > 0) {
+          months.forEach(m => monthSet.add(`${year}-${String(m).padStart(2, '0')}`));
+        } else {
+          getMonthsInYear(year).forEach(m => monthSet.add(m));
+        }
+        break;
       case 'quarterly':
-        if (quarter) return getMonthsInQuarter(year, quarter);
-        return getMonthsInYear(year);
+        if (quarters && quarters.length > 0) {
+          quarters.forEach(q => {
+            getMonthsInQuarter(year, q).forEach(m => monthSet.add(m));
+          });
+        } else {
+          getMonthsInYear(year).forEach(m => monthSet.add(m));
+        }
+        break;
       case 'semi-annual':
-        if (halfYear) return getMonthsInHalfYear(year, halfYear);
-        return getMonthsInYear(year);
+        if (halfYears && halfYears.length > 0) {
+          halfYears.forEach(h => {
+            getMonthsInHalfYear(year, h).forEach(m => monthSet.add(m));
+          });
+        } else {
+          getMonthsInYear(year).forEach(m => monthSet.add(m));
+        }
+        break;
       case 'annual':
       default:
-        return getMonthsInYear(year);
+        getMonthsInYear(year).forEach(m => monthSet.add(m));
     }
+
+    return Array.from(monthSet).sort();
   }, [selection]);
 
   /** 선택된 기간 이후 ~ 12월까지 (수주잔액 범위) */
@@ -56,16 +76,42 @@ export function usePeriodSelector() {
     return allMonths.filter(m => m > lastSelected);
   }, [selection, selectedMonthKeys]);
 
-  /** 기간 라벨 텍스트 */
+  /** 기간 라벨 텍스트 (다중 선택 지원) */
   const periodLabel = useMemo((): string => {
-    const { periodType, year, month, quarter, halfYear } = selection;
+    const { periodType, year, months, quarters, halfYears } = selection;
+
+    const formatMonthRange = (arr: number[]): string => {
+      if (arr.length === 0) return `${year}년`;
+      if (arr.length === 1) return `${year}년 ${arr[0]}월`;
+      const sorted = [...arr].sort((a, b) => a - b);
+      // 연속된 범위인지 확인
+      const isConsecutive = sorted.every((v, i) => i === 0 || v === sorted[i - 1] + 1);
+      if (isConsecutive) {
+        return `${year}년 ${sorted[0]}월~${sorted[sorted.length - 1]}월`;
+      }
+      return `${year}년 ${sorted.join(', ')}월`;
+    };
+
+    const formatQuarterRange = (arr: Quarter[]): string => {
+      if (arr.length === 0) return `${year}년`;
+      if (arr.length === 1) return `${year}년 ${arr[0].replace('Q', '')}분기`;
+      const sorted = [...arr].sort();
+      return `${year}년 ${sorted.map(q => q.replace('Q', '')).join(', ')}분기`;
+    };
+
+    const formatHalfYearRange = (arr: HalfYear[]): string => {
+      if (arr.length === 0) return `${year}년`;
+      if (arr.length === 1) return `${year}년 ${arr[0] === 'H1' ? '상반기' : '하반기'}`;
+      return `${year}년 상/하반기`;
+    };
+
     switch (periodType) {
       case 'monthly':
-        return month ? `${year}년 ${month}월` : `${year}년`;
+        return formatMonthRange(months ?? []);
       case 'quarterly':
-        return quarter ? `${year}년 ${quarter.replace('Q', '')}분기` : `${year}년`;
+        return formatQuarterRange(quarters ?? []);
       case 'semi-annual':
-        return halfYear ? `${year}년 ${halfYear === 'H1' ? '상반기' : '하반기'}` : `${year}년`;
+        return formatHalfYearRange(halfYears ?? []);
       case 'annual':
       default:
         return `${year}년`;

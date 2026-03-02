@@ -212,3 +212,52 @@
 | 산업군별 저장 | ✅ | `backlog/{year}/industry_groups/` |
 
 ---
+
+## Phase 7: 데이터 입력 개선 및 매핑 로직
+
+### 빌드 테스트
+
+| 항목 | 결과 | 비고 |
+|------|------|------|
+| `npm run build` | ✅ 성공 | 5.05s |
+| TypeScript 타입 에러 | 0건 | tsc -b 통과 |
+| `npm run test` | ✅ 성공 | 14 files, 89 tests passed (3.13s) |
+| DataInputPage 청크 | ✅ | 42.28 KB (산업군 매핑 로직 포함) |
+| ProductGroupTargetInputPage 청크 | ✅ | 11.38 KB (엑셀 가져오기 + 숫자 포맷 포함) |
+| IndustryGroupManagementPage 청크 | ✅ | 12.75 KB (엑셀 가져오기 포함) |
+
+### 주요 변경 사항
+
+| 항목 | 설명 | 상태 |
+|------|------|------|
+| 업로드 통합 | 4버튼 → 2버튼 (시트명 자동 감지) | ✅ |
+| 제품군 목표 엑셀 | Import 버튼 + ExcelJS 파싱 | ✅ |
+| 숫자 포맷 | FormattedInput (포커스/블러 콤마 포맷) | ✅ |
+| 산업군 엑셀 | Import 버튼 + writeBatch 일괄 생성 | ✅ |
+| 산업군 매핑 | mapToIndustryGroups() — 키워드 매칭 → 합산 | ✅ |
+| Firestore ID 수정 | `/` → `_` 치환 (DD/DX 제품군) | ✅ |
+| 쿼리 최적화 | orderBy 제거 → 클라이언트 정렬 | ✅ |
+
+### 수정 이력
+
+- `productGroupTargetService.ts`: `getDocId()`에서 `productGroup.replace(/\//g, '_')` 추가 (i-oneNet DD/DX 문서 ID 오류 수정)
+- `productGroupTargetService.ts`: `getProductGroupTargetsByYear()`에서 `orderBy` 제거, 클라이언트 사이드 `QUARTER_ORDER` 정렬로 변경
+- `ProductGroupTargetTable.tsx`: `FormattedInput` 컴포넌트 추가 (focus: raw number, blur: comma formatted)
+- `useDataInput.ts`: `mapToIndustryGroups()` — 산업군 키워드 매칭 후 동일 산업군 합산 (정확 매칭 → 키워드 매칭 → "기타" 폴백)
+
+### 산업군 매핑 검증 결과 (14개 고객구분 → 10개 산업군)
+
+| 고객구분 (raw) | 매핑된 산업군 |
+|----------------|---------------|
+| 공공기관, 공기업 | 공공 |
+| 2금융, 보험, 금융 | 금융 |
+| 국방 | 국방 |
+| 대기업 | 대기업 |
+| 중견기업 | 중견기업 |
+| 중소기업 | 중소기업 |
+| 외자기업 | 외자기업 |
+| 부,청 | 중앙부처 |
+| 클라우드 | 클라우드 |
+| 유지보수 (섹션 합산) | 유지보수 |
+
+---

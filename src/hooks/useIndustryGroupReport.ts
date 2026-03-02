@@ -13,10 +13,12 @@ import {
   getPeriodInfoList,
   getAvailableYears,
 } from '@/utils/periodUtils';
+import { remapIndustryGroupData } from '@/utils/industryGroupMapper';
 
 interface UseIndustryGroupReportReturn {
   industryGroups: IndustryGroup[];
   summaries: IndustryGroupSummary[];
+  dataItems: IndustryGroupDataItem[];
   periodInfoList: PeriodInfo[];
   availableYears: number[];
   availableMonths: string[];
@@ -54,9 +56,11 @@ export function useIndustryGroupReport(): UseIndustryGroupReportReturn {
       setIndustryGroups(groups);
 
       const { reportId, report } = await getOrCreateReport(filter.year);
-      const igData = await getIndustryGroupData(reportId);
+      const rawData = await getIndustryGroupData(reportId);
 
-      setDataItems(igData);
+      // 설정된 산업군 기준으로 재분류 (키워드 매핑 + _MA 패턴 처리)
+      const mappedData = remapIndustryGroupData(rawData, groups);
+      setDataItems(mappedData);
       setAvailableMonths(report.months || []);
     } catch (err) {
       console.error('useIndustryGroupReport load error:', err);
@@ -133,6 +137,7 @@ export function useIndustryGroupReport(): UseIndustryGroupReportReturn {
   return {
     industryGroups,
     summaries,
+    dataItems,
     periodInfoList,
     availableYears,
     availableMonths,

@@ -88,11 +88,15 @@ export async function updateReportMonths(
 }
 
 /**
- * 보고서의 모든 데이터 삭제 (제품, 스냅샷, 부문 데이터, 업로드 이력)
+ * 보고서의 모든 데이터 삭제 (제품, 스냅샷, 부문 데이터, 산업군 데이터, 수주잔액, 업로드 이력)
  * - 주의: 복구 불가능
  */
 export async function clearReportData(reportId: string): Promise<void> {
   const batchLimit = 500;
+
+  // reportId에서 연도 추출 (예: "report-2026" → 2026)
+  const yearMatch = reportId.match(/report-(\d+)/);
+  const year = yearMatch ? yearMatch[1] : null;
 
   // 1. 하위 컬렉션 데이터 삭제 헬퍼
   const deleteCollection = async (collectionPath: string) => {
@@ -102,11 +106,11 @@ export async function clearReportData(reportId: string): Promise<void> {
     if (snap.empty) return;
 
     // 배치가 500개 제한이므로 청크로 나누어 삭제
-    const chunks = [];
-    let currentChunk = [];
+    const chunks: typeof snap.docs[] = [];
+    let currentChunk: typeof snap.docs = [];
 
-    for (const doc of snap.docs) {
-      currentChunk.push(doc);
+    for (const d of snap.docs) {
+      currentChunk.push(d);
       if (currentChunk.length >= batchLimit) {
         chunks.push(currentChunk);
         currentChunk = [];
@@ -116,7 +120,7 @@ export async function clearReportData(reportId: string): Promise<void> {
 
     for (const chunk of chunks) {
       const batch = writeBatch(db);
-      chunk.forEach(doc => batch.delete(doc.ref));
+      chunk.forEach(d => batch.delete(d.ref));
       await batch.commit();
     }
   };
@@ -127,7 +131,10 @@ export async function clearReportData(reportId: string): Promise<void> {
   // 3. division_data 삭제
   await deleteCollection(`reports/${reportId}/division_data`);
 
-  // 4. snapshots 및 하위 products 삭제
+  // 4. industry_group_data 삭제 (산업군별 실적 데이터)
+  await deleteCollection(`reports/${reportId}/industry_group_data`);
+
+  // 5. snapshots 및 하위 products 삭제
   const snapshotsRef = collection(db, `reports/${reportId}/snapshots`);
   const snapshotsSnap = await getDocs(snapshotsRef);
   for (const snapshotDoc of snapshotsSnap.docs) {
@@ -137,14 +144,28 @@ export async function clearReportData(reportId: string): Promise<void> {
     await deleteDoc(snapshotDoc.ref);
   }
 
-  // 5. uploadHistory 삭제 (해당 리포트 관련)
+  // 6. uploadHistory 삭제 (해당 리포트 관련)
   const historyQuery = query(collection(db, 'uploadHistory'), where('reportId', '==', reportId));
   const historySnap = await getDocs(historyQuery);
-  const historyBatch = writeBatch(db);
-  historySnap.forEach(doc => historyBatch.delete(doc.ref));
-  await historyBatch.commit();
+  if (!historySnap.empty) {
+    const historyBatch = writeBatch(db);
+    historySnap.forEach(d => historyBatch.delete(d.ref));
+    await historyBatch.commit();
+  }
 
-  // 6. 리포트 메타데이터 초기화
+  // 7. 수주잔액 데이터 삭제 (backlog/{year}/*)
+  if (year) {
+    // 수주잔액 하위 컬렉션 삭제
+    await deleteCollection(`backlog/${year}/products`);
+    await deleteCollection(`backlog/${year}/divisions`);
+    await deleteCollection(`backlog/${year}/industry_groups`);
+
+    // 수주잔액 메타 문서 삭제
+    const backlogMetaRef = doc(db, 'backlog', year);
+    await deleteDoc(backlogMetaRef);
+  }
+
+  // 8. 리포트 메타데이터 초기화
   const reportRef = doc(db, 'reports', reportId);
   await updateDoc(reportRef, {
     months: [],
@@ -152,5 +173,102 @@ export async function clearReportData(reportId: string): Promise<void> {
     updatedAt: serverTimestamp(),
   });
 
-  logger.debug(`[clearReportData] Report ${reportId} cleared successfully.`);
+  logger.debug(`[clearReportData] Report ${reportId} and backlog ${year} cleared successfully.`);
+}
+
+/**
+ * 모든 연도의 보고서 및 수주잔액 데이터 삭제
+ * - 주의: 복구 불가능
+ */
+export async function clearAllReportData(): Promise<{ clearedReports: string[]; clearedBacklogs: string[] }> {
+  const batchLimit = 500;
+  const clearedReports: string[] = [];
+  const clearedBacklogs: string[] = [];
+
+  // 하위 컬렉션 데이터 삭제 헬퍼
+  const deleteCollection = async (collectionPath: string) => {
+    const colRef = collection(db, collectionPath);
+    const snap = await getDocs(colRef);
+
+    if (snap.empty) return;
+
+    const chunks: typeof snap.docs[] = [];
+    let currentChunk: typeof snap.docs = [];
+
+    for (const d of snap.docs) {
+      currentChunk.push(d);
+      if (currentChunk.length >= batchLimit) {
+        chunks.push(currentChunk);
+        currentChunk = [];
+      }
+    }
+    if (currentChunk.length > 0) chunks.push(currentChunk);
+
+    for (const chunk of chunks) {
+      const batch = writeBatch(db);
+      chunk.forEach(d => batch.delete(d.ref));
+      await batch.commit();
+    }
+  };
+
+  // 1. 모든 보고서 조회
+  const reportsRef = collection(db, 'reports');
+  const reportsSnap = await getDocs(reportsRef);
+
+  for (const reportDoc of reportsSnap.docs) {
+    const reportId = reportDoc.id;
+
+    // 하위 컬렉션 삭제
+    await deleteCollection(`reports/${reportId}/products`);
+    await deleteCollection(`reports/${reportId}/division_data`);
+    await deleteCollection(`reports/${reportId}/industry_group_data`);
+
+    // snapshots 및 하위 products 삭제
+    const snapshotsRef = collection(db, `reports/${reportId}/snapshots`);
+    const snapshotsSnap = await getDocs(snapshotsRef);
+    for (const snapshotDoc of snapshotsSnap.docs) {
+      await deleteCollection(`reports/${reportId}/snapshots/${snapshotDoc.id}/products`);
+      await deleteDoc(snapshotDoc.ref);
+    }
+
+    // uploadHistory 삭제
+    const historyQuery = query(collection(db, 'uploadHistory'), where('reportId', '==', reportId));
+    const historySnap = await getDocs(historyQuery);
+    if (!historySnap.empty) {
+      const historyBatch = writeBatch(db);
+      historySnap.forEach(d => historyBatch.delete(d.ref));
+      await historyBatch.commit();
+    }
+
+    // 리포트 메타데이터 초기화
+    await updateDoc(reportDoc.ref, {
+      months: [],
+      monthLabels: {},
+      updatedAt: serverTimestamp(),
+    });
+
+    clearedReports.push(reportId);
+  }
+
+  // 2. 모든 수주잔액 데이터 삭제
+  const backlogRef = collection(db, 'backlog');
+  const backlogSnap = await getDocs(backlogRef);
+
+  for (const backlogDoc of backlogSnap.docs) {
+    const year = backlogDoc.id;
+
+    // 하위 컬렉션 삭제
+    await deleteCollection(`backlog/${year}/products`);
+    await deleteCollection(`backlog/${year}/divisions`);
+    await deleteCollection(`backlog/${year}/industry_groups`);
+
+    // 메타 문서 삭제
+    await deleteDoc(backlogDoc.ref);
+
+    clearedBacklogs.push(year);
+  }
+
+  logger.debug(`[clearAllReportData] Cleared reports: ${clearedReports.join(', ')}, backlogs: ${clearedBacklogs.join(', ')}`);
+
+  return { clearedReports, clearedBacklogs };
 }
