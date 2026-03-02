@@ -279,3 +279,67 @@
 | `src/components/layout/Sidebar.tsx` (수정) | navItems에 '산업군별 보고서' + Factory 아이콘 추가 | ✅ |
 
 ---
+
+## Phase 7: 데이터 입력 개선 및 매핑 로직 ✅
+
+### 7-1. 업로드 타입 통합 (4→2 버튼 + 자동 감지) ✅
+
+| 파일 | 작업 | 상태 |
+|------|------|------|
+| `src/features/dataInput/components/UploadTypeSelector.tsx` (수정) | 4개 버튼(제품별/부문별/산업군별/수주잔액) → 2개 버튼(실적데이터/수주잔액)으로 통합 | ✅ |
+| `src/features/dataInput/hooks/useDataInput.ts` (수정) | `detectPerformanceType()` 함수 추가 — 시트명 기반 자동 감지(부문별/산업군별/제품별), performance 업로드 시 ExcelJS로 시트명 읽어서 subType 자동 분기 | ✅ |
+| `src/pages/DataInputPage.tsx` (수정) | 감지된 서브타입 표시, 실적 설명 텍스트 업데이트, detectedSubType 연동 | ✅ |
+
+### 7-2. 제품군별 목표 엑셀 가져오기 ✅
+
+| 파일 | 작업 | 상태 |
+|------|------|------|
+| `src/features/productGroupTargetInput/hooks/useProductGroupTargetMatrix.ts` (수정) | `importFromExcel()` 함수 추가 — ExcelJS로 파싱, PRODUCT_GROUPS 매핑, 매트릭스 state 업데이트 | ✅ |
+| `src/pages/admin/ProductGroupTargetInputPage.tsx` (수정) | '엑셀 가져오기' 버튼 + hidden file input 추가 (Upload 아이콘) | ✅ |
+| `src/firebase/services/productGroupTargetService.ts` (수정) | `getDocId()`: productGroup 내 `/`를 `_`로 치환 (Firestore 문서 ID 제한), `getProductGroupTargetsByYear()`: `orderBy` 제거 → 클라이언트 사이드 정렬로 변경 | ✅ |
+| `firestore.indexes.json` (수정) | `product_group_targets` 복합 인덱스 추가 (year ASC + quarter ASC) | ✅ |
+
+### 7-3. 제품군별 목표 숫자 포맷 (###,###) ✅
+
+| 파일 | 작업 | 상태 |
+|------|------|------|
+| `src/features/productGroupTargetInput/components/ProductGroupTargetTable.tsx` (수정) | `FormattedInput` 컴포넌트 추가 (포커스: 숫자만, 블러: 콤마 포맷), `formatNumber()`/`parseFormattedNumber()` 헬퍼, 모든 `type="number"` input → `FormattedInput` 교체, 합계 행도 `formatNumber()` 적용 | ✅ |
+
+### 7-4. 산업군 엑셀 가져오기 ✅
+
+| 파일 | 작업 | 상태 |
+|------|------|------|
+| `src/features/industryGroupManagement/hooks/useIndustryGroupManagement.ts` (수정) | `importFromExcel()` 함수 추가 — 엑셀 파싱(col1=산업군명, col2=키워드), richText 지원, 기존 삭제 후 writeBatch로 일괄 생성 | ✅ |
+| `src/pages/admin/IndustryGroupManagementPage.tsx` (수정) | '엑셀 가져오기' 버튼 + hidden file input 추가 (Upload 아이콘) | ✅ |
+
+### 7-5. 산업군 매핑 로직 (고객구분 → 산업군) ✅
+
+| 파일 | 작업 | 상태 |
+|------|------|------|
+| `src/features/dataInput/hooks/useDataInput.ts` (수정) | `mapToIndustryGroups()` 함수 추가 — Firestore 산업군 키워드로 raw 고객구분명 매핑 후 합산, 정확히 일치 → 키워드 매칭 → "기타" 폴백, `getIndustryGroups()` 호출하여 동적 매핑 | ✅ |
+
+---
+
+## Phase 8: 산업군별 차트 통합 (10개 산업군 기준) ✅
+
+> 대시보드 산업군별 차트에서 세부 항목(공공기관, 1금융, 지자체 등)을 산업군 관리 메뉴의 10개 산업군으로 통합
+
+### 8-1. 수주잔액 산업군 재분류 유틸리티 ✅
+
+| 파일 | 작업 | 상태 |
+|------|------|------|
+| `src/utils/industryGroupMapper.ts` (수정) | `remapBacklogByIndustryGroup()` 함수 추가 — `Record<string, { sales, cost }>` 형태의 수주잔액 데이터를 산업군 설정 기준으로 재분류 (산업군명 일치 → 키워드 매칭 → "기타" 폴백) | ✅ |
+
+### 8-2. 수주잔액 훅 산업군 재분류 지원 ✅
+
+| 파일 | 작업 | 상태 |
+|------|------|------|
+| `src/features/dashboard/hooks/useBacklogData.ts` (수정) | `industryGroupConfig` 파라미터 추가 (선택적), `backlogByIndustryGroup` 계산 시 재분류 적용, 상태 변수명 `industryGroups` → `industryGroupsData`로 변경 (파라미터 충돌 방지) | ✅ |
+
+### 8-3. 대시보드 산업군 설정 연동 ✅
+
+| 파일 | 작업 | 상태 |
+|------|------|------|
+| `src/components/SolutionBusinessDashboard.tsx` (수정) | `industryGroupConfig` state 추가 (마운트 시 조기 로드), `useBacklogData(year, industryGroupConfig)` 호출로 산업군 설정 전달, 당년/전년 실적 + 수주잔액 모두 동일한 10개 산업군 기준으로 통합 | ✅ |
+
+---

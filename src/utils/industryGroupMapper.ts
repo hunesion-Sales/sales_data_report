@@ -1,6 +1,14 @@
 import type { IndustryGroup } from '@/types';
 
 /**
+ * 산업군 데이터 아이템 타입
+ */
+export interface IndustryGroupDataItem {
+  industryGroupName: string;
+  months: Record<string, { sales: number; cost: number }>;
+}
+
+/**
  * 키워드 기반으로 산업군을 매칭
  * 엑셀 데이터의 "항목"(고객구분) 값을 받아서 해당하는 산업군 ID를 반환
  *
@@ -77,3 +85,100 @@ export const DEFAULT_INDUSTRY_GROUPS: Array<{ name: string; keywords: string[]; 
   { name: '유지보수', keywords: ['*_MA'], sortOrder: 9 },
   { name: '기타', keywords: ['변경필요'], sortOrder: 10 },
 ];
+
+/**
+ * 수주잔액 산업군별 데이터를 설정된 산업군 기준으로 재분류
+ * - 산업군명과 정확히 일치 → 해당 산업군
+ * - 키워드 매칭 → 해당 산업군
+ * - 미매칭 → "기타"로 분류
+ */
+export function remapBacklogByIndustryGroup(
+  backlogMap: Record<string, { sales: number; cost: number }>,
+  groups: { name: string; keywords: string[] }[],
+): Record<string, { sales: number; cost: number }> {
+  const result: Record<string, { sales: number; cost: number }> = {};
+
+  for (const [rawName, data] of Object.entries(backlogMap)) {
+    let targetName: string;
+
+    // 1. 산업군명과 정확히 일치
+    if (groups.find(g => g.name === rawName)) {
+      targetName = rawName;
+    }
+    // 2. 키워드 매칭
+    else {
+      const matched = groups.find(g =>
+        g.keywords.some(kw =>
+          kw === rawName ||
+          rawName.includes(kw) ||
+          kw.includes(rawName)
+        )
+      );
+      targetName = matched?.name ?? '기타';
+    }
+
+    if (!result[targetName]) {
+      result[targetName] = { sales: 0, cost: 0 };
+    }
+    result[targetName].sales += data.sales;
+    result[targetName].cost += data.cost;
+  }
+
+  return result;
+}
+
+/**
+ * 저장된 데이터를 설정된 산업군 기준으로 재분류
+ * - "_MA"로 끝나는 고객구분 → "유지보수" 산업군 (2025년 데이터 호환)
+ * - 산업군명과 정확히 일치 → 해당 산업군
+ * - 키워드 매칭 → 해당 산업군
+ * - 미매칭 → "기타"로 분류
+ */
+export function remapIndustryGroupData(
+  dataItems: IndustryGroupDataItem[],
+  groups: { name: string; keywords: string[] }[],
+): IndustryGroupDataItem[] {
+  const groupMap = new Map<string, Record<string, { sales: number; cost: number }>>();
+
+  for (const item of dataItems) {
+    let targetName: string;
+
+    // 1. "_MA"로 끝나는 고객구분은 유지보수 산업군으로 분류 (2025년 데이터 호환)
+    if (item.industryGroupName.trim().endsWith('_MA')) {
+      targetName = '유지보수';
+    }
+    // 2. 산업군명과 정확히 일치
+    else if (groups.find(g => g.name === item.industryGroupName)) {
+      targetName = item.industryGroupName;
+    }
+    // 3. 키워드 매칭
+    else {
+      const matched = groups.find(g =>
+        g.keywords.some(kw =>
+          kw === item.industryGroupName ||
+          item.industryGroupName.includes(kw) ||
+          kw.includes(item.industryGroupName)
+        )
+      );
+      targetName = matched?.name ?? '기타';
+    }
+
+    const existing = groupMap.get(targetName) || {};
+    for (const [monthKey, data] of Object.entries(item.months)) {
+      if (existing[monthKey]) {
+        existing[monthKey] = {
+          sales: existing[monthKey].sales + data.sales,
+          cost: existing[monthKey].cost + data.cost,
+        };
+      } else {
+        existing[monthKey] = { ...data };
+      }
+    }
+    groupMap.set(targetName, existing);
+  }
+
+  return Array.from(groupMap.entries()).map(([name, months]) => ({
+    industryGroupName: name,
+    months,
+  }));
+}

@@ -2,14 +2,22 @@ import { useState, useEffect, useMemo } from 'react';
 import { getBacklogProducts, getBacklogDivisions, getBacklogIndustryGroups } from '@/firebase/services/backlogService';
 import type { BacklogProductData, BacklogDivisionData, BacklogIndustryGroupData } from '@/types';
 import { PRODUCT_GROUP_MAPPING } from '@/firebase/services/productMasterService';
+import { remapBacklogByIndustryGroup } from '@/utils/industryGroupMapper';
+
+interface IndustryGroupConfig {
+  name: string;
+  keywords: string[];
+}
 
 /**
  * 수주잔액 데이터 fetch + 집계 훅
+ * @param year 대상 연도
+ * @param industryGroups 산업군 설정 (재분류용)
  */
-export function useBacklogData(year: number) {
+export function useBacklogData(year: number, industryGroupConfig?: IndustryGroupConfig[]) {
   const [products, setProducts] = useState<BacklogProductData[]>([]);
   const [divisions, setDivisions] = useState<BacklogDivisionData[]>([]);
-  const [industryGroups, setIndustryGroups] = useState<BacklogIndustryGroupData[]>([]);
+  const [industryGroupsData, setIndustryGroupsData] = useState<BacklogIndustryGroupData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -25,7 +33,7 @@ export function useBacklogData(year: number) {
         if (cancelled) return;
         setProducts(p);
         setDivisions(d);
-        setIndustryGroups(ig);
+        setIndustryGroupsData(ig);
       })
       .catch(() => {
         // Firestore 에러 시 빈 데이터 사용
@@ -80,36 +88,70 @@ export function useBacklogData(year: number) {
     return map;
   }, [divisions]);
 
-  /** 산업군별 수주잔액 집계 */
+  /** 산업군별 수주잔액 집계 (산업군 설정 기준으로 재분류) */
   const backlogByIndustryGroup = useMemo(() => {
-    const map: Record<string, { sales: number; cost: number }> = {};
-    for (const ig of industryGroups) {
-      if (!map[ig.industryGroupName]) map[ig.industryGroupName] = { sales: 0, cost: 0 };
+    // 원본 데이터 집계
+    const rawMap: Record<string, { sales: number; cost: number }> = {};
+    for (const ig of industryGroupsData) {
+      if (!rawMap[ig.industryGroupName]) rawMap[ig.industryGroupName] = { sales: 0, cost: 0 };
       for (const md of Object.values(ig.months)) {
-        map[ig.industryGroupName].sales += md.sales;
-        map[ig.industryGroupName].cost += md.cost;
+        rawMap[ig.industryGroupName].sales += md.sales;
+        rawMap[ig.industryGroupName].cost += md.cost;
       }
     }
-    return map;
-  }, [industryGroups]);
+    // 산업군 설정이 제공되면 재분류, 아니면 원본 반환
+    if (industryGroupConfig && industryGroupConfig.length > 0) {
+      return remapBacklogByIndustryGroup(rawMap, industryGroupConfig);
+    }
+    return rawMap;
+  }, [industryGroupsData, industryGroupConfig]);
 
-  /** 월별 수주잔액 (전체 합산) */
+  /** 월별 수주잔액 (전체 합산) - 제품별 > 부문별 > 산업군별 우선순위 */
   const backlogByMonth = useMemo(() => {
     const map: Record<string, { sales: number; cost: number }> = {};
-    for (const p of products) {
-      for (const [mk, md] of Object.entries(p.months)) {
-        if (!map[mk]) map[mk] = { sales: 0, cost: 0 };
-        map[mk].sales += md.sales;
-        map[mk].cost += md.cost;
+
+    // 제품별 데이터가 있으면 사용 (가장 상세)
+    if (products.length > 0) {
+      for (const p of products) {
+        for (const [mk, md] of Object.entries(p.months)) {
+          if (!map[mk]) map[mk] = { sales: 0, cost: 0 };
+          map[mk].sales += md.sales;
+          map[mk].cost += md.cost;
+        }
+      }
+      return map;
+    }
+
+    // 부문별 데이터가 있으면 사용
+    if (divisions.length > 0) {
+      for (const d of divisions) {
+        for (const [mk, md] of Object.entries(d.months)) {
+          if (!map[mk]) map[mk] = { sales: 0, cost: 0 };
+          map[mk].sales += md.sales;
+          map[mk].cost += md.cost;
+        }
+      }
+      return map;
+    }
+
+    // 산업군별 데이터가 있으면 사용
+    if (industryGroupsData.length > 0) {
+      for (const ig of industryGroupsData) {
+        for (const [mk, md] of Object.entries(ig.months)) {
+          if (!map[mk]) map[mk] = { sales: 0, cost: 0 };
+          map[mk].sales += md.sales;
+          map[mk].cost += md.cost;
+        }
       }
     }
+
     return map;
-  }, [products]);
+  }, [products, divisions, industryGroupsData]);
 
   return {
     products,
     divisions,
-    industryGroups,
+    industryGroupsData,
     isLoading,
     getBacklogTotals,
     backlogByProductGroup,

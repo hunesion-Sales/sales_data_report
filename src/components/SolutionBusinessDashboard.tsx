@@ -10,7 +10,10 @@ import { useAchievement } from '@/hooks/useAchievement';
 import ViewToggle from '@/components/ui/ViewToggle';
 import { useViewMode } from '@/hooks/useViewMode';
 import { getIndustryGroupData } from '@/firebase/services/industryGroupDataService';
+import { getIndustryGroups } from '@/firebase/services/industryGroupService';
 import { getProductGroupTargetsByYear } from '@/firebase/services/productGroupTargetService';
+import { remapIndustryGroupData, DEFAULT_INDUSTRY_GROUPS } from '@/utils/industryGroupMapper';
+import type { IndustryGroup } from '@/types';
 import {
   useDashboardData,
   usePeriodSelector,
@@ -66,13 +69,24 @@ export default function SolutionBusinessDashboard() {
   // 전년도 비교 데이터
   const { previousData } = useYoYReport(selection.year, true);
 
-  // 수주잔액 데이터
+  // 산업군 마스터 설정 (수주잔액 및 실적 데이터 재분류용)
+  const [industryGroupConfig, setIndustryGroupConfig] = useState<
+    Array<{ name: string; keywords: string[] }>
+  >([]);
+
+  useEffect(() => {
+    getIndustryGroups()
+      .then(groups => setIndustryGroupConfig(groups.map(g => ({ name: g.name, keywords: g.keywords }))))
+      .catch(() => setIndustryGroupConfig(DEFAULT_INDUSTRY_GROUPS));
+  }, []);
+
+  // 수주잔액 데이터 (산업군 설정 기준으로 재분류)
   const {
     backlogByMonth,
     backlogByProductGroup,
     backlogByDivision,
     backlogByIndustryGroup,
-  } = useBacklogData(selection.year);
+  } = useBacklogData(selection.year, industryGroupConfig);
 
   // 산업군별 실적 데이터 (당년 + 전년)
   const [industryGroupData, setIndustryGroupData] = useState<
@@ -83,16 +97,32 @@ export default function SolutionBusinessDashboard() {
   >([]);
 
   useEffect(() => {
-    const reportId = `report-${selection.year}`;
-    getIndustryGroupData(reportId)
-      .then(setIndustryGroupData)
-      .catch(() => setIndustryGroupData([]));
+    const fetchIndustryGroupData = async () => {
+      try {
+        // 산업군 마스터 조회 (키워드 매핑용) - 캐시된 config 사용
+        const groups = industryGroupConfig.length > 0
+          ? industryGroupConfig
+          : await getIndustryGroups().catch(() => DEFAULT_INDUSTRY_GROUPS);
 
-    const prevReportId = `report-${selection.year - 1}`;
-    getIndustryGroupData(prevReportId)
-      .then(setPrevIndustryGroupData)
-      .catch(() => setPrevIndustryGroupData([]));
-  }, [selection.year]);
+        // 당년 데이터
+        const reportId = `report-${selection.year}`;
+        const rawData = await getIndustryGroupData(reportId).catch(() => []);
+        const mappedData = remapIndustryGroupData(rawData, groups);
+        setIndustryGroupData(mappedData);
+
+        // 전년 데이터
+        const prevReportId = `report-${selection.year - 1}`;
+        const rawPrevData = await getIndustryGroupData(prevReportId).catch(() => []);
+        const mappedPrevData = remapIndustryGroupData(rawPrevData, groups);
+        setPrevIndustryGroupData(mappedPrevData);
+      } catch {
+        setIndustryGroupData([]);
+        setPrevIndustryGroupData([]);
+      }
+    };
+
+    fetchIndustryGroupData();
+  }, [selection.year, industryGroupConfig]);
 
   // 제품군별 목표 합계 + 개별 목표
   const [productGroupTargetTotal, setProductGroupTargetTotal] = useState({ sales: 0, profit: 0 });
