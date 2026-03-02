@@ -19,11 +19,12 @@ import { formatMillionWonChart, formatMillionWonTooltip } from '@/utils/formatUt
 interface AchievementChartsProps {
   achievements: TargetAchievement[];
   viewMode: 'sales' | 'profit';
+  entityLabel?: string;
 }
 
 
 
-function AchievementCharts({ achievements, viewMode }: AchievementChartsProps) {
+function AchievementCharts({ achievements, viewMode, entityLabel = '부문' }: AchievementChartsProps) {
   const isSalesMode = viewMode === 'sales';
 
   // 1. Dual Axis Chart Data: Target vs Actual (Bars) + Achievement Rate (Line)
@@ -52,7 +53,7 @@ function AchievementCharts({ achievements, viewMode }: AchievementChartsProps) {
   return (
     <div className="w-full">
       {/* 1. Dual Axis Chart: Target vs Actual + Rate */}
-      <ChartWrapper title={`부문별 ${metricLabel} 목표 vs 실적 및 달성율`} height={350}>
+      <ChartWrapper title={`${entityLabel}별 ${metricLabel} 목표 vs 실적 및 달성율`} height={350}>
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={chartData} margin={{ top: 20, right: 30, left: 30, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} />

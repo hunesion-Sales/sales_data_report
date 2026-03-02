@@ -1,8 +1,10 @@
 
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Target, TrendingUp, DollarSign, BarChart3 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAchievement } from '@/hooks/useAchievement';
+import { useProductGroupAchievement } from '@/hooks/useProductGroupAchievement';
 import { FirestoreErrorFallback, LoadingSpinner } from '@/components/error';
 import AchievementTable from '@/components/achievement/AchievementTable';
 import AchievementCharts from '@/components/achievement/AchievementCharts';
@@ -10,6 +12,8 @@ import type { AchievementPeriod } from '@/types';
 import { getAchievementPeriodLabel } from '@/utils/periodUtils';
 import ViewToggle from '@/components/ui/ViewToggle';
 import { useViewMode } from '@/hooks/useViewMode';
+
+type ActiveTab = 'division' | 'product';
 
 const CURRENT_YEAR = new Date().getFullYear();
 const YEARS = Array.from({ length: 5 }, (_, i) => CURRENT_YEAR - 2 + i);
@@ -27,6 +31,17 @@ export default function AchievementPage() {
   const navigate = useNavigate();
   const { user, isAdmin } = useAuth();
   const { viewMode, setViewMode } = useViewMode('profit');
+  const [activeTab, setActiveTab] = useState<ActiveTab>('division');
+
+  // 부문별 달성 현황
+  const division = useAchievement(user?.divisionId, isAdmin);
+
+  // 제품군별 달성 현황
+  const productGroup = useProductGroupAchievement();
+
+  // 활성 탭에 따라 데이터 소스 선택
+  const isDivisionTab = activeTab === 'division';
+  const data = isDivisionTab ? division : productGroup;
 
   const {
     achievements,
@@ -43,7 +58,18 @@ export default function AchievementPage() {
     totalActualSales,
     totalActualProfit,
     refresh,
-  } = useAchievement(user?.divisionId, isAdmin);
+  } = data;
+
+  // 연도/기간 변경 시 양쪽 훅 동기화
+  const handleYearChange = (newYear: number) => {
+    division.setYear(newYear);
+    productGroup.setYear(newYear);
+  };
+
+  const handlePeriodChange = (newPeriod: AchievementPeriod) => {
+    division.setPeriod(newPeriod);
+    productGroup.setPeriod(newPeriod);
+  };
 
   const getOverallStatusColor = () => {
     const rate = viewMode === 'sales' ? overallSalesAchievementRate : overallProfitAchievementRate;
@@ -64,6 +90,8 @@ export default function AchievementPage() {
   const currentTotalTarget = viewMode === 'sales' ? totalSalesTarget : totalProfitTarget;
   const currentAchievementRate = viewMode === 'sales' ? overallSalesAchievementRate : overallProfitAchievementRate;
   const currentActual = viewMode === 'sales' ? totalActualSales : totalActualProfit;
+
+  const entityLabel = isDivisionTab ? '부문' : '제품군';
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -97,7 +125,7 @@ export default function AchievementPage() {
               <label className="text-sm text-slate-500">연도</label>
               <select
                 value={year}
-                onChange={(e) => setYear(Number(e.target.value))}
+                onChange={(e) => handleYearChange(Number(e.target.value))}
                 className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
               >
                 {YEARS.map(y => (
@@ -110,7 +138,7 @@ export default function AchievementPage() {
               {(['Q1', 'Q2', 'Q3', 'Q4', 'H1', 'H2', 'Year'] as AchievementPeriod[]).map(p => (
                 <button
                   key={p}
-                  onClick={() => setPeriod(p)}
+                  onClick={() => handlePeriodChange(p)}
                   className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${period === p
                     ? 'bg-white text-indigo-700 shadow-sm'
                     : 'text-slate-500 hover:text-slate-700'
@@ -121,6 +149,30 @@ export default function AchievementPage() {
               ))}
             </div>
           </div>
+        </div>
+
+        {/* Tab Buttons */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setActiveTab('division')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              activeTab === 'division'
+                ? 'bg-slate-800 text-white shadow-sm'
+                : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+            }`}
+          >
+            부문별 달성
+          </button>
+          <button
+            onClick={() => setActiveTab('product')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              activeTab === 'product'
+                ? 'bg-slate-800 text-white shadow-sm'
+                : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+            }`}
+          >
+            제품별 달성
+          </button>
         </div>
 
         {/* Loading State */}
@@ -166,15 +218,7 @@ export default function AchievementPage() {
                 <p className="text-xs text-slate-400 mt-1">{getAchievementPeriodLabel(period)} 누적</p>
               </div>
 
-              {/* 3. 이익률 info (Only show if needed, or always show profit rate?) */}
-              {/* User wants readable charts. KPI cards can be flexible. */}
-              {/* Let's show Profit Rate always in 3rd card? Or switch based on view? */}
-              {/* Dashboard logic reused? */}
-              {/* Original code had Sales Actual and Profit Actual always. */}
-              {/* I'll stick to original layout but update contents based on viewMode if I want to save space, OR keep showing both? */}
-              {/* Original layout: Target, Sales, Profit, Rate. */}
-              {/* Keeping it simple: Target (Dynamic), Sales Actual, Profit Actual, Rate (Dynamic) */}
-
+              {/* 3. 매출이익 */}
               <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
                 <div className="flex justify-between items-center mb-2">
                   <h3 className="text-sm font-medium text-slate-500">매출이익</h3>
@@ -206,14 +250,13 @@ export default function AchievementPage() {
             </div>
 
             {/* Charts */}
-            <AchievementCharts achievements={achievements} viewMode={viewMode} />
+            <AchievementCharts achievements={achievements} viewMode={viewMode} entityLabel={entityLabel} />
 
             {/* Table */}
-            <AchievementTable achievements={achievements} viewMode={viewMode} />
+            <AchievementTable achievements={achievements} viewMode={viewMode} entityLabel={entityLabel} />
           </>
-        )
-        }
-      </main >
-    </div >
+        )}
+      </main>
+    </div>
   );
 }

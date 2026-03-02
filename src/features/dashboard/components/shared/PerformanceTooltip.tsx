@@ -2,10 +2,8 @@ import { formatMillionWonTooltip } from '@/utils/formatUtils';
 
 interface PerformanceTooltipData {
   prevYearActual?: number;  // 전년 실적
-  growthRate?: number;       // 전년 대비 성장율
   currentActual?: number;    // 당년 실적
   backlog?: number;          // 수주잔액
-  achievementRate?: number;  // 목표 대비 달성율
 }
 
 interface PerformanceTooltipProps {
@@ -17,7 +15,7 @@ interface PerformanceTooltipProps {
 
 /**
  * 대시보드 차트 공통 커스텀 툴팁
- * 5개 항목: 전년실적, 성장율, 당년실적, 수주잔액, 달성율
+ * 3개 항목: 전년실적, 당년실적, 수주잔액
  */
 export default function PerformanceTooltip({
   active,
@@ -42,13 +40,6 @@ export default function PerformanceTooltip({
             color="text-slate-500"
           />
         )}
-        {data.growthRate !== undefined && (
-          <TooltipRow
-            label="전년 대비 성장율"
-            value={`${data.growthRate >= 0 ? '+' : ''}${data.growthRate.toFixed(1)}%`}
-            color={data.growthRate >= 0 ? 'text-emerald-600' : 'text-rose-600'}
-          />
-        )}
         {data.currentActual !== undefined && (
           <TooltipRow
             label="당년 실적"
@@ -63,12 +54,15 @@ export default function PerformanceTooltip({
             color="text-amber-600"
           />
         )}
-        {data.achievementRate !== undefined && (
-          <TooltipRow
-            label="목표 대비 달성율"
-            value={`${data.achievementRate.toFixed(1)}%`}
-            color="text-blue-600"
-          />
+        {data.currentActual !== undefined && data.backlog !== undefined && (
+          <>
+            <div className="border-t border-slate-200 my-1" />
+            <TooltipRow
+              label="실적+수주잔액"
+              value={`${formatMillionWonTooltip(data.currentActual + data.backlog)} 백만원`}
+              color="text-slate-800"
+            />
+          </>
         )}
       </div>
     </div>
@@ -93,9 +87,7 @@ function extractFromPayload(payload: any[]): PerformanceTooltipData {
 
   return {
     prevYearActual: entry.prevYearActual,
-    growthRate: entry.growthRate,
     currentActual: entry.currentActual,
     backlog: entry.backlog,
-    achievementRate: entry.achievementRate,
   };
 }

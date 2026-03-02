@@ -7,6 +7,7 @@ import { formatMillionWon, formatCurrency } from '@/utils/formatUtils';
 interface AchievementTableProps {
   achievements: TargetAchievement[];
   viewMode: 'sales' | 'profit';
+  entityLabel?: string;
 }
 
 const STATUS_CONFIG: Record<AchievementStatus, { label: string; bgColor: string; textColor: string; barColor: string }> = {
@@ -16,7 +17,7 @@ const STATUS_CONFIG: Record<AchievementStatus, { label: string; bgColor: string;
   critical: { label: '위험', bgColor: 'bg-red-100', textColor: 'text-red-700', barColor: 'bg-red-500' },
 };
 
-function AchievementTable({ achievements, viewMode }: AchievementTableProps) {
+function AchievementTable({ achievements, viewMode, entityLabel = '부문' }: AchievementTableProps) {
   const [sortKey, setSortKey] = useState<'actual' | 'target' | 'rate'>('actual');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
@@ -62,14 +63,14 @@ function AchievementTable({ achievements, viewMode }: AchievementTableProps) {
   return (
     <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
       <div className="p-4 border-b border-slate-100 bg-slate-50">
-        <h3 className="text-sm font-semibold text-slate-700">부문별 {isSales ? '매출' : '매출이익'} 달성 현황</h3>
+        <h3 className="text-sm font-semibold text-slate-700">{entityLabel}별 {isSales ? '매출' : '매출이익'} 달성 현황</h3>
       </div>
 
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-slate-100 text-slate-600">
             <tr>
-              <th className="p-3 text-left font-medium">영업부문</th>
+              <th className="p-3 text-left font-medium">{entityLabel === '제품군' ? '제품군' : '영업부문'}</th>
               <th
                 className="p-3 text-right font-medium cursor-pointer hover:bg-slate-200 transition-colors"
                 onClick={() => handleSort('target')}
