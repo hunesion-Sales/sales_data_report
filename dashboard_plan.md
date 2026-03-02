@@ -423,3 +423,57 @@ Phase 0 (공통 인프라) ───┐
 | 대시보드 데이터 | `src/features/dashboard/hooks/useDashboardData.ts` |
 | 차트 컴포넌트 | `src/features/dashboard/components/` |
 | YoY 비교 | `src/hooks/useYoYReport.ts`, `src/utils/yoyUtils.ts` |
+
+---
+
+## Phase 9: 달성율 페이지 제품군별 탭 추가
+
+### 9-1. 배경
+- 달성율 페이지(`AchievementPage.tsx`)는 **부문별(Division)** 목표 달성 현황만 표시
+- **제품군별(Product Group)** 목표 달성 현황도 동일한 KPI/차트/테이블 형태로 추가 필요
+- 탭 UI로 부문별/제품별 전환
+
+### 9-2. 신규: `useProductGroupAchievement` 훅
+- `useAchievement`와 동일한 패턴의 제품군별 달성 현황 계산 훅
+- **데이터 소스:**
+  - 목표: `getProductGroupTargetsByYear(year)` → `ProductGroupTarget[]`
+  - 실적: `getReport(year)` → `getProducts(reportId)` → `ProductData[]`
+  - 매핑: `PRODUCT_GROUP_MAPPING` (제품명 → 제품군)
+- **계산 로직:**
+  1. 제품군별 목표 합산 (선택 기간의 분기 필터링)
+  2. ProductData를 PRODUCT_GROUP_MAPPING으로 제품군별 그룹핑
+  3. 선택 기간 월의 sales/profit(=sales-cost) 합산
+  4. 달성율 = (실적 / 목표) × 100
+  5. `TargetAchievement[]` 형태로 반환 (기존 인터페이스 재사용)
+- **반환값:** `useAchievement`와 동일 구조 (achievements, totalSalesTarget, totalActualSales, overallRate 등)
+
+### 9-3. 수정: AchievementCharts / AchievementTable
+- `entityLabel?: string` prop 추가 (기본값: `'부문'`)
+- 차트 제목/테이블 헤더: `부문별` → `{entityLabel}별`
+- 첫 번째 열 헤더: `영업부문` → `{entityLabel === '제품군' ? '제품군' : '영업부문'}`
+
+### 9-4. 수정: AchievementPage
+- **탭 상태:** `activeTab: 'division' | 'product'`
+- **탭 UI:** Filter Bar 아래에 탭 버튼 2개 ("부문별 달성", "제품별 달성")
+- **데이터 훅:** `useAchievement` + `useProductGroupAchievement` 병렬 호출
+- **조건부 렌더링:** 활성 탭에 따라 KPI/차트/테이블 데이터 소스 전환
+- **동기화:** 연도/기간 변경 시 양쪽 훅 모두 반영
+
+### 9-5. 기존 코드 재사용
+
+| 항목 | 파일 | 재사용 방식 |
+|------|------|-------------|
+| `TargetAchievement` 타입 | `src/types/target.ts` | 그대로 사용 (`divisionName`에 제품군명 할당) |
+| `PRODUCT_GROUP_MAPPING` | `src/firebase/services/productMasterService.ts` | 제품→제품군 매핑 |
+| `PRODUCT_GROUPS` | `src/firebase/services/productMasterService.ts` | 전체 제품군 목록 |
+| `getProductGroupTargetsByYear` | `src/firebase/services/productGroupTargetService.ts` | 목표 데이터 조회 |
+| `AchievementCharts` / `AchievementTable` | `src/components/achievement/` | entityLabel prop 추가 후 재사용 |
+
+---
+
+## Phase 10: 대시보드 툴팁 실적+수주잔액 합산 표시
+
+### 10-1. 수정: PerformanceTooltip
+- 기존 3항목(전년 실적, 당년 실적, 수주잔액) 아래에 구분선 + **실적+수주잔액** 합산 행 추가
+- 당년 실적과 수주잔액이 모두 존재할 때만 표시
+- 색상: `text-slate-800` (강조)

@@ -343,3 +343,55 @@
 | `src/components/SolutionBusinessDashboard.tsx` (수정) | `industryGroupConfig` state 추가 (마운트 시 조기 로드), `useBacklogData(year, industryGroupConfig)` 호출로 산업군 설정 전달, 당년/전년 실적 + 수주잔액 모두 동일한 10개 산업군 기준으로 통합 | ✅ |
 
 ---
+
+## Phase 9: 달성율 페이지 제품군별 탭 추가 ✅
+
+> 달성율 페이지에 부문별/제품별 탭 UI를 추가하여 제품군별 목표 달성 현황 확인 가능
+
+### 9-1. 제품군별 달성 현황 훅 ✅
+
+| 파일 | 작업 | 상태 |
+|------|------|------|
+| `src/hooks/useProductGroupAchievement.ts` (신규) | `useAchievement` 동일 패턴, `getProductGroupTargetsByYear()` + `getProducts()` + `PRODUCT_GROUP_MAPPING` 기반 제품군별 목표/실적/달성율 계산, `TargetAchievement[]` 반환, 14개 공유 필드 (achievements, overallSalesAchievementRate, year, setYear, period, setPeriod, isLoading, error, totals, refresh) | ✅ |
+
+### 9-2. AchievementCharts entityLabel prop 추가 ✅
+
+| 파일 | 작업 | 상태 |
+|------|------|------|
+| `src/components/achievement/AchievementCharts.tsx` (수정) | `entityLabel?: string` prop 추가 (기본값 `'부문'`), 차트 제목 `부문별` → `{entityLabel}별` 동적 변경 | ✅ |
+
+### 9-3. AchievementTable entityLabel prop 추가 ✅
+
+| 파일 | 작업 | 상태 |
+|------|------|------|
+| `src/components/achievement/AchievementTable.tsx` (수정) | `entityLabel?: string` prop 추가 (기본값 `'부문'`), 테이블 헤더 `부문별` → `{entityLabel}별`, 첫 열 `영업부문` → `제품군` 조건부 변경 | ✅ |
+
+### 9-4. AchievementPage 탭 UI + 조건부 렌더링 ✅
+
+| 파일 | 작업 | 상태 |
+|------|------|------|
+| `src/pages/AchievementPage.tsx` (수정) | `activeTab: 'division' \| 'product'` 상태 추가, 탭 버튼 2개 (부문별 달성/제품별 달성), `useAchievement` + `useProductGroupAchievement` 병렬 호출, `isDivisionTab` 기반 데이터 소스 전환, `handleYearChange`/`handlePeriodChange`로 양쪽 훅 동기화, `entityLabel` prop 전달 | ✅ |
+
+### 9-5. Gap Analysis 결과 ✅
+
+| 카테고리 | 점수 |
+|----------|:----:|
+| 설계 일치 | 97% |
+| 아키텍처 준수 | 100% |
+| 컨벤션 준수 | 95% |
+| **전체** | **97%** |
+
+- 7개 검증 포인트 모두 통과
+- 경미한 편차 1건: `console.error` 사용 (기존 `useAchievement`와 동일 패턴)
+
+---
+
+## Phase 10: 대시보드 툴팁 실적+수주잔액 합산 표시 ✅
+
+### 10-1. PerformanceTooltip 수정 ✅
+
+| 파일 | 작업 | 상태 |
+|------|------|------|
+| `src/features/dashboard/components/shared/PerformanceTooltip.tsx` (수정) | 기존 3항목(전년 실적, 당년 실적, 수주잔액) 아래에 `border-t` 구분선 + **"실적+수주잔액"** 합산 행 추가, `currentActual + backlog` 계산, `text-slate-800` 강조 색상, 당년 실적과 수주잔액이 모두 존재할 때만 표시 | ✅ |
+
+---
