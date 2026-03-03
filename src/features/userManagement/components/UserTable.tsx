@@ -5,6 +5,7 @@ import {
   ShieldOff,
   Building2,
   Loader2,
+  RotateCcw,
 } from 'lucide-react';
 import type { UserProfile, Division } from '@/types';
 import StatusBadge from './StatusBadge';
@@ -19,6 +20,7 @@ interface UserTableProps {
   onReject: (uid: string) => void;
   onToggleAdmin: (user: UserProfile) => void;
   onDivisionChange: (uid: string, divisionId: string) => void;
+  onPasswordReset?: (uid: string, email: string) => void;
 }
 
 export default function UserTable({
@@ -31,6 +33,7 @@ export default function UserTable({
   onReject,
   onToggleAdmin,
   onDivisionChange,
+  onPasswordReset,
 }: UserTableProps) {
   return (
     <div className="overflow-x-auto">
@@ -118,20 +121,31 @@ export default function UserTable({
                         </>
                       )}
                       {user.status === 'approved' && (
-                        <button
-                          onClick={() => onToggleAdmin(user)}
-                          className={`p-1.5 rounded transition-colors ${user.role === 'admin'
-                            ? 'text-amber-600 hover:bg-amber-50'
-                            : 'text-indigo-600 hover:bg-indigo-50'
-                            }`}
-                          title={user.role === 'admin' ? '관리자 해제' : '관리자 지정'}
-                        >
-                          {user.role === 'admin' ? (
-                            <ShieldOff className="w-4 h-4" />
-                          ) : (
-                            <Shield className="w-4 h-4" />
+                        <>
+                          <button
+                            onClick={() => onToggleAdmin(user)}
+                            className={`p-1.5 rounded transition-colors ${user.role === 'admin'
+                              ? 'text-amber-600 hover:bg-amber-50'
+                              : 'text-indigo-600 hover:bg-indigo-50'
+                              }`}
+                            title={user.role === 'admin' ? '관리자 해제' : '관리자 지정'}
+                          >
+                            {user.role === 'admin' ? (
+                              <ShieldOff className="w-4 h-4" />
+                            ) : (
+                              <Shield className="w-4 h-4" />
+                            )}
+                          </button>
+                          {onPasswordReset && (
+                            <button
+                              onClick={() => onPasswordReset(user.uid, user.email)}
+                              className="p-1.5 text-slate-500 hover:bg-slate-100 rounded transition-colors"
+                              title="비밀번호 초기화 메일 발송"
+                            >
+                              <RotateCcw className="w-4 h-4" />
+                            </button>
                           )}
-                        </button>
+                        </>
                       )}
                       {user.status === 'rejected' && (
                         <button

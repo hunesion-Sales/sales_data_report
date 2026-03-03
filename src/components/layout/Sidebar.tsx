@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import hSRLogo from '@/assets/HUNESION_Huni.png';
+import ChangePasswordModal from '@/components/auth/ChangePasswordModal';
 import {
     LayoutDashboard,
     FileText,
@@ -16,7 +17,8 @@ import {
     Users,
     ChevronDown,
     ChevronUp,
-    Factory
+    Factory,
+    KeyRound,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -29,6 +31,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleCollapse })
     const navigate = useNavigate();
     const location = useLocation();
     const [isAdminOpen, setIsAdminOpen] = useState(false);
+    const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
 
     const handleLogout = async () => {
         try {
@@ -105,7 +108,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleCollapse })
                     </NavLink>
                 ))}
 
-                {/* Settings Section (Visible to All) */}
+                {/* Settings Section (Admin Only) */}
+                {isAdmin && (
                 <div className="pt-2">
                     {!isCollapsed ? (
                         <div>
@@ -121,7 +125,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleCollapse })
                             </button>
                             {isAdminOpen && (
                                 <div className="mt-1 ml-4 space-y-1 border-l-2 border-slate-100 pl-2">
-                                    {/* Data Management (All Users) */}
+                                    {/* Data Management */}
                                     <NavLink
                                         to="/input"
                                         className={({ isActive }) =>
@@ -135,33 +139,28 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleCollapse })
                                         <span>데이터 관리</span>
                                     </NavLink>
 
-                                    {/* Admin Only Items */}
-                                    {isAdmin && (
-                                        <>
-                                            <div className="my-2 border-t border-slate-100" />
-                                            {adminItems.map((item) => (
-                                                <NavLink
-                                                    key={item.path}
-                                                    to={item.path}
-                                                    className={({ isActive }) =>
-                                                        `flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${isActive
-                                                            ? 'bg-slate-100 text-slate-900 font-medium'
-                                                            : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
-                                                        }`
-                                                    }
-                                                >
-                                                    <item.icon className="w-4 h-4" />
-                                                    <span>{item.label}</span>
-                                                </NavLink>
-                                            ))}
-                                        </>
-                                    )}
+                                    <div className="my-2 border-t border-slate-100" />
+                                    {adminItems.map((item) => (
+                                        <NavLink
+                                            key={item.path}
+                                            to={item.path}
+                                            className={({ isActive }) =>
+                                                `flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${isActive
+                                                    ? 'bg-slate-100 text-slate-900 font-medium'
+                                                    : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
+                                                }`
+                                            }
+                                        >
+                                            <item.icon className="w-4 h-4" />
+                                            <span>{item.label}</span>
+                                        </NavLink>
+                                    ))}
                                 </div>
                             )}
                         </div>
                     ) : (
                         <button
-                            onClick={() => toggleCollapse()} // Open sidebar to show settings
+                            onClick={() => toggleCollapse()}
                             className="w-full flex items-center justify-center px-3 py-2.5 rounded-lg text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
                             title="설정"
                         >
@@ -169,6 +168,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleCollapse })
                         </button>
                     )}
                 </div>
+                )}
             </nav>
 
             {/* User Footer */}
@@ -186,19 +186,35 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleCollapse })
                                 <span className="text-xs text-slate-500 mt-1">{user?.divisionName || '소속 미정'}</span>
                             </div>
                         </div>
-                        <button
-                            onClick={handleLogout}
-                            className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors"
-                            title="로그아웃"
-                        >
-                            <LogOut className="w-5 h-5" />
-                        </button>
+                        <div className="flex items-center gap-1">
+                            <button
+                                onClick={() => setIsPasswordModalOpen(true)}
+                                className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
+                                title="비밀번호 변경"
+                            >
+                                <KeyRound className="w-5 h-5" />
+                            </button>
+                            <button
+                                onClick={handleLogout}
+                                className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors"
+                                title="로그아웃"
+                            >
+                                <LogOut className="w-5 h-5" />
+                            </button>
+                        </div>
                     </div>
                 ) : (
-                    <div className="flex flex-col items-center gap-4">
+                    <div className="flex flex-col items-center gap-2">
                         <div className="w-9 h-9 rounded-full bg-primary-100 flex items-center justify-center text-primary-700 font-bold" title={user?.displayName}>
                             {user?.displayName?.[0] || 'U'}
                         </div>
+                        <button
+                            onClick={() => setIsPasswordModalOpen(true)}
+                            className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
+                            title="비밀번호 변경"
+                        >
+                            <KeyRound className="w-4 h-4" />
+                        </button>
                         <button
                             onClick={handleLogout}
                             className="p-1.5 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors"
@@ -209,6 +225,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, toggleCollapse })
                     </div>
                 )}
             </div>
+
+            {/* 비밀번호 변경 모달 */}
+            <ChangePasswordModal
+                isOpen={isPasswordModalOpen}
+                onClose={() => setIsPasswordModalOpen(false)}
+            />
         </aside>
     );
 };

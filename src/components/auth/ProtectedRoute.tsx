@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { Loader2, Clock, XCircle } from 'lucide-react';
+import ChangePasswordModal from './ChangePasswordModal';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -9,8 +10,9 @@ interface ProtectedRouteProps {
 }
 
 export default function ProtectedRoute({ children, adminOnly = false }: ProtectedRouteProps) {
-  const { user, loading, isAdmin, isApproved } = useAuth();
+  const { user, loading, isAdmin, isApproved, refreshProfile } = useAuth();
   const location = useLocation();
+  const [passwordChanged, setPasswordChanged] = useState(false);
 
   // 로딩 중
   if (loading) {
@@ -79,6 +81,24 @@ export default function ProtectedRoute({ children, adminOnly = false }: Protecte
   // 승인된 사용자
   if (!isApproved) {
     return <Navigate to="/login" replace />;
+  }
+
+  // 비밀번호 변경 강제 (관리자 추가 계정)
+  if (user.mustChangePassword && !passwordChanged) {
+    return (
+      <>
+        {children}
+        <ChangePasswordModal
+          isOpen={true}
+          onClose={() => {}}
+          forced={true}
+          onSuccess={() => {
+            setPasswordChanged(true);
+            refreshProfile();
+          }}
+        />
+      </>
+    );
   }
 
   return <>{children}</>;

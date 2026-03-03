@@ -75,7 +75,8 @@ service cloud.firestore {
           && isStringMaxLen(data.displayName, 50)
           && data.role in ['admin', 'user']
           && data.status in ['pending', 'approved', 'rejected']
-          && data.uid == userId;
+          && data.uid == userId
+          && (!('mustChangePassword' in data) || data.mustChangePassword is bool);
       }
 
       // 사용자 수정 시 필드 검증
@@ -84,15 +85,16 @@ service cloud.firestore {
         return (!('email' in data) || (isNonEmptyString(data.email) && isStringMaxLen(data.email, 254)))
           && (!('displayName' in data) || (isNonEmptyString(data.displayName) && isStringMaxLen(data.displayName, 50)))
           && (!('role' in data) || data.role in ['admin', 'user'])
-          && (!('status' in data) || data.status in ['pending', 'approved', 'rejected']);
+          && (!('status' in data) || data.status in ['pending', 'approved', 'rejected'])
+          && (!('mustChangePassword' in data) || data.mustChangePassword is bool);
       }
 
       // 읽기: 인증된 사용자
       allow read: if isAuthenticated();
 
-      // 생성: 인증된 사용자가 본인 uid로만 생성 가능 + 필드 검증
+      // 생성: 본인 uid로 생성 또는 관리자가 대신 생성 + 필드 검증
       allow create: if isAuthenticated()
-        && request.auth.uid == userId
+        && (request.auth.uid == userId || isAdmin())
         && isValidUserCreate();
 
       // 수정: 본인 또는 관리자 + 필드 검증

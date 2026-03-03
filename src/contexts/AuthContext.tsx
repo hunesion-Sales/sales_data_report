@@ -25,6 +25,7 @@ interface AuthContextType {
   register: (email: string, password: string, displayName: string, divisionId?: string) => Promise<void>;
   logout: () => Promise<void>;
   clearError: () => void;
+  refreshProfile: () => Promise<void>;
   isAdmin: boolean;
   isApproved: boolean;
 }
@@ -140,6 +141,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setError(null);
   }, []);
 
+  const refreshProfile = useCallback(async () => {
+    if (firebaseUser) {
+      const profile = await getUserProfile(firebaseUser.uid);
+      if (profile) setUser(profile);
+    }
+  }, [firebaseUser]);
+
   // 비활동 타임아웃: 30분 동안 마우스/키보드/터치 없으면 자동 로그아웃
   useEffect(() => {
     if (!firebaseUser) return;
@@ -181,6 +189,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         register,
         logout,
         clearError,
+        refreshProfile,
         isAdmin,
         isApproved,
       }}

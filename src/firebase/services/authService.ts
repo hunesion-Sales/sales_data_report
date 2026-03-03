@@ -3,17 +3,24 @@ import {
   signInWithEmailAndPassword,
   signOut,
   updateProfile,
+  sendPasswordResetEmail,
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+  updatePassword,
   User,
 } from 'firebase/auth';
+import { initializeApp, deleteApp } from 'firebase/app';
+import { getAuth } from 'firebase/auth';
 import {
   doc,
   getDoc,
+  getFirestore,
   setDoc,
   updateDoc,
   serverTimestamp,
   Timestamp,
 } from 'firebase/firestore';
-import { auth, db } from '../config';
+import { auth, db, firebaseConfig } from '../config';
 import type { UserProfile, UserRole, UserStatus } from '../../types';
 import { getDivision } from './divisionService';
 import { logger } from '@/utils/logger';
@@ -31,6 +38,7 @@ function docToUserProfile(uid: string, data: Record<string, unknown>): UserProfi
     divisionId: (data.divisionId as string) || null,
     role: data.role as UserRole,
     status: data.status as UserStatus,
+    mustChangePassword: (data.mustChangePassword as boolean) || false,
     createdAt: (data.createdAt as Timestamp)?.toDate() || new Date(),
     updatedAt: (data.updatedAt as Timestamp)?.toDate() || new Date(),
   };
@@ -199,6 +207,90 @@ export async function updateUserDivision(uid: string, divisionId: string): Promi
   const docRef = doc(db, 'users', uid);
   await updateDoc(docRef, {
     divisionId,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+/**
+ * 관리자가 사용자 추가 (Secondary App 패턴)
+ * - 관리자 세션을 유지하면서 새 계정 생성
+ * - Secondary App의 Firestore로 문서 생성 (새 사용자 인증 컨텍스트 사용)
+ */
+export async function createUserByAdmin(
+  email: string,
+  password: string,
+  displayName: string,
+  divisionId: string | null = null
+): Promise<UserProfile> {
+  const secondaryApp = initializeApp(firebaseConfig, 'secondary');
+  const secondaryAuth = getAuth(secondaryApp);
+  const secondaryDb = getFirestore(secondaryApp);
+
+  try {
+    const userCredential = await createUserWithEmailAndPassword(secondaryAuth, email, password);
+    const newUser = userCredential.user;
+
+    await updateProfile(newUser, { displayName });
+
+    const profileData = {
+      uid: newUser.uid,
+      email: newUser.email || email,
+      displayName,
+      divisionId,
+      role: 'user' as UserRole,
+      status: 'approved' as UserStatus,
+      mustChangePassword: true,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    };
+
+    // Secondary DB 사용: request.auth.uid == newUser.uid 으로 규칙 통과
+    await setDoc(doc(secondaryDb, 'users', newUser.uid), profileData);
+
+    await secondaryAuth.signOut();
+
+    return {
+      ...profileData,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as UserProfile;
+  } finally {
+    await deleteApp(secondaryApp);
+  }
+}
+
+/**
+ * 비밀번호 초기화 메일 발송 + mustChangePassword 설정
+ */
+export async function sendPasswordReset(uid: string, email: string): Promise<void> {
+  await sendPasswordResetEmail(auth, email);
+
+  const docRef = doc(db, 'users', uid);
+  await updateDoc(docRef, {
+    mustChangePassword: true,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+/**
+ * 본인 비밀번호 변경 (재인증 후 변경)
+ */
+export async function changeOwnPassword(
+  currentPassword: string,
+  newPassword: string
+): Promise<void> {
+  const user = auth.currentUser;
+  if (!user || !user.email) {
+    throw new Error('로그인된 사용자가 없습니다');
+  }
+
+  const credential = EmailAuthProvider.credential(user.email, currentPassword);
+  await reauthenticateWithCredential(user, credential);
+  await updatePassword(user, newPassword);
+
+  const docRef = doc(db, 'users', user.uid);
+  await updateDoc(docRef, {
+    mustChangePassword: false,
     updatedAt: serverTimestamp(),
   });
 }

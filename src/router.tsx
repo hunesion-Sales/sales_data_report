@@ -55,9 +55,11 @@ export const router = createBrowserRouter([
       {
         path: '/input',
         element: (
-          <SuspenseWrapper>
-            <DataInputPage />
-          </SuspenseWrapper>
+          <ProtectedRoute adminOnly>
+            <SuspenseWrapper>
+              <DataInputPage />
+            </SuspenseWrapper>
+          </ProtectedRoute>
         ),
       },
       {

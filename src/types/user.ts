@@ -13,6 +13,7 @@ export interface UserProfile {
   divisionName?: string; // 클라이언트 편의용
   role: UserRole;
   status: UserStatus;
+  mustChangePassword?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }

@@ -7,6 +7,8 @@ import {
   rejectUser,
   updateUserRole,
   updateUserDivision,
+  createUserByAdmin,
+  sendPasswordReset,
 } from '@/firebase/services/authService';
 import type { UserProfile, Division } from '@/types';
 
@@ -124,6 +126,30 @@ export function useUserManagement() {
     }
   };
 
+  const handleAddUser = async (
+    email: string,
+    password: string,
+    displayName: string,
+    divisionId: string | null
+  ) => {
+    await createUserByAdmin(email, password, displayName, divisionId);
+    showNotification(`${displayName} 사용자가 추가되었습니다.`);
+    await loadData();
+  };
+
+  const handlePasswordReset = async (uid: string, email: string) => {
+    try {
+      setProcessingId(uid);
+      await sendPasswordReset(uid, email);
+      showNotification(`${email}로 비밀번호 초기화 메일이 발송되었습니다.`);
+    } catch (err) {
+      setError('비밀번호 초기화 메일 발송에 실패했습니다.');
+      console.error(err);
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
   return {
     users,
     divisions,
@@ -143,5 +169,7 @@ export function useUserManagement() {
     handleReject,
     handleToggleAdmin,
     handleDivisionChange,
+    handleAddUser,
+    handlePasswordReset,
   };
 }

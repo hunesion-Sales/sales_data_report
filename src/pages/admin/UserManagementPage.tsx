@@ -1,9 +1,12 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Users, Loader2, AlertCircle, X, Save, Filter } from 'lucide-react';
+import { ArrowLeft, Users, Loader2, AlertCircle, X, Save, Filter, UserPlus } from 'lucide-react';
 import { useUserManagement, UserTable } from '@/features/userManagement';
+import AddUserModal from '@/features/userManagement/components/AddUserModal';
 
 export default function UserManagementPage() {
   const navigate = useNavigate();
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const {
     users,
     divisions,
@@ -23,6 +26,8 @@ export default function UserManagementPage() {
     handleReject,
     handleToggleAdmin,
     handleDivisionChange,
+    handleAddUser,
+    handlePasswordReset,
   } = useUserManagement();
 
   if (isLoading) {
@@ -65,6 +70,13 @@ export default function UserManagementPage() {
               )}
             </div>
           </div>
+          <button
+            onClick={() => setIsAddModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <UserPlus className="w-4 h-4" />
+            사용자 추가
+          </button>
         </div>
       </header>
 
@@ -120,9 +132,18 @@ export default function UserManagementPage() {
             onReject={handleReject}
             onToggleAdmin={handleToggleAdmin}
             onDivisionChange={handleDivisionChange}
+            onPasswordReset={handlePasswordReset}
           />
         </div>
       </main>
+
+      {/* 사용자 추가 모달 */}
+      <AddUserModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onSubmit={handleAddUser}
+        divisions={divisions}
+      />
     </div>
   );
 }
