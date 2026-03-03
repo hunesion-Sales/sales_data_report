@@ -6,6 +6,8 @@ interface ChartWrapperProps {
     height?: number;
     className?: string;
     title?: string;
+    /** 타이틀 오른쪽에 표시할 컨트롤 (토글 버튼 등) */
+    headerRight?: ReactNode;
     loading?: boolean;
     hasData?: boolean;
 }
@@ -29,6 +31,7 @@ export function ChartWrapper({
     height = 320,
     className = '',
     title,
+    headerRight,
     loading = false,
     hasData = true,
 }: ChartWrapperProps) {
@@ -53,8 +56,11 @@ export function ChartWrapper({
 
     return (
         <div className={`bg-white rounded-xl shadow-sm border border-slate-200 p-6 ${className}`}>
-            {title && (
-                <h3 className="text-lg font-bold text-slate-800 mb-4">{title}</h3>
+            {(title || headerRight) && (
+                <div className="flex items-center justify-between mb-4">
+                    {title && <h3 className="text-lg font-bold text-slate-800">{title}</h3>}
+                    {headerRight}
+                </div>
             )}
             <div style={containerStyle} className="relative">
                 {loading ? (

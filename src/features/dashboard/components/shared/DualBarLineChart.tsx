@@ -1,3 +1,4 @@
+import { useState, useMemo } from 'react';
 import {
   ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, LabelList, Legend,
@@ -36,6 +37,8 @@ interface DualBarLineChartProps {
     bar3Color?: string;
   };
   loading?: boolean;
+  /** 합산보기/따로보기 토글 숨김 (부모가 직접 제어할 때) */
+  hideStackToggle?: boolean;
 }
 
 /**
@@ -44,7 +47,7 @@ interface DualBarLineChartProps {
  * 색상 테마: colors.ts의 DASHBOARD_BAR_COLORS, DASHBOARD_LINE_COLORS 사용
  */
 /** X축 라벨 최대 표시 글자 수 */
-const LABEL_MAX_CHARS = 10;
+const LABEL_MAX_CHARS = 16;
 
 export default function DualBarLineChart({
   data,
@@ -53,6 +56,7 @@ export default function DualBarLineChart({
   lineCount = 2,
   barOverrides,
   loading = false,
+  hideStackToggle = false,
 }: DualBarLineChartProps) {
   const bar1Key = barOverrides?.bar1Key ?? 'prevYearActual';
   const bar1Name = barOverrides?.bar1Name ?? '전년 실적';
@@ -65,6 +69,15 @@ export default function DualBarLineChart({
   const bar3Key = barOverrides?.bar3Key ?? 'backlog';
   const bar3Name = barOverrides?.bar3Name ?? '수주잔액';
   const bar3Color = barOverrides?.bar3Color ?? DASHBOARD_BAR_COLORS.backlog;
+
+  // 수주잔액이 있는 데이터가 하나라도 있으면 토글 표시
+  const hasBacklog = useMemo(
+    () => data.some(d => (d[bar3Key as keyof DualBarLineChartDataItem] as number) > 0),
+    [data, bar3Key],
+  );
+
+  const [stacked, setStacked] = useState(true);
+  const showToggle = hasBacklog && !hideStackToggle;
 
   // 긴 라벨이 있을 때만 기울임 (제품군별 등), 짧은 라벨(월별/산업군별)은 수평 유지
   const hasLongLabels = data.some(d => d.name.length > 6);
@@ -84,8 +97,8 @@ export default function DualBarLineChart({
           dy={needsAngle ? 6 : 14}
           textAnchor={needsAngle ? 'end' : 'middle'}
           fill="#475569"
-          fontSize={11}
-          transform={needsAngle ? 'rotate(-45)' : undefined}
+          fontSize={12}
+          transform={needsAngle ? 'rotate(-35)' : undefined}
         >
           {display}
         </text>
@@ -93,8 +106,32 @@ export default function DualBarLineChart({
     );
   };
 
+  /** 합산보기/따로보기 토글 버튼 */
+  const stackToggle = showToggle ? (
+    <div className="flex bg-slate-100 rounded-lg p-0.5">
+      <button
+        onClick={() => setStacked(true)}
+        className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+          stacked ? 'bg-slate-800 text-white' : 'text-slate-500 hover:text-slate-700'
+        }`}
+      >
+        합산보기
+      </button>
+      <button
+        onClick={() => setStacked(false)}
+        className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+          !stacked ? 'bg-slate-800 text-white' : 'text-slate-500 hover:text-slate-700'
+        }`}
+      >
+        따로보기
+      </button>
+    </div>
+  ) : undefined;
+
+  const isStacked = hasBacklog && stacked;
+
   return (
-    <ChartWrapper title={title} height={height} loading={loading} hasData={data.length > 0}>
+    <ChartWrapper title={title} headerRight={stackToggle} height={height} loading={loading} hasData={data.length > 0}>
       <ComposedChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
         <CartesianGrid strokeDasharray="3 3" vertical={false} />
         <XAxis
@@ -102,7 +139,7 @@ export default function DualBarLineChart({
           tick={renderXAxisTick}
           tickLine={false}
           interval={0}
-          height={needsAngle ? 80 : 35}
+          height={needsAngle ? 90 : 40}
         />
         <YAxis
           yAxisId="left"
@@ -123,24 +160,62 @@ export default function DualBarLineChart({
         )}
         <Tooltip content={<PerformanceTooltip />} />
         <Legend
-          wrapperStyle={{ fontSize: 11 }}
+          wrapperStyle={{ fontSize: 13 }}
           iconType="rect"
-          iconSize={10}
+          iconSize={12}
         />
 
-        {/* 바 1: 전년 실적 */}
+        {/* 바 1: 전년 실적 — 항상 독립 막대 */}
         <Bar yAxisId="left" dataKey={bar1Key} name={bar1Name} fill={bar1Color} barSize={20} radius={[2, 2, 0, 0]}>
           <LabelList dataKey={bar1Key} position="top" formatter={(v: any) => formatMillionWonChart(v)} fontSize={9} fill="#64748b" />
         </Bar>
 
-        {/* 바 2: 당년 실적 */}
-        <Bar yAxisId="left" dataKey={bar2Key} name={bar2Name} fill={bar2Color} barSize={20} radius={[2, 2, 0, 0]}>
-          <LabelList dataKey={bar2Key} position="top" formatter={(v: any) => formatMillionWonChart(v)} fontSize={9} fill="#4338ca" />
+        {/* 바 2: 당년 실적 — 합산보기 시 bar3과 스택 */}
+        <Bar
+          yAxisId="left"
+          dataKey={bar2Key}
+          name={bar2Name}
+          fill={bar2Color}
+          barSize={20}
+          radius={isStacked ? [0, 0, 0, 0] : [2, 2, 0, 0]}
+          stackId={isStacked ? 'cb' : undefined}
+        >
+          {!isStacked && (
+            <LabelList dataKey={bar2Key} position="top" formatter={(v: any) => formatMillionWonChart(v)} fontSize={9} fill="#4338ca" />
+          )}
         </Bar>
 
-        {/* 바 3: 수주잔액 */}
-        <Bar yAxisId="left" dataKey={bar3Key} name={bar3Name} fill={bar3Color} barSize={20} radius={[2, 2, 0, 0]}>
-          <LabelList dataKey={bar3Key} position="top" formatter={(v: any) => formatMillionWonChart(v)} fontSize={9} fill="#b45309" />
+        {/* 바 3: 수주잔액 — 합산보기 시 bar2 위에 스택 */}
+        <Bar
+          yAxisId="left"
+          dataKey={bar3Key}
+          name={bar3Name}
+          fill={bar3Color}
+          barSize={20}
+          radius={isStacked ? [2, 2, 0, 0] : [2, 2, 0, 0]}
+          stackId={isStacked ? 'cb' : undefined}
+        >
+          {isStacked ? (
+            <LabelList
+              position="top"
+              content={(props: any) => {
+                const { x, y, width, index } = props;
+                const item = data[index];
+                if (!item) return null;
+                const actual = (item[bar2Key as keyof DualBarLineChartDataItem] as number) ?? 0;
+                const backlog = (item[bar3Key as keyof DualBarLineChartDataItem] as number) ?? 0;
+                const total = actual + backlog;
+                if (total === 0) return null;
+                return (
+                  <text x={x + width / 2} y={y - 4} textAnchor="middle" fontSize={9} fill="#1e293b">
+                    {formatMillionWonChart(total)}
+                  </text>
+                );
+              }}
+            />
+          ) : (
+            <LabelList dataKey={bar3Key} position="top" formatter={(v: any) => formatMillionWonChart(v)} fontSize={9} fill="#b45309" />
+          )}
         </Bar>
 
         {/* 라인 1: 달성율 (lineCount >= 1 일 때만) */}
