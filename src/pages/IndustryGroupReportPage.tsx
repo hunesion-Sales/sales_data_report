@@ -13,7 +13,7 @@ import type { IndustryGroupDataItem } from '@/firebase/services/industryGroupDat
 
 export default function IndustryGroupReportPage() {
   const navigate = useNavigate();
-  const { viewMode, setViewMode } = useViewMode('sales');
+  const { viewMode, setViewMode } = useViewMode('profit');
 
   const {
     summaries,

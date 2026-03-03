@@ -22,7 +22,7 @@ interface MonthlyTrendChartProps {
  * - 바 3개: 전년실적(회색) + 당년실적(남색) + 수주잔액(골드)
  */
 function MonthlyTrendChart({ data, viewMode }: MonthlyTrendChartProps) {
-  const [isCumulative, setIsCumulative] = useState(false);
+  const [isCumulative, setIsCumulative] = useState(true);
 
   const chartData: DualBarLineChartDataItem[] = isCumulative
     ? data.reduce<DualBarLineChartDataItem[]>((acc, item, idx) => {

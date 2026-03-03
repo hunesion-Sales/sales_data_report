@@ -17,7 +17,7 @@ import KPICardGrid from '@/components/common/KPICardGrid';
 export default function DivisionReportPage() {
   const navigate = useNavigate();
   const { user, isAdmin } = useAuth();
-  const { viewMode, setViewMode } = useViewMode('sales');
+  const { viewMode, setViewMode } = useViewMode('profit');
 
   const {
     divisions,

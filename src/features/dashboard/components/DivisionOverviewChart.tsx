@@ -25,7 +25,7 @@ interface DivisionOverviewChartProps {
  * - 실적만 보기 / 실적+수주잔액 보기 토글
  */
 function DivisionOverviewChart({ data, viewMode }: DivisionOverviewChartProps) {
-  const [includeBacklog, setIncludeBacklog] = useState(false);
+  const [includeBacklog, setIncludeBacklog] = useState(true);
   const label = viewMode === 'sales' ? '매출' : '매출이익';
 
   const chartData: DualBarLineChartDataItem[] = data.map(d => ({

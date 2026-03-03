@@ -49,7 +49,7 @@ export default function ProductReportPage() {
     // 훅으로 추출된 데이터 가공
     const { mainData, cloudData, totals, cloudTotals } = useProductReport(data, filteredMonths);
 
-    const { viewMode, setViewMode } = useViewMode('sales');
+    const { viewMode, setViewMode } = useViewMode('profit');
 
     return (
         <div className="space-y-6 animate-fade-in p-6">
