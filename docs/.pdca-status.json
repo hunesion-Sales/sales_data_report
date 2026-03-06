@@ -1,6 +1,6 @@
 {
   "version": "2.0",
-  "lastUpdated": "2026-02-23T06:44:57.380Z",
+  "lastUpdated": "2026-03-03T23:57:04.566Z",
   "activeFeatures": [
     "productManagement",
     "admin",
@@ -10,7 +10,13 @@
     "achievement",
     "dashboard",
     "sales_data_weekly",
-    "__tests__"
+    "__tests__",
+    "firebase",
+    "charts",
+    "authService.ts",
+    "layout",
+    "auth",
+    "contexts"
   ],
   "primaryFeature": "productManagement",
   "features": {
@@ -28,7 +34,7 @@
       "lastFile": "/Volumes/hclim_SSD/sales_data_weekly/src/features/productManagement/__tests__/productManagement.test.ts"
     },
     "admin": {
-      "phase": "act",
+      "phase": "do",
       "phaseNumber": 3,
       "matchRate": 95,
       "iterationCount": 0,
@@ -36,12 +42,12 @@
       "documents": {},
       "timestamps": {
         "started": "2026-02-23T06:24:43.970Z",
-        "lastUpdated": "2026-02-23T06:27:21.641Z"
+        "lastUpdated": "2026-03-03T02:52:46.723Z"
       },
-      "lastFile": "/Volumes/hclim_SSD/sales_data_weekly/src/pages/admin/DivisionManagementPage.tsx"
+      "lastFile": "/Volumes/hclim_SSD/sales_data_weekly/src/pages/admin/UserManagementPage.tsx"
     },
     "userManagement": {
-      "phase": "act",
+      "phase": "do",
       "phaseNumber": 3,
       "matchRate": 95,
       "iterationCount": 0,
@@ -49,9 +55,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-02-23T06:25:12.838Z",
-        "lastUpdated": "2026-02-23T06:29:29.096Z"
+        "lastUpdated": "2026-03-03T02:52:51.638Z"
       },
-      "lastFile": "/Volumes/hclim_SSD/sales_data_weekly/src/features/userManagement/__tests__/userManagement.test.ts"
+      "lastFile": "/Volumes/hclim_SSD/sales_data_weekly/src/features/userManagement/index.ts"
     },
     "divisionManagement": {
       "phase": "act",
@@ -93,7 +99,7 @@
       "lastFile": "/Volumes/hclim_SSD/sales_data_weekly/src/components/achievement/AchievementTable.tsx"
     },
     "dashboard": {
-      "phase": "act",
+      "phase": "do",
       "phaseNumber": 3,
       "matchRate": 95,
       "iterationCount": 0,
@@ -101,12 +107,12 @@
       "documents": {},
       "timestamps": {
         "started": "2026-02-23T06:43:41.477Z",
-        "lastUpdated": "2026-02-23T06:44:52.920Z"
+        "lastUpdated": "2026-03-03T23:57:04.566Z"
       },
-      "lastFile": "/Volumes/hclim_SSD/sales_data_weekly/src/features/dashboard/__tests__/dashboard.test.ts"
+      "lastFile": "/Volumes/hclim_SSD/sales_data_weekly/src/features/dashboard/components/DivisionOverviewChart.tsx"
     },
     "sales_data_weekly": {
-      "phase": "act",
+      "phase": "do",
       "phaseNumber": 3,
       "matchRate": 95,
       "iterationCount": 0,
@@ -114,9 +120,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-02-23T06:44:31.787Z",
-        "lastUpdated": "2026-02-23T06:44:43.832Z"
+        "lastUpdated": "2026-03-03T23:56:44.897Z"
       },
-      "lastFile": "/Volumes/hclim_SSD/sales_data_weekly/src/components/SolutionBusinessDashboard.tsx"
+      "lastFile": "/Volumes/hclim_SSD/sales_data_weekly/src/pages/IndustryGroupReportPage.tsx"
     },
     "__tests__": {
       "phase": "act",
@@ -130,6 +136,84 @@
         "lastUpdated": "2026-02-23T06:44:57.380Z"
       },
       "lastFile": "/Volumes/hclim_SSD/sales_data_weekly/src/components/achievement/__tests__/achievement-memo.test.ts"
+    },
+    "firebase": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-03-02T23:42:05.723Z",
+        "lastUpdated": "2026-03-03T02:48:41.396Z"
+      },
+      "lastFile": "/Volumes/hclim_SSD/sales_data_weekly/src/firebase/config.ts"
+    },
+    "charts": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-03-03T00:23:26.961Z",
+        "lastUpdated": "2026-03-03T00:23:34.872Z"
+      },
+      "lastFile": "/Volumes/hclim_SSD/sales_data_weekly/src/components/charts/ChartWrapper.tsx"
+    },
+    "authService.ts": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-03-03T02:48:49.104Z",
+        "lastUpdated": "2026-03-03T02:59:40.470Z"
+      },
+      "lastFile": "/Volumes/hclim_SSD/sales_data_weekly/src/firebase/services/authService.ts"
+    },
+    "layout": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-03-03T02:49:34.645Z",
+        "lastUpdated": "2026-03-03T02:50:40.086Z"
+      },
+      "lastFile": "/Volumes/hclim_SSD/sales_data_weekly/src/components/layout/Sidebar.tsx"
+    },
+    "auth": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-03-03T02:50:15.351Z",
+        "lastUpdated": "2026-03-03T02:51:01.221Z"
+      },
+      "lastFile": "/Volumes/hclim_SSD/sales_data_weekly/src/components/auth/ProtectedRoute.tsx"
+    },
+    "contexts": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-03-03T02:51:07.923Z",
+        "lastUpdated": "2026-03-03T02:51:17.409Z"
+      },
+      "lastFile": "/Volumes/hclim_SSD/sales_data_weekly/src/contexts/AuthContext.tsx"
     }
   },
   "pipeline": {
@@ -140,7 +224,7 @@
   "session": {
     "startedAt": "2026-02-23T02:11:12.644Z",
     "onboardingCompleted": false,
-    "lastActivity": "2026-02-23T06:44:57.380Z"
+    "lastActivity": "2026-03-03T23:57:04.566Z"
   },
   "history": [
     {
@@ -453,6 +537,288 @@
       "timestamp": "2026-02-23T06:44:57.380Z",
       "feature": "__tests__",
       "phase": "act",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-02T23:42:05.723Z",
+      "feature": "firebase",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-03T00:09:51.004Z",
+      "feature": "firebase",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-03T00:12:16.139Z",
+      "feature": "dashboard",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-03T00:12:20.651Z",
+      "feature": "dashboard",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-03T00:12:25.000Z",
+      "feature": "dashboard",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-03T00:12:29.417Z",
+      "feature": "dashboard",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-03T00:12:36.882Z",
+      "feature": "dashboard",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-03T00:23:26.961Z",
+      "feature": "charts",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-03T00:23:30.850Z",
+      "feature": "charts",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-03T00:23:34.872Z",
+      "feature": "charts",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-03T00:23:50.138Z",
+      "feature": "dashboard",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-03T00:23:58.606Z",
+      "feature": "dashboard",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-03T00:24:41.056Z",
+      "feature": "dashboard",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-03T00:27:54.548Z",
+      "feature": "dashboard",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-03T02:48:28.522Z",
+      "feature": "sales_data_weekly",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-03T02:48:41.396Z",
+      "feature": "firebase",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-03T02:48:49.104Z",
+      "feature": "authService.ts",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-03T02:48:55.443Z",
+      "feature": "authService.ts",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-03T02:49:08.393Z",
+      "feature": "authService.ts",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-03T02:49:34.645Z",
+      "feature": "layout",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-03T02:49:39.553Z",
+      "feature": "sales_data_weekly",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-03T02:50:15.351Z",
+      "feature": "auth",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-03T02:50:23.422Z",
+      "feature": "layout",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-03T02:50:28.201Z",
+      "feature": "layout",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-03T02:50:40.086Z",
+      "feature": "layout",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-03T02:50:54.135Z",
+      "feature": "auth",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-03T02:51:01.221Z",
+      "feature": "auth",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-03T02:51:07.923Z",
+      "feature": "contexts",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-03T02:51:13.021Z",
+      "feature": "contexts",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-03T02:51:17.409Z",
+      "feature": "contexts",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-03T02:51:48.075Z",
+      "feature": "userManagement",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-03T02:51:53.272Z",
+      "feature": "userManagement",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-03T02:52:02.616Z",
+      "feature": "userManagement",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-03T02:52:07.155Z",
+      "feature": "userManagement",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-03T02:52:14.120Z",
+      "feature": "userManagement",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-03T02:52:22.860Z",
+      "feature": "userManagement",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-03T02:52:31.180Z",
+      "feature": "admin",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-03T02:52:39.899Z",
+      "feature": "admin",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-03T02:52:46.723Z",
+      "feature": "admin",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-03T02:52:51.638Z",
+      "feature": "userManagement",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-03T02:59:30.461Z",
+      "feature": "authService.ts",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-03T02:59:40.470Z",
+      "feature": "authService.ts",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-03T23:56:26.917Z",
+      "feature": "sales_data_weekly",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-03T23:56:35.806Z",
+      "feature": "sales_data_weekly",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-03T23:56:44.897Z",
+      "feature": "sales_data_weekly",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-03T23:56:50.245Z",
+      "feature": "dashboard",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-03-03T23:57:04.566Z",
+      "feature": "dashboard",
+      "phase": "do",
       "action": "updated"
     }
   ]
