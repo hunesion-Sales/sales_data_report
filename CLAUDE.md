@@ -3,7 +3,7 @@
 ## Project Overview
 
 - **Name**: HSR (Huni Sales Report System) - 휴네시온 솔루션사업본부 매출 보고 시스템
-- **URL**: https://hunesalesreport.web.app
+- **URL**: https://henesalesreport-v2.web.app
 - **Stack**: React 19.2 + TypeScript 5.9 + Vite 7.2 + Firebase 12.9 (Firestore, Auth, Hosting) + Tailwind CSS 3.4
 - **Charts**: Recharts 3.5
 - **Excel**: ExcelJS 4.4 (매출 데이터 파싱)
