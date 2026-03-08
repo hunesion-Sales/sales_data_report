@@ -1,15 +1,19 @@
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Factory } from 'lucide-react';
 import { useIndustryGroupReport } from '@/hooks/useIndustryGroupReport';
+import { usePreviousYearIndustryGroupData } from '@/hooks/usePreviousYearIndustryGroupData';
+import { useBacklogData } from '@/features/dashboard/hooks/useBacklogData';
+import { useReportTrendData } from '@/hooks/useReportTrendData';
 import { FirestoreErrorFallback, LoadingSpinner } from '@/components/error';
 import IndustryGroupReportFilterBar from '@/components/reports/IndustryGroupReportFilterBar';
+import ReportTrendChart from '@/components/reports/ReportTrendChart';
 import IndustryGroupSummaryTable from '@/components/reports/IndustryGroupSummaryTable';
 import IndustryGroupCharts from '@/components/reports/IndustryGroupCharts';
 import { formatMillionWon, formatCurrency as formatCurrencyFull } from '@/utils/formatUtils';
 import ViewToggle from '@/components/ui/ViewToggle';
 import { useViewMode } from '@/hooks/useViewMode';
 import KPICardGrid from '@/components/common/KPICardGrid';
-import type { IndustryGroupDataItem } from '@/firebase/services/industryGroupDataService';
 
 export default function IndustryGroupReportPage() {
   const navigate = useNavigate();
@@ -27,6 +31,48 @@ export default function IndustryGroupReportPage() {
     industryGroups,
     dataItems,
   } = useIndustryGroupReport();
+
+  // 트렌드 차트용 데이터
+  const { data: prevIndustryData } = usePreviousYearIndustryGroupData(filter.year, industryGroups);
+  const industryGroupConfig = useMemo(
+    () => industryGroups.map(g => ({ name: g.name, keywords: g.keywords })),
+    [industryGroups]
+  );
+  const { industryGroupsData: backlogIndustryGroups } = useBacklogData(filter.year, industryGroupConfig);
+  const [trendSelectedGroup, setTrendSelectedGroup] = useState('전체');
+
+  // 산업군 항목 드롭다운 옵션
+  const trendItems = useMemo(() => {
+    const names = dataItems.map(d => d.industryGroupName);
+    const unique = [...new Set(names)];
+    return [
+      { value: '전체', label: '전체' },
+      ...unique.map(name => ({ value: name, label: name })),
+    ];
+  }, [dataItems]);
+
+  // 트렌드 데이터 소스
+  const trendSource = useMemo(() => {
+    const currentItems = dataItems.map(d => ({
+      name: d.industryGroupName,
+      months: d.months,
+    }));
+
+    const previousItems = prevIndustryData.map(d => ({
+      name: d.industryGroupName,
+      months: d.months,
+    }));
+
+    // 수주잔액
+    const backlogByItem: Record<string, Record<string, { sales: number; cost: number }>> = {};
+    for (const big of backlogIndustryGroups) {
+      backlogByItem[big.industryGroupName] = big.months;
+    }
+
+    return { currentItems, previousItems, backlogByItem };
+  }, [dataItems, prevIndustryData, backlogIndustryGroups]);
+
+  const trendData = useReportTrendData(trendSource, trendSelectedGroup, filter.year, viewMode);
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -107,6 +153,16 @@ export default function IndustryGroupReportPage() {
                   },
                 ];
               })()}
+            />
+
+            {/* 트렌드 차트 */}
+            <ReportTrendChart
+              data={trendData}
+              viewMode={viewMode}
+              items={trendItems}
+              selectedItem={trendSelectedGroup}
+              onItemChange={setTrendSelectedGroup}
+              titlePrefix="산업군별"
             />
 
             {/* Charts */}

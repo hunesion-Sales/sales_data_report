@@ -10,12 +10,13 @@ import { getDivisions } from '@/firebase/services/divisionService';
 import { getOrCreateReport } from '@/firebase/services/reportService';
 import { getDivisionData, type DivisionDataItem } from '@/firebase/services/divisionDataService';
 import {
-  getPeriodInfoList,
+  getFilteredPeriodInfoList,
   getAvailableYears,
 } from '@/utils/periodUtils';
 
 interface UseDivisionReportReturn {
   divisions: Division[];
+  divisionItems: DivisionDataItem[];
   summaries: DivisionSummary[];
   periodInfoList: PeriodInfo[];
   availableYears: number[];
@@ -79,10 +80,13 @@ export function useDivisionReport(userDivisionId?: string | null, isAdmin = fals
     return getAvailableYears(availableMonths);
   }, [availableMonths]);
 
-  // 기간 정보 목록
+  // 기간 정보 목록 (세부 기간 선택 반영)
   const periodInfoList = useMemo(() => {
-    return getPeriodInfoList(filter.year, filter.periodType, availableMonths);
-  }, [filter.year, filter.periodType, availableMonths]);
+    return getFilteredPeriodInfoList(
+      filter.year, filter.periodType, availableMonths,
+      filter.months, filter.quarters, filter.halfYears
+    );
+  }, [filter.year, filter.periodType, availableMonths, filter.months, filter.quarters, filter.halfYears]);
 
   // 부문별 요약 데이터 생성
   const summaries = useMemo<DivisionSummary[]>(() => {
@@ -162,6 +166,7 @@ export function useDivisionReport(userDivisionId?: string | null, isAdmin = fals
 
   return {
     divisions,
+    divisionItems,
     summaries,
     periodInfoList,
     availableYears,

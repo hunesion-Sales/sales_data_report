@@ -10,7 +10,7 @@ import { getIndustryGroups } from '@/firebase/services/industryGroupService';
 import { getOrCreateReport } from '@/firebase/services/reportService';
 import { getIndustryGroupData, type IndustryGroupDataItem } from '@/firebase/services/industryGroupDataService';
 import {
-  getPeriodInfoList,
+  getFilteredPeriodInfoList,
   getAvailableYears,
 } from '@/utils/periodUtils';
 import { remapIndustryGroupData } from '@/utils/industryGroupMapper';
@@ -78,9 +78,13 @@ export function useIndustryGroupReport(): UseIndustryGroupReportReturn {
     return getAvailableYears(availableMonths);
   }, [availableMonths]);
 
+  // 기간 정보 목록 (세부 기간 선택 반영)
   const periodInfoList = useMemo(() => {
-    return getPeriodInfoList(filter.year, filter.periodType, availableMonths);
-  }, [filter.year, filter.periodType, availableMonths]);
+    return getFilteredPeriodInfoList(
+      filter.year, filter.periodType, availableMonths,
+      filter.months, filter.quarters, filter.halfYears
+    );
+  }, [filter.year, filter.periodType, availableMonths, filter.months, filter.quarters, filter.halfYears]);
 
   const summaries = useMemo<IndustryGroupSummary[]>(() => {
     const result: IndustryGroupSummary[] = [];

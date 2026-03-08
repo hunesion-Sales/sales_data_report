@@ -35,6 +35,9 @@ export interface ReportFilter {
   year: number;
   periodType: PeriodType;
   divisionId?: string; // undefined면 전체 부문
+  months?: number[];        // 월별 선택 시 (1~12)
+  quarters?: Quarter[];     // 분기별 선택 시
+  halfYears?: HalfYear[];   // 반기별 선택 시
 }
 
 /** 기간 정보 */
@@ -58,6 +61,9 @@ export interface IndustryGroupReportFilter {
   year: number;
   periodType: PeriodType;
   industryGroupName?: string; // undefined면 전체
+  months?: number[];        // 월별 선택 시 (1~12)
+  quarters?: Quarter[];     // 분기별 선택 시
+  halfYears?: HalfYear[];   // 반기별 선택 시
 }
 
 /** 대시보드 기간 선택 상태 */

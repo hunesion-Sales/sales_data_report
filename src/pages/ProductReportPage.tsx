@@ -2,14 +2,18 @@ import React, { useState, useMemo } from 'react';
 import type { ProductData, ReportFilter } from '@/types';
 import { useReport } from '@/hooks/useReport';
 import { useProductReport } from '@/hooks/useProductReport';
+import { useYoYReport } from '@/hooks/useYoYReport';
+import { useBacklogData } from '@/features/dashboard/hooks/useBacklogData';
+import { useReportTrendData } from '@/hooks/useReportTrendData';
 import { Cloud, CloudOff, Loader2, Package, Wrench } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { CURRENT_YEAR } from '@/config/appConfig';
 import { formatMillionWon, formatCurrency as formatCurrencyFull } from '@/utils/formatUtils';
-import { getAvailableYears, getPeriodInfoList } from '@/utils/periodUtils';
+import { getAvailableYears, getFilteredPeriodInfoList } from '@/utils/periodUtils';
 import ProductCharts from '@/components/reports/ProductCharts';
 import ProductReportTable from '@/components/reports/ProductReportTable';
 import ReportFilterBar from '@/components/reports/ReportFilterBar';
+import ReportTrendChart from '@/components/reports/ReportTrendChart';
 import ViewToggle from '@/components/ui/ViewToggle';
 import { useViewMode } from '@/hooks/useViewMode';
 import KPICardGrid from '@/components/common/KPICardGrid';
@@ -37,19 +41,58 @@ export default function ProductReportPage() {
 
     const availableYears = useMemo(() => getAvailableYears(months), [months]);
 
-    // 기간 필터 적용
+    // 기간 필터 적용 (세부 기간 선택 반영)
     const filteredMonths = useMemo(() => {
-        if (filter.periodType === 'monthly') {
-            return months.filter(m => m.startsWith(`${filter.year}`));
-        }
-        const periodInfoList = getPeriodInfoList(filter.year, filter.periodType, months);
+        const periodInfoList = getFilteredPeriodInfoList(
+            filter.year, filter.periodType, months,
+            filter.months, filter.quarters, filter.halfYears
+        );
         return periodInfoList.flatMap(p => p.months);
-    }, [filter.year, filter.periodType, months]);
+    }, [filter.year, filter.periodType, months, filter.months, filter.quarters, filter.halfYears]);
 
     // 훅으로 추출된 데이터 가공
     const { mainData, cloudData, maintenanceData, totals, cloudTotals, maintenanceTotals } = useProductReport(data, filteredMonths);
 
     const { viewMode, setViewMode } = useViewMode('profit');
+
+    // 트렌드 차트용 데이터
+    const { previousData } = useYoYReport(filter.year, true);
+    const { products: backlogProducts } = useBacklogData(filter.year);
+    const [trendSelectedProduct, setTrendSelectedProduct] = useState('전체');
+
+    // 제품 항목 드롭다운 옵션
+    const trendItems = useMemo(() => {
+        const productNames = mainData.map(p => p.product);
+        return [
+            { value: '전체', label: '전체' },
+            ...productNames.map(name => ({ value: name, label: name })),
+        ];
+    }, [mainData]);
+
+    // 트렌드 데이터 소스 구성
+    const trendSource = useMemo(() => {
+        // 당년: data (ProductData[]) → ItemWithMonths[]
+        const currentItems = data.map(p => ({
+            name: p.product,
+            months: p.months as Record<string, { sales: number; cost: number }>,
+        }));
+
+        // 전년: previousData (ProductData[])
+        const previousItems = previousData.map(p => ({
+            name: p.product,
+            months: p.months as Record<string, { sales: number; cost: number }>,
+        }));
+
+        // 수주잔액: backlogProducts (BacklogProductData[]) → 제품별 월별 데이터
+        const backlogByItem: Record<string, Record<string, { sales: number; cost: number }>> = {};
+        for (const bp of backlogProducts) {
+            backlogByItem[bp.product] = bp.months;
+        }
+
+        return { currentItems, previousItems, backlogByItem };
+    }, [data, previousData, backlogProducts]);
+
+    const trendData = useReportTrendData(trendSource, trendSelectedProduct, filter.year, viewMode);
 
     return (
         <div className="space-y-6 animate-fade-in p-6">
@@ -120,6 +163,16 @@ export default function ProductReportPage() {
                         color: 'violet',
                     },
                 ]}
+            />
+
+            {/* 트렌드 차트 */}
+            <ReportTrendChart
+                data={trendData}
+                viewMode={viewMode}
+                items={trendItems}
+                selectedItem={trendSelectedProduct}
+                onItemChange={setTrendSelectedProduct}
+                titlePrefix="제품별"
             />
 
             {/* 1. Main Report Section */}

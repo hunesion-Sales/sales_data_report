@@ -1,5 +1,5 @@
 import { Calendar, Filter, RefreshCw } from 'lucide-react';
-import type { IndustryGroup, IndustryGroupReportFilter, PeriodType } from '@/types';
+import type { IndustryGroup, IndustryGroupReportFilter, PeriodType, Quarter, HalfYear } from '@/types';
 import { PERIOD_TYPE_LABELS } from '@/utils/periodUtils';
 
 interface IndustryGroupReportFilterBarProps {
@@ -13,6 +13,23 @@ interface IndustryGroupReportFilterBarProps {
 
 const PERIOD_TYPES: PeriodType[] = ['monthly', 'quarterly', 'semi-annual', 'annual'];
 
+const QUARTERS: { value: Quarter; label: string }[] = [
+  { value: 'Q1', label: '1분기' },
+  { value: 'Q2', label: '2분기' },
+  { value: 'Q3', label: '3분기' },
+  { value: 'Q4', label: '4분기' },
+];
+
+const HALF_YEARS: { value: HalfYear; label: string }[] = [
+  { value: 'H1', label: '상반기' },
+  { value: 'H2', label: '하반기' },
+];
+
+const MONTHS = Array.from({ length: 12 }, (_, i) => ({
+  value: i + 1,
+  label: `${i + 1}월`,
+}));
+
 export default function IndustryGroupReportFilterBar({
   filter,
   onFilterChange,
@@ -21,6 +38,41 @@ export default function IndustryGroupReportFilterBar({
   onRefresh,
   isLoading = false,
 }: IndustryGroupReportFilterBarProps) {
+  const handlePeriodTypeChange = (periodType: PeriodType) => {
+    const updated: IndustryGroupReportFilter = { ...filter, periodType };
+    delete updated.months;
+    delete updated.quarters;
+    delete updated.halfYears;
+    onFilterChange(updated);
+  };
+
+  const handleMonthToggle = (month: number) => {
+    const current = filter.months ?? [];
+    const isSelected = current.includes(month);
+    const next = isSelected
+      ? current.filter(m => m !== month)
+      : [...current, month].sort((a, b) => a - b);
+    onFilterChange({ ...filter, months: next.length > 0 ? next : undefined });
+  };
+
+  const handleQuarterToggle = (quarter: Quarter) => {
+    const current = filter.quarters ?? [];
+    const isSelected = current.includes(quarter);
+    const next = isSelected
+      ? current.filter(q => q !== quarter)
+      : [...current, quarter].sort();
+    onFilterChange({ ...filter, quarters: next.length > 0 ? next : undefined });
+  };
+
+  const handleHalfYearToggle = (halfYear: HalfYear) => {
+    const current = filter.halfYears ?? [];
+    const isSelected = current.includes(halfYear);
+    const next = isSelected
+      ? current.filter(h => h !== halfYear)
+      : [...current, halfYear].sort();
+    onFilterChange({ ...filter, halfYears: next.length > 0 ? next : undefined });
+  };
+
   return (
     <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
       <div className="flex flex-wrap items-center gap-4">
@@ -53,7 +105,7 @@ export default function IndustryGroupReportFilterBar({
           {PERIOD_TYPES.map((type) => (
             <button
               key={type}
-              onClick={() => onFilterChange({ ...filter, periodType: type })}
+              onClick={() => handlePeriodTypeChange(type)}
               className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
                 filter.periodType === type
                   ? 'bg-white text-slate-900 shadow-sm'
@@ -64,6 +116,61 @@ export default function IndustryGroupReportFilterBar({
             </button>
           ))}
         </div>
+
+        {/* 세부 기간 선택 (다중 선택) */}
+        {filter.periodType === 'monthly' && (
+          <div className="flex gap-1 flex-wrap">
+            {MONTHS.map((m) => (
+              <button
+                key={m.value}
+                onClick={() => handleMonthToggle(m.value)}
+                className={`px-2 py-1 text-xs rounded-md transition-all ${
+                  filter.months?.includes(m.value)
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                {m.label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {filter.periodType === 'quarterly' && (
+          <div className="flex gap-1">
+            {QUARTERS.map((q) => (
+              <button
+                key={q.value}
+                onClick={() => handleQuarterToggle(q.value)}
+                className={`px-3 py-1 text-xs rounded-md transition-all ${
+                  filter.quarters?.includes(q.value)
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                {q.label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {filter.periodType === 'semi-annual' && (
+          <div className="flex gap-1">
+            {HALF_YEARS.map((h) => (
+              <button
+                key={h.value}
+                onClick={() => handleHalfYearToggle(h.value)}
+                className={`px-3 py-1 text-xs rounded-md transition-all ${
+                  filter.halfYears?.includes(h.value)
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                {h.label}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* 산업군 필터 */}
         <div className="flex items-center gap-2">

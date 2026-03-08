@@ -1,12 +1,16 @@
 
-import { useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, BarChart3 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDivisionReport } from '@/hooks/useDivisionReport';
 import { useAchievement } from '@/hooks/useAchievement';
+import { usePreviousYearDivisionData } from '@/hooks/usePreviousYearDivisionData';
+import { useBacklogData } from '@/features/dashboard/hooks/useBacklogData';
+import { useReportTrendData } from '@/hooks/useReportTrendData';
 import { FirestoreErrorFallback, LoadingSpinner } from '@/components/error';
 import ReportFilterBar from '@/components/reports/ReportFilterBar';
+import ReportTrendChart from '@/components/reports/ReportTrendChart';
 import DivisionSummaryTable from '@/components/reports/DivisionSummaryTable';
 import DivisionCharts from '@/components/reports/DivisionCharts';
 import { formatMillionWon, formatCurrency as formatCurrencyFull } from '@/utils/formatUtils';
@@ -21,6 +25,7 @@ export default function DivisionReportPage() {
 
   const {
     divisions,
+    divisionItems,
     summaries,
     periodInfoList,
     availableYears,
@@ -41,8 +46,46 @@ export default function DivisionReportPage() {
   // Sync Achievement Year with Report Filter Year
   useEffect(() => {
     setAchievementYear(filter.year);
-    setAchievementPeriod('Year'); // Always use Year for the high-level chart
+    setAchievementPeriod('Year');
   }, [filter.year, setAchievementYear, setAchievementPeriod]);
+
+  // 트렌드 차트용 데이터
+  const { data: prevDivisionData } = usePreviousYearDivisionData(filter.year);
+  const { divisions: backlogDivisions } = useBacklogData(filter.year);
+  const [trendSelectedDivision, setTrendSelectedDivision] = useState('전체');
+
+  // 부문 항목 드롭다운 옵션
+  const trendItems = useMemo(() => {
+    const names = divisionItems.map(d => d.divisionName);
+    const unique = [...new Set(names)];
+    return [
+      { value: '전체', label: '전체' },
+      ...unique.map(name => ({ value: name, label: name })),
+    ];
+  }, [divisionItems]);
+
+  // 트렌드 데이터 소스
+  const trendSource = useMemo(() => {
+    const currentItems = divisionItems.map(d => ({
+      name: d.divisionName,
+      months: d.months,
+    }));
+
+    const previousItems = prevDivisionData.map(d => ({
+      name: d.divisionName,
+      months: d.months,
+    }));
+
+    // 수주잔액: backlogDivisions은 BacklogDivisionData[]
+    const backlogByItem: Record<string, Record<string, { sales: number; cost: number }>> = {};
+    for (const bd of backlogDivisions) {
+      backlogByItem[bd.division] = bd.months;
+    }
+
+    return { currentItems, previousItems, backlogByItem };
+  }, [divisionItems, prevDivisionData, backlogDivisions]);
+
+  const trendData = useReportTrendData(trendSource, trendSelectedDivision, filter.year, viewMode);
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -125,6 +168,16 @@ export default function DivisionReportPage() {
                   },
                 ];
               })()}
+            />
+
+            {/* 트렌드 차트 */}
+            <ReportTrendChart
+              data={trendData}
+              viewMode={viewMode}
+              items={trendItems}
+              selectedItem={trendSelectedDivision}
+              onItemChange={setTrendSelectedDivision}
+              titlePrefix="부문별"
             />
 
             {/* Charts */}

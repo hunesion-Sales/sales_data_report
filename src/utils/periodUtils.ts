@@ -118,6 +118,44 @@ export function getPeriodInfoList(year: number, periodType: PeriodType, availabl
 }
 
 /**
+ * 세부 기간 선택이 적용된 periodInfoList 반환
+ * - 세부 선택이 없으면 전체 반환 (기존 동작 유지)
+ */
+export function getFilteredPeriodInfoList(
+  year: number,
+  periodType: PeriodType,
+  availableMonths: string[],
+  selectedMonths?: number[],
+  selectedQuarters?: Quarter[],
+  selectedHalfYears?: HalfYear[]
+): PeriodInfo[] {
+  const fullList = getPeriodInfoList(year, periodType, availableMonths);
+
+  switch (periodType) {
+    case 'monthly':
+      if (!selectedMonths || selectedMonths.length === 0) return fullList;
+      return fullList.filter(p => {
+        const monthNum = parseInt(p.key.split('-')[1], 10);
+        return selectedMonths.includes(monthNum);
+      });
+
+    case 'quarterly':
+      if (!selectedQuarters || selectedQuarters.length === 0) return fullList;
+      return fullList.filter(p => selectedQuarters.includes(p.key as Quarter));
+
+    case 'semi-annual':
+      if (!selectedHalfYears || selectedHalfYears.length === 0) return fullList;
+      return fullList.filter(p => selectedHalfYears.includes(p.key as HalfYear));
+
+    case 'annual':
+      return fullList;
+
+    default:
+      return fullList;
+  }
+}
+
+/**
  * 분기 라벨 반환
  */
 export function getQuarterLabel(quarter: Quarter): string {
