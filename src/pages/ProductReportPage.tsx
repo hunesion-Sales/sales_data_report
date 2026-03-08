@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import type { ProductData, ReportFilter } from '@/types';
 import { useReport } from '@/hooks/useReport';
 import { useProductReport } from '@/hooks/useProductReport';
-import { Cloud, CloudOff, Loader2, Package } from 'lucide-react';
+import { Cloud, CloudOff, Loader2, Package, Wrench } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { CURRENT_YEAR } from '@/config/appConfig';
 import { formatMillionWon, formatCurrency as formatCurrencyFull } from '@/utils/formatUtils';
@@ -47,7 +47,7 @@ export default function ProductReportPage() {
     }, [filter.year, filter.periodType, months]);
 
     // 훅으로 추출된 데이터 가공
-    const { mainData, cloudData, totals, cloudTotals } = useProductReport(data, filteredMonths);
+    const { mainData, cloudData, maintenanceData, totals, cloudTotals, maintenanceTotals } = useProductReport(data, filteredMonths);
 
     const { viewMode, setViewMode } = useViewMode('profit');
 
@@ -157,6 +157,32 @@ export default function ProductReportPage() {
                     enableQuarterGrouping={filteredMonths.length > 6}
                 />
             </div>
+
+            {/* 3. Maintenance Report Section */}
+            {maintenanceData.length > 0 && (
+                <div className="mt-12 space-y-6 pt-8 no-print-break-before">
+                    <div className="bg-teal-50 border-l-4 border-teal-500 p-4 rounded-r-lg mb-6 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-white rounded-lg shadow-sm">
+                                <Wrench className="w-6 h-6 text-teal-600" />
+                            </div>
+                            <div>
+                                <h2 className="text-xl font-bold text-teal-900">유지보수 실적 보고</h2>
+                                <p className="text-sm text-teal-600">유지보수(MA) 제품군 상세 분석</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <ProductCharts items={maintenanceData} months={filteredMonths} viewMode={viewMode} />
+                    <ProductReportTable
+                        title="유지보수 상세 실적"
+                        items={maintenanceData}
+                        months={filteredMonths}
+                        totals={maintenanceTotals}
+                        enableQuarterGrouping={filteredMonths.length > 6}
+                    />
+                </div>
+            )}
         </div>
     );
 }

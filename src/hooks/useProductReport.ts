@@ -11,7 +11,7 @@ export function useProductReport(data: ProductData[], months: string[]) {
     return item.months[monthKey] ?? { sales: 0, cost: 0 };
   };
 
-  const { mainData, cloudData } = useMemo(() => {
+  const { mainData, cloudData, maintenanceData } = useMemo(() => {
     const emptyMonths = (): Record<string, { sales: number; cost: number }> => {
       const m: Record<string, { sales: number; cost: number }> = {};
       months.forEach(key => { m[key] = { sales: 0, cost: 0 }; });
@@ -25,10 +25,15 @@ export function useProductReport(data: ProductData[], months: string[]) {
 
     const regularItems: ProductData[] = [];
     const cloudItems: ProductData[] = [];
+    const maintenanceItems: ProductData[] = [];
     const cloudSubtotal: ProductData = { id: 'cloud_total', product: 'Cloud 서비스', months: emptyMonths() };
 
     data.forEach(item => {
       if (item.product.endsWith('_MA')) {
+        maintenanceItems.push({
+          ...item,
+          product: item.product.replace(/_MA$/, ''),
+        });
         months.forEach(mk => {
           const md = getMonthData(item, mk);
           aggregatedGroups['유지보수'].months[mk].sales += md.sales;
@@ -54,6 +59,7 @@ export function useProductReport(data: ProductData[], months: string[]) {
 
     regularItems.sort((a, b) => a.product.localeCompare(b.product));
     cloudItems.sort((a, b) => a.product.localeCompare(b.product));
+    maintenanceItems.sort((a, b) => a.product.localeCompare(b.product));
 
     const processList = (list: ProductData[]): ProcessedProduct[] => list.map(item => {
       const processedMonths: Record<string, { sales: number; cost: number; profit: number }> = {};
@@ -88,6 +94,7 @@ export function useProductReport(data: ProductData[], months: string[]) {
     return {
       mainData: processList(mainRaw),
       cloudData: processList(cloudItems),
+      maintenanceData: processList(maintenanceItems),
     };
   }, [data, months]);
 
@@ -133,5 +140,26 @@ export function useProductReport(data: ProductData[], months: string[]) {
     return { byMonth, totalSales, totalCost, totalProfit: totalSales - totalCost };
   }, [cloudData, months]);
 
-  return { mainData, cloudData, totals, cloudTotals };
+  const maintenanceTotals = useMemo<Totals>(() => {
+    const byMonth: Record<string, { sales: number; cost: number; profit: number }> = {};
+    months.forEach(mk => { byMonth[mk] = { sales: 0, cost: 0, profit: 0 }; });
+
+    let totalSales = 0;
+    let totalCost = 0;
+
+    maintenanceData.forEach(item => {
+      months.forEach(mk => {
+        const md = item.months[mk] ?? { sales: 0, cost: 0, profit: 0 };
+        byMonth[mk].sales += md.sales;
+        byMonth[mk].cost += md.cost;
+        byMonth[mk].profit += md.profit;
+      });
+      totalSales += item.totalSales;
+      totalCost += item.totalCost;
+    });
+
+    return { byMonth, totalSales, totalCost, totalProfit: totalSales - totalCost };
+  }, [maintenanceData, months]);
+
+  return { mainData, cloudData, maintenanceData, totals, cloudTotals, maintenanceTotals };
 }
