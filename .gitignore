@@ -4,3 +4,7 @@ dist/
 *.local
 .env
 .env.*
+
+# Firebase migration - service account keys & auth export
+*-key.json
+users.json

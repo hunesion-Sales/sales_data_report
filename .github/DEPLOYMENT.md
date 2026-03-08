@@ -46,5 +46,5 @@ npm run deploy:all
 ## 5. 배포 확인
 
 배포 후 다음 URL에서 확인:
-- https://hunesalesreport.web.app
-- https://hunesalesreport.firebaseapp.com
+- https://henesalesreport-v2.web.app
+- https://hunesalesreport-v2.firebaseapp.com
