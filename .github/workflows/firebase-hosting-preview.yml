@@ -45,5 +45,5 @@ jobs:
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-          projectId: hunesalesreport
+          projectId: henesalesreport-v2
           # PR 프리뷰 (channelId 없이 실행하면 자동으로 프리뷰 URL 생성)
