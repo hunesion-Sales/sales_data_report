@@ -14,6 +14,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@rollup/rollup-darwin-x64": "^4.59.0",
     "exceljs": "^4.4.0",
     "firebase": "^12.10.0",
     "lucide-react": "^0.555.0",
