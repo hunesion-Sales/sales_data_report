@@ -89,7 +89,6 @@ export default function AchievementPage() {
 
   const currentTotalTarget = viewMode === 'sales' ? totalSalesTarget : totalProfitTarget;
   const currentAchievementRate = viewMode === 'sales' ? overallSalesAchievementRate : overallProfitAchievementRate;
-  const currentActual = viewMode === 'sales' ? totalActualSales : totalActualProfit;
 
   const entityLabel = isDivisionTab ? '부문' : '제품군';
 
@@ -206,14 +205,14 @@ export default function AchievementPage() {
                 <p className="text-xs text-slate-400 mt-1">{year}년 {getAchievementPeriodLabel(period)}</p>
               </div>
 
-              {/* 2. 실적 (매출 or 이익) */}
+              {/* 2. 매출 실적 (항상 매출액 표시) */}
               <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
                 <div className="flex justify-between items-center mb-2">
-                  <h3 className="text-sm font-medium text-slate-500">{viewMode === 'sales' ? '매출 실적' : '매출이익 실적'}</h3>
-                  {viewMode === 'sales' ? <DollarSign className="w-5 h-5 text-blue-500" /> : <TrendingUp className="w-5 h-5 text-emerald-500" />}
+                  <h3 className="text-sm font-medium text-slate-500">매출 실적</h3>
+                  <DollarSign className="w-5 h-5 text-blue-500" />
                 </div>
-                <div className={`text-2xl font-bold ${viewMode === 'sales' ? 'text-slate-900' : 'text-emerald-600'}`}>
-                  {formatCurrencyWithUnit(currentActual)}
+                <div className="text-2xl font-bold text-slate-900">
+                  {formatCurrencyWithUnit(totalActualSales)}
                 </div>
                 <p className="text-xs text-slate-400 mt-1">{getAchievementPeriodLabel(period)} 누적</p>
               </div>
