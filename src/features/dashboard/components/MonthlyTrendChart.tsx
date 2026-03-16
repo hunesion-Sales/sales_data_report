@@ -31,7 +31,7 @@ function MonthlyTrendChart({ data, viewMode }: MonthlyTrendChartProps) {
           name: item.name,
           prevYearActual: (prev?.prevYearActual ?? 0) + item.prevYearActual,
           currentActual: (prev?.currentActual ?? 0) + item.currentActual,
-          backlog: (prev?.backlog ?? 0) + item.backlog,
+          backlog: item.backlog,
           achievementRate: item.achievementRate,
           growthRate: item.growthRate,
         });

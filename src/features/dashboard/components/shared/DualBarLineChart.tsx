@@ -199,11 +199,10 @@ export default function DualBarLineChart({
             <LabelList
               position="top"
               content={(props: any) => {
-                const { x, y, width, index } = props;
-                const item = data[index];
-                if (!item) return null;
-                const actual = (item[bar2Key as keyof DualBarLineChartDataItem] as number) ?? 0;
-                const backlog = (item[bar3Key as keyof DualBarLineChartDataItem] as number) ?? 0;
+                const { x, y, width, payload } = props;
+                if (!payload) return null;
+                const actual = (payload[bar2Key] as number) ?? 0;
+                const backlog = (payload[bar3Key] as number) ?? 0;
                 const total = actual + backlog;
                 if (total === 0) return null;
                 return (
